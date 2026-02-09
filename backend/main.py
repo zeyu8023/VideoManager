@@ -13,7 +13,7 @@ from typing import Optional
 from .processor import process_excel_background
 from .models import Video, AppSettings
 
-main_app = FastAPI(title="VideoHub V12.0")
+main_app = FastAPI(title="VideoHub V13.0")
 engine = create_engine("sqlite:///data/inventory.db")
 
 @main_app.on_event("startup")
@@ -23,20 +23,18 @@ def on_startup():
     os.makedirs("temp_uploads", exist_ok=True)
     SQLModel.metadata.create_all(engine)
     
-    # === DB Migration & Repair ===
+    # 数据库结构自动修复
     with Session(engine) as session:
         try:
             session.exec(text("SELECT created_at FROM video LIMIT 1"))
         except Exception:
-            # Add column if missing
-            session.exec(text("ALTER TABLE video ADD COLUMN created_at DATETIME"))
+            try: session.exec(text("ALTER TABLE video ADD COLUMN created_at DATETIME"))
+            except: pass
             session.commit()
-        
-        # Backfill created_at for old records (CRITICAL FIX)
-        session.exec(text(f"UPDATE video SET created_at = '{datetime.datetime.now()}' WHERE created_at IS NULL"))
-        session.commit()
+            session.exec(text(f"UPDATE video SET created_at = '{datetime.datetime.now()}' WHERE created_at IS NULL"))
+            session.commit()
 
-        # Default Settings
+        # 默认配置兜底
         defaults = {
             "hosts": "小梨,VIVI,七七,杨总",
             "statuses": "待发布,已发布,剪辑中,拍摄中,脚本中",
@@ -55,38 +53,35 @@ main_app.mount("/assets", StaticFiles(directory="assets"), name="assets")
 async def read_index():
     return FileResponse(os.path.join("frontend", "index.html"))
 
-# === Report API ===
+# === 报表统计 ===
 @main_app.get("/api/report")
 def get_report(dim: str = "day"):
     with Session(engine) as session:
         videos = session.exec(select(Video)).all()
         stats = {}
         
-        def fmt_date(dt):
+        def get_key(dt):
             if not dt: return None
             if isinstance(dt, str):
                 try: dt = datetime.datetime.strptime(dt[:10], "%Y-%m-%d")
                 except: return None
             if dim == 'day': return dt.strftime("%Y-%m-%d")
             if dim == 'week': return dt.strftime("%Y-W%W")
-            if dim == 'month': return dt.strftime("%Y-%m")
-            return None
+            return dt.strftime("%Y-%m")
 
         for v in videos:
-            # Count Inbound
-            d_in = fmt_date(v.created_at)
-            if d_in:
-                if d_in not in stats: stats[d_in] = {"in": 0, "out": 0}
-                stats[d_in]["in"] += 1
+            k_in = get_key(v.created_at)
+            if k_in:
+                if k_in not in stats: stats[k_in] = {"in": 0, "out": 0}
+                stats[k_in]["in"] += 1
             
-            # Count Outbound
             if v.status == "已发布" and v.publish_time:
-                d_out = fmt_date(v.publish_time)
-                if d_out:
-                    if d_out not in stats: stats[d_out] = {"in": 0, "out": 0}
-                    stats[d_out]["out"] += 1
-
-        keys = sorted(stats.keys())[-15:]
+                k_out = get_key(v.publish_time)
+                if k_out:
+                    if k_out not in stats: stats[k_out] = {"in": 0, "out": 0}
+                    stats[k_out]["out"] += 1
+        
+        keys = sorted(stats.keys())[-30:] # 取最近30个周期
         
         plat_map = {}
         for v in videos:
@@ -94,37 +89,36 @@ def get_report(dim: str = "day"):
                 for p in v.platform.replace('，', ',').split(','):
                     p = p.strip()
                     if p: plat_map[p] = plat_map.get(p, 0) + 1
-        
+
         return {
             "dates": keys,
-            "series_in": [stats[k]["in"] for k in keys],
-            "series_out": [stats[k]["out"] for k in keys],
-            "platforms": [{"name": k, "value": v} for k, v in plat_map.items()]
+            "in": [stats[k]["in"] for k in keys],
+            "out": [stats[k]["out"] for k in keys],
+            "plats": [{"name": k, "value": v} for k, v in plat_map.items()]
         }
 
-# === Options API ===
+# === 选项 ===
 @main_app.get("/api/options")
 def get_options():
     with Session(engine) as session:
         settings = {item.key: item.value.split(',') for item in session.exec(select(AppSettings)).all()}
-        def get_merged(col, key):
-            db_vals = session.exec(select(col).distinct()).all()
+        def merge(col, key):
+            db = session.exec(select(col).distinct()).all()
             clean = []
-            for item in db_vals:
-                if item and str(item).lower() != 'nan': 
-                    clean.extend([x.strip() for x in str(item).replace('，', ',').split(',')])
+            for i in db:
+                if i and str(i) != 'nan': clean.extend([x.strip() for x in str(i).replace('，',',').split(',')])
             preset = [x.strip() for x in settings.get(key, []) if x.strip()]
             return sorted(list(set(clean + preset)))
         return {
-            "hosts": get_merged(Video.host, "hosts"),
-            "categories": get_merged(Video.category, "categories"),
-            "statuses": get_merged(Video.status, "statuses"),
-            "platforms": get_merged(Video.platform, "platforms"),
-            "video_types": get_merged(Video.video_type, "video_types"),
-            "product_ids": get_merged(Video.product_id, "ignore")
+            "hosts": merge(Video.host, "hosts"),
+            "categories": merge(Video.category, "categories"),
+            "statuses": merge(Video.status, "statuses"),
+            "platforms": merge(Video.platform, "platforms"),
+            "video_types": merge(Video.video_type, "video_types"),
+            "product_ids": merge(Video.product_id, "ignore")
         }
 
-# === List API ===
+# === 列表 ===
 @main_app.get("/api/videos")
 def list_videos(
     page: int = 1, size: int = 100, sort_by: str = "id", order: str = "desc",
@@ -136,8 +130,7 @@ def list_videos(
 ):
     with Session(engine) as session:
         stmt = select(Video)
-        if keyword:
-            stmt = stmt.where(or_(col(Video.title).contains(keyword), col(Video.product_id).contains(keyword), col(Video.remark).contains(keyword)))
+        if keyword: stmt = stmt.where(or_(col(Video.title).contains(keyword), col(Video.product_id).contains(keyword), col(Video.remark).contains(keyword)))
         if product_id: stmt = stmt.where(col(Video.product_id).contains(product_id))
         if title: stmt = stmt.where(col(Video.title).contains(title))
         if host and host!="全部": stmt = stmt.where(col(Video.host).contains(host))
@@ -155,7 +148,7 @@ def list_videos(
         stmt = stmt.order_by(asc(sort_col) if order=="asc" else desc(sort_col)).offset((page-1)*size).limit(size)
         return {"items": session.exec(stmt).all(), "total": total, "page": page, "size": size, "total_pages": math.ceil(total/size)}
 
-# === Actions ===
+# === 保存/上传 ===
 @main_app.post("/api/upload")
 async def upload_image(file: UploadFile):
     os.makedirs("assets/previews", exist_ok=True)
@@ -176,12 +169,7 @@ async def save_video(
 ):
     with Session(engine) as session:
         if not id or id in ['new', 'temp', 'undefined', 'null']:
-            video = Video(
-                product_id=product_id or "未命名", 
-                title=title or "新建", 
-                image_url="/assets/default.png",
-                created_at=datetime.datetime.now()
-            )
+            video = Video(product_id=product_id or "未命名", title=title or "新建", image_url="/assets/default.png", created_at=datetime.datetime.now())
             session.add(video)
         else:
             video = session.get(Video, int(id))

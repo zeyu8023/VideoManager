@@ -3,107 +3,104 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VideoHub V12</title>
+    <title>VideoHub V13</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/echarts/5.4.3/echarts.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'Inter', 'Noto Sans SC', sans-serif; background: #f8fafc; color: #1e293b; overflow: hidden; }
+        body { font-family: 'Inter', 'Noto Sans SC', sans-serif; background: #f1f5f9; color: #334155; overflow: hidden; }
         
-        /* Layout */
-        .sidebar { width: 240px; background: #1e293b; color: #94a3b8; flex-shrink: 0; display: flex; flex-direction: column; }
-        .sidebar-item { padding: 12px 20px; cursor: pointer; display: flex; align-items: center; gap: 12px; font-weight: 500; transition: all 0.2s; border-left: 3px solid transparent; }
+        /* 侧边栏 */
+        .sidebar { width: 240px; background: #1e293b; color: #94a3b8; flex-shrink: 0; display: flex; flex-direction: column; transition: width 0.2s; }
+        .sidebar-item { padding: 14px 24px; cursor: pointer; display: flex; align-items: center; gap: 12px; font-weight: 500; border-left: 3px solid transparent; }
         .sidebar-item:hover { background: #334155; color: white; }
         .sidebar-item.active { background: #0f172a; color: white; border-left-color: #3b82f6; }
         
-        .main-content { flex: 1; display: flex; flex-direction: column; overflow: hidden; background: #f1f5f9; }
-        
-        /* Table */
-        .table-container { flex: 1; overflow: auto; background: white; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); margin: 0 16px 16px 16px; }
-        table { width: 100%; border-collapse: collapse; min-width: 1400px; }
+        /* 表格容器 */
+        .table-container { flex: 1; overflow: auto; background: white; margin: 0 20px 20px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+        table { width: 100%; border-collapse: collapse; min-width: 1600px; } /* 宽屏不挤 */
         th { position: sticky; top: 0; background: #f8fafc; font-size: 13px; font-weight: 700; color: #475569; padding: 12px; border-bottom: 2px solid #e2e8f0; text-align: left; z-index: 10; }
         td { padding: 10px 12px; border-bottom: 1px solid #f1f5f9; font-size: 13px; vertical-align: middle; }
         tr:hover td { background: #f8fafc; }
 
-        /* Inline Edit */
+        /* 行内编辑 */
         .t-input { width: 100%; padding: 6px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 13px; outline: none; background: white; }
         .t-input:focus { border-color: #3b82f6; box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1); }
         .editing { background: #eff6ff !important; }
-        .new-row { background: #f0fdf4 !important; animation: fadeIn 0.3s; }
+        .new-row { background: #f0fdf4 !important; }
 
-        /* Filter Panel */
-        #filter-panel { transition: max-height 0.3s ease; overflow: hidden; max-height: 0; background: white; margin: 0 16px 16px; border-radius: 8px; padding: 0 16px; }
-        #filter-panel.open { max-height: 500px; padding: 16px; }
+        /* 筛选面板 */
+        #filter-panel { transition: max-height 0.3s ease; overflow: hidden; max-height: 0; background: white; margin: 0 20px 10px; border-radius: 8px; padding: 0 20px; }
+        #filter-panel.open { max-height: 600px; padding-top: 16px; padding-bottom: 16px; }
 
-        /* Pills & Images */
-        .pill { padding: 2px 8px; border-radius: 6px; font-size: 12px; font-weight: 600; display: inline-block; margin-right: 4px; border: 1px solid transparent; }
+        /* 组件 */
+        .pill { padding: 3px 8px; border-radius: 6px; font-size: 12px; font-weight: 600; display: inline-block; margin-right: 4px; border: 1px solid transparent; }
         .img-cell { width: 44px; height: 44px; border-radius: 6px; border: 1px solid #e2e8f0; background: white; overflow: hidden; cursor: pointer; display: flex; align-items: center; justify-content: center; }
         .img-cell:hover { border-color: #3b82f6; }
-
-        /* Modals & Popups */
+        
         .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 50; opacity: 0; pointer-events: none; transition: opacity 0.2s; }
         .modal.active { opacity: 1; pointer-events: auto; }
-        .multi-pop { position: absolute; background: white; border: 1px solid #cbd5e1; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); border-radius: 6px; width: 200px; max-height: 200px; overflow-y: auto; z-index: 40; display: none; }
+        .multi-pop { position: absolute; background: white; border: 1px solid #cbd5e1; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); border-radius: 6px; width: 200px; max-height: 240px; overflow-y: auto; z-index: 40; display: none; }
         .multi-pop.show { display: block; }
         .multi-opt { padding: 8px; cursor: pointer; display: flex; align-items: center; gap: 8px; font-size: 13px; }
         .multi-opt:hover { background: #f1f5f9; }
-
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
     </style>
 </head>
 <body class="flex h-screen">
 
     <aside class="sidebar">
-        <div class="h-16 flex items-center px-6 gap-3 mb-4">
-            <div class="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white font-bold">V</div>
+        <div class="h-16 flex items-center px-6 gap-3 mb-2">
+            <div class="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white font-bold text-xl">V</div>
             <h1 class="text-lg font-bold text-white">VideoHub</h1>
         </div>
         <div class="sidebar-item active" onclick="switchView('assets', this)">
             <span>📦</span> 资产管理
         </div>
         <div class="sidebar-item" onclick="switchView('report', this)">
-            <span>📊</span> 数据统计
+            <span>📊</span> 数据报表
         </div>
     </aside>
 
-    <main class="main-content">
+    <main class="flex-1 flex flex-col min-w-0 bg-slate-50 relative">
         
-        <header class="h-16 flex justify-between items-center px-6 shrink-0 bg-white border-b border-slate-200 mb-4">
+        <header class="h-16 flex justify-between items-center px-6 shrink-0 bg-white border-b border-slate-200 mb-4 shadow-sm">
             <h2 class="text-lg font-bold text-slate-800" id="page-title">资产管理</h2>
             <div class="flex items-center gap-3">
                 <input id="g-search" onkeydown="if(event.key==='Enter') loadData(1)" placeholder="全局搜索..." class="pl-3 pr-3 py-1.5 w-64 bg-slate-100 border-none rounded text-sm focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none">
-                <button onclick="toggleFilters()" class="text-slate-500 hover:text-blue-600 p-2 border rounded hover:bg-slate-50 text-sm">筛选</button>
-                <button onclick="openSettings()" class="text-slate-500 hover:text-blue-600 p-2 border rounded hover:bg-slate-50 text-sm">配置</button>
-                <button onclick="addNewRow()" class="bg-emerald-600 text-white text-sm font-bold px-4 py-2 rounded hover:bg-emerald-700 shadow">+ 新增一行</button>
+                <button onclick="toggleFilters()" class="text-slate-600 hover:text-blue-600 p-2 text-sm font-bold bg-slate-50 rounded">筛选</button>
+                <button onclick="openSettings()" class="text-slate-600 hover:text-blue-600 p-2 text-sm font-bold bg-slate-50 rounded">配置</button>
+                <button onclick="addNewRow()" class="bg-blue-600 text-white text-sm font-bold px-4 py-2 rounded shadow hover:bg-blue-700">+ 新增一行</button>
             </div>
         </header>
 
         <div id="view-assets" class="flex flex-col flex-1 overflow-hidden">
             
-            <div class="px-6 mb-4 grid grid-cols-3 gap-4 shrink-0">
-                <div class="bg-white p-3 rounded-lg border border-slate-200 flex justify-between items-center">
-                    <div><div class="text-xs text-slate-400 font-bold">总资产</div><div class="text-xl font-black" id="st-total">-</div></div>
+            <div class="px-6 mb-4 grid grid-cols-3 gap-6 shrink-0">
+                <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex justify-between items-center">
+                    <div><div class="text-xs text-slate-400 font-bold uppercase">总资产</div><div class="text-2xl font-black text-slate-800 mt-1" id="st-total">-</div></div>
+                    <div class="text-3xl opacity-30">📦</div>
                 </div>
-                <div class="bg-white p-3 rounded-lg border border-slate-200 flex justify-between items-center">
-                    <div><div class="text-xs text-orange-400 font-bold">待发布</div><div class="text-xl font-black text-orange-500" id="st-pending">-</div></div>
+                <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex justify-between items-center">
+                    <div><div class="text-xs text-orange-400 font-bold uppercase">待发布</div><div class="text-2xl font-black text-orange-500 mt-1" id="st-pending">-</div></div>
+                    <div class="text-3xl opacity-30">🔥</div>
                 </div>
-                <div class="bg-white p-3 rounded-lg border border-slate-200 flex justify-between items-center">
-                    <div><div class="text-xs text-emerald-400 font-bold">批量操作</div>
-                    <button onclick="openImport()" class="text-blue-600 text-xs font-bold hover:underline">导入数据</button></div>
+                <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex justify-between items-center cursor-pointer hover:bg-slate-50" onclick="openImport()">
+                    <div><div class="text-xs text-blue-400 font-bold uppercase">批量操作</div><div class="text-base font-bold text-blue-600 mt-1">导入数据</div></div>
+                    <div class="text-3xl opacity-30">📥</div>
                 </div>
             </div>
 
             <div id="filter-panel">
-                <div class="grid grid-cols-6 gap-4 py-2">
+                <div class="grid grid-cols-6 gap-4">
                     <input id="s-pid" list="dl-pids" class="t-input" placeholder="编号...">
                     <input id="s-title" class="t-input" placeholder="标题...">
                     <select id="s-cat" class="t-input"></select>
                     <select id="s-type" class="t-input"></select>
                     <select id="s-status" class="t-input"></select>
                     <select id="s-host" class="t-input"></select>
-                    <div class="col-span-6 flex justify-end gap-2 border-t pt-2">
-                        <button onclick="loadData(1)" class="bg-slate-800 text-white text-xs px-4 py-2 rounded">查询</button>
-                        <button onclick="resetFilters()" class="bg-white border text-xs px-4 py-2 rounded">重置</button>
+                    <div class="col-span-6 flex justify-end gap-2 border-t pt-3">
+                        <button onclick="loadData(1)" class="bg-slate-800 text-white text-xs px-5 py-2 rounded font-bold">查询</button>
+                        <button onclick="resetFilters()" class="bg-white border text-xs px-5 py-2 rounded font-bold">重置</button>
                     </div>
                 </div>
             </div>
@@ -112,41 +109,40 @@
                 <table>
                     <thead>
                         <tr>
-                            <th class="w-16">图</th>
+                            <th class="w-16 text-center">图</th>
                             <th class="w-24" onclick="sortBy('product_id')">编号 ↕</th>
                             <th style="min-width: 240px" onclick="sortBy('title')">标题 ↕</th>
                             <th class="w-24">类型</th>
+                            <th class="w-28">完成时间</th>
                             <th class="w-24">视类</th>
-                            <th class="w-28">主播(多)</th>
-                            <th class="w-24">状态</th>
-                            <th class="w-28">平台(多)</th>
+                            <th class="w-32">主播(多)</th>
+                            <th class="w-24 text-center">状态</th>
+                            <th class="w-32">平台(多)</th>
                             <th class="w-32">发布时间</th>
                             <th class="w-40">备注</th>
-                            <th class="w-20 text-center">操作</th>
+                            <th class="w-20 text-center sticky right-0 bg-slate-50 border-l">操作</th>
                         </tr>
                     </thead>
                     <tbody id="table-body"></tbody>
                 </table>
             </div>
             
-            <div class="h-12 bg-white border-t px-6 flex justify-between items-center shrink-0">
-                <span id="page-info" class="text-xs text-slate-500">0 条</span>
-                <div class="flex gap-2">
-                    <button id="btn-prev" onclick="changePage(-1)" class="px-2 py-1 bg-slate-100 rounded text-xs">◀</button>
-                    <button id="btn-next" onclick="changePage(1)" class="px-2 py-1 bg-slate-100 rounded text-xs">▶</button>
-                </div>
+            <div class="h-12 bg-white border-t border-slate-200 px-6 flex justify-end items-center shrink-0 gap-3">
+                <span id="page-info" class="text-xs text-slate-500 font-medium">0 条</span>
+                <button id="btn-prev" onclick="changePage(-1)" class="px-3 py-1 bg-slate-100 rounded text-xs font-bold disabled:opacity-50">◀</button>
+                <button id="btn-next" onclick="changePage(1)" class="px-3 py-1 bg-slate-100 rounded text-xs font-bold disabled:opacity-50">▶</button>
             </div>
         </div>
 
         <div id="view-report" class="hidden flex-1 overflow-y-auto p-6">
             <div class="flex justify-end gap-2 mb-4">
-                <button onclick="loadReport('day')" class="px-3 py-1 bg-white border rounded text-xs">日</button>
-                <button onclick="loadReport('week')" class="px-3 py-1 bg-white border rounded text-xs">周</button>
-                <button onclick="loadReport('month')" class="px-3 py-1 bg-white border rounded text-xs">月</button>
+                <button onclick="loadReport('day')" class="px-4 py-1 bg-white border rounded text-xs font-bold hover:bg-slate-50">日</button>
+                <button onclick="loadReport('week')" class="px-4 py-1 bg-white border rounded text-xs font-bold hover:bg-slate-50">周</button>
+                <button onclick="loadReport('month')" class="px-4 py-1 bg-white border rounded text-xs font-bold hover:bg-slate-50">月</button>
             </div>
             <div class="grid grid-cols-2 gap-6">
-                <div class="bg-white p-4 rounded-xl border shadow-sm col-span-2 lg:col-span-1" style="height: 400px;" id="chart-trend"></div>
-                <div class="bg-white p-4 rounded-xl border shadow-sm col-span-2 lg:col-span-1" style="height: 400px;" id="chart-plat"></div>
+                <div class="bg-white p-6 rounded-xl border shadow-sm col-span-2 lg:col-span-1" style="height: 400px;" id="chart-trend"></div>
+                <div class="bg-white p-6 rounded-xl border shadow-sm col-span-2 lg:col-span-1" style="height: 400px;" id="chart-plat"></div>
             </div>
         </div>
 
@@ -158,22 +154,22 @@
 
     <div id="import-modal" class="modal">
         <div class="bg-white rounded-xl w-[400px] p-8 text-center">
-            <h3 class="font-bold text-xl mb-4">导入</h3>
-            <p class="text-sm text-slate-500 mb-6">确保 Excel 在 temp_uploads 目录</p>
-            <button onclick="startImport()" class="w-full bg-slate-800 text-white py-2 rounded font-bold">扫描</button>
-            <button onclick="document.getElementById('import-modal').classList.remove('active')" class="mt-4 text-slate-400 text-xs">关闭</button>
+            <h3 class="font-bold text-xl mb-4">导入数据</h3>
+            <p class="text-sm text-slate-500 mb-6">请确认文件已在 NAS <code class="bg-slate-100 px-1">temp_uploads</code> 目录</p>
+            <button onclick="startImport()" class="w-full bg-slate-800 text-white py-3 rounded font-bold">开始扫描</button>
+            <button onclick="document.getElementById('import-modal').classList.remove('active')" class="mt-4 text-slate-400 text-xs font-bold">关闭</button>
         </div>
     </div>
 
     <div id="settings-modal" class="modal">
         <div class="bg-white rounded-xl w-[400px] p-6">
             <h3 class="font-bold mb-4">配置</h3>
-            <textarea id="set-hosts" class="t-input h-20 mb-2" placeholder="主播..."></textarea>
-            <input id="set-cats" class="t-input mb-2" placeholder="类型...">
-            <input id="set-types" class="t-input mb-2" placeholder="视类...">
+            <textarea id="set-hosts" class="t-input h-20 mb-3" placeholder="主播..."></textarea>
+            <input id="set-cats" class="t-input mb-3" placeholder="类型...">
+            <input id="set-types" class="t-input mb-3" placeholder="视类...">
             <input id="set-plats" class="t-input mb-4" placeholder="平台...">
-            <button onclick="saveSettings()" class="w-full bg-blue-600 text-white py-2 rounded">保存</button>
-            <button onclick="document.getElementById('settings-modal').classList.remove('active')" class="w-full mt-2 text-slate-400 text-xs">关闭</button>
+            <button onclick="saveSettings()" class="w-full bg-blue-600 text-white py-2 rounded font-bold">保存</button>
+            <button onclick="document.getElementById('settings-modal').classList.remove('active')" class="w-full mt-2 text-slate-400 text-xs font-bold">关闭</button>
         </div>
     </div>
 
@@ -182,7 +178,11 @@
         let globalOptions={}, editingId=null, globalData=[];
         let charts={};
 
-        (async()=>{ await loadOptions(); await loadData(1); updateStats(); 
+        // --- 核心修复：并发加载 ---
+        (function init() {
+            loadOptions(); // 不await，异步跑
+            loadData(1);   // 不await，异步跑，确保数据立马显示
+            updateStats();
             document.addEventListener('click',e=>{if(!e.target.closest('.multi-pop')&&!e.target.closest('.multi-trig')) document.getElementById('multi-pop').classList.remove('show')});
         })();
 
@@ -197,11 +197,13 @@
         }
 
         async function loadOptions() {
-            const res=await fetch('/api/options'); globalOptions=await res.json();
-            const fill=(id,l)=>document.getElementById(id).innerHTML=`<option value="">全部</option>`+l.map(i=>`<option>${i}</option>`).join('');
-            fill('s-cat',globalOptions.categories); fill('s-type',globalOptions.video_types);
-            fill('s-host',globalOptions.hosts); fill('s-status',globalOptions.statuses);
-            document.getElementById('dl-pids').innerHTML=globalOptions.product_ids.map(i=>`<option>${i}</option>`).join('');
+            try {
+                const res=await fetch('/api/options'); globalOptions=await res.json();
+                const fill=(id,l)=>document.getElementById(id).innerHTML=`<option value="">全部</option>`+l.map(i=>`<option>${i}</option>`).join('');
+                fill('s-cat',globalOptions.categories); fill('s-type',globalOptions.video_types);
+                fill('s-host',globalOptions.hosts); fill('s-status',globalOptions.statuses);
+                document.getElementById('dl-pids').innerHTML=globalOptions.product_ids.map(i=>`<option>${i}</option>`).join('');
+            } catch(e) { console.error("Options error", e); }
         }
 
         async function loadData(p) {
@@ -289,9 +291,9 @@
         async function loadReport(dim) {
             const res = await fetch(`/api/report?dim=${dim}`); const d = await res.json();
             if(!charts.t) charts.t = echarts.init(document.getElementById('chart-trend'));
-            charts.t.setOption({tooltip:{trigger:'axis'},legend:{data:['入库','发布']},xAxis:{type:'category',data:d.dates},yAxis:{type:'value'},series:[{name:'入库',type:'line',data:d.series_in,smooth:true},{name:'发布',type:'bar',data:d.series_out}]});
+            charts.t.setOption({title:{text:'入库 vs 发布'},tooltip:{trigger:'axis'},legend:{data:['入库','发布']},xAxis:{type:'category',data:d.dates},yAxis:{type:'value'},series:[{name:'入库',type:'line',data:d.in,smooth:true},{name:'发布',type:'bar',data:d.out}]});
             if(!charts.p) charts.p = echarts.init(document.getElementById('chart-plat'));
-            charts.p.setOption({tooltip:{trigger:'item'},series:[{type:'pie',radius:['40%','70%'],data:d.platforms}]});
+            charts.p.setOption({title:{text:'平台分布'},tooltip:{trigger:'item'},series:[{type:'pie',radius:['40%','70%'],data:d.plats}]});
         }
 
         function openMulti(input,type){
