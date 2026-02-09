@@ -12,7 +12,7 @@ from typing import Optional
 from .processor import process_excel_background
 from .models import Video, AppSettings
 
-main_app = FastAPI(title="VideoHub V8.0")
+main_app = FastAPI(title="VideoHub V9.0")
 engine = create_engine("sqlite:///data/inventory.db")
 
 @main_app.on_event("startup")
@@ -22,16 +22,18 @@ def on_startup():
     os.makedirs("temp_uploads", exist_ok=True)
     SQLModel.metadata.create_all(engine)
     
-    # 默认配置兜底
+    # === 关键修复：初始化所有默认配置，包括视频类型 ===
     with Session(engine) as session:
-        if not session.get(AppSettings, "hosts"):
-            session.add(AppSettings(key="hosts", value="小梨,VIVI,七七"))
-        if not session.get(AppSettings, "statuses"):
-            session.add(AppSettings(key="statuses", value="待发布,已发布,剪辑中"))
-        if not session.get(AppSettings, "categories"):
-            session.add(AppSettings(key="categories", value="球服,球鞋,球拍"))
-        if not session.get(AppSettings, "platforms"):
-            session.add(AppSettings(key="platforms", value="抖音,小红书"))
+        defaults = {
+            "hosts": "小梨,VIVI,七七,杨总",
+            "statuses": "待发布,已发布,剪辑中,拍摄中,脚本中",
+            "categories": "球服,球鞋,球拍,周边,配件",
+            "platforms": "抖音,小红书,视频号,B站",
+            "video_types": "产品展示,剧情,口播,Vlog,花絮"  # 修复：补全默认视频类型
+        }
+        for key, val in defaults.items():
+            if not session.get(AppSettings, key):
+                session.add(AppSettings(key=key, value=val))
         session.commit()
 
 main_app.mount("/assets", StaticFiles(directory="assets"), name="assets")
@@ -58,21 +60,24 @@ def update_settings(key: str = Form(...), value: str = Form(...)):
         session.commit()
     return {"message": "配置已更新"}
 
-# === 选项接口 (强力去重+合并) ===
+# === 选项接口 (数据清洗+合并) ===
 @main_app.get("/api/options")
 def get_options():
     with Session(engine) as session:
         settings = {item.key: item.value.split(',') for item in session.exec(select(AppSettings)).all()}
         
         def get_merged(column, key):
-            # 1. 数据库现有值 (拆分逗号)
+            # 1. 数据库值 (去重 & 清洗)
             db_vals = session.exec(select(column).distinct()).all()
             clean_db = []
             for item in db_vals:
-                if item and str(item) != 'nan':
-                    clean_db.extend([x.strip() for x in str(item).split(',')])
+                if item and str(item).lower() != 'nan' and str(item).strip() != '':
+                    clean_db.extend([x.strip() for x in str(item).split(',')]) # 支持逗号拆分
+            
             # 2. 配置值
             preset = [x.strip() for x in settings.get(key, []) if x.strip()]
+            
+            # 3. 合并去重排序
             return sorted(list(set(clean_db + preset)))
 
         return {
@@ -80,8 +85,8 @@ def get_options():
             "categories": get_merged(Video.category, "categories"),
             "statuses": get_merged(Video.status, "statuses"),
             "platforms": get_merged(Video.platform, "platforms"),
-            "video_types": get_merged(Video.video_type, "video_types"),
-            "product_ids": get_merged(Video.product_id, "ignore") # 用于联想
+            "video_types": get_merged(Video.video_type, "video_types"), # 修复：确保返回此字段
+            "product_ids": get_merged(Video.product_id, "ignore")
         }
 
 # === 列表查询 (全字段筛选) ===
@@ -90,17 +95,21 @@ def list_videos(
     page: int = 1, size: int = 100, 
     sort_by: Optional[str] = "id", order: Optional[str] = "desc",
     keyword: Optional[str] = None, 
+    
+    # 筛选字段
     host: Optional[str] = None, status: Optional[str] = None,
     category: Optional[str] = None, platform: Optional[str] = None,
     video_type: Optional[str] = None, product_id: Optional[str] = None,
-    title: Optional[str] = None,
+    title: Optional[str] = None, remark: Optional[str] = None,
+    
+    # 时间字段
     pub_start: Optional[str] = None, pub_end: Optional[str] = None,
     fin_start: Optional[str] = None, fin_end: Optional[str] = None
 ):
     with Session(engine) as session:
         statement = select(Video)
         
-        # 全局搜索
+        # 全局模糊搜
         if keyword:
             statement = statement.where(or_(
                 col(Video.title).contains(keyword),
@@ -108,13 +117,16 @@ def list_videos(
                 col(Video.remark).contains(keyword)
             ))
         
-        # 精确/模糊筛选
+        # 精确/包含筛选
         if product_id: statement = statement.where(col(Video.product_id).contains(product_id))
         if title: statement = statement.where(col(Video.title).contains(title))
+        if remark: statement = statement.where(col(Video.remark).contains(remark))
         
-        # 下拉框 (多选模糊匹配)
+        # 下拉框筛选 (支持多选字段的包含查询)
         if host and host != "全部": statement = statement.where(col(Video.host).contains(host))
         if platform and platform != "全部": statement = statement.where(col(Video.platform).contains(platform))
+        
+        # 单选字段
         if category and category != "全部": statement = statement.where(Video.category == category)
         if status and status != "全部": statement = statement.where(Video.status == status)
         if video_type and video_type != "全部": statement = statement.where(Video.video_type == video_type)
@@ -125,7 +137,7 @@ def list_videos(
         if fin_start: statement = statement.where(Video.finish_time >= fin_start)
         if fin_end: statement = statement.where(Video.finish_time <= fin_end)
 
-        # 排序与分页
+        # 排序 & 分页
         count_stmt = select(func.count()).select_from(statement.subquery())
         total = session.exec(count_stmt).one()
         
@@ -162,7 +174,7 @@ async def save_video(
         else:
             video = Video(product_id=product_id or "New", title=title or "未命名", image_url="/assets/default.png")
 
-        # 更新逻辑：None不更新，空字符串更新为空
+        # 允许空字符串更新 (清空字段)
         if product_id is not None: video.product_id = product_id
         if title is not None: video.title = title
         if host is not None: video.host = host

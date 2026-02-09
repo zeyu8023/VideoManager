@@ -3,113 +3,123 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>VideoHub V8</title>
+    <title>VideoHub V9.0</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'Inter', 'Noto Sans SC', sans-serif; background: #f8fafc; color: #334155; }
+        body { font-family: 'Inter', 'Noto Sans SC', sans-serif; background: #f8fafc; color: #1e293b; }
         
-        /* 1. 响应式与表格 */
-        .table-container { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
-        table { width: 100%; border-collapse: collapse; min-width: 1200px; } /* 保证手机上不挤，可滑动 */
-        th { font-size: 12px; font-weight: 700; color: #475569; padding: 10px 8px; background: #f1f5f9; border-bottom: 2px solid #e2e8f0; white-space: nowrap; text-align: left; cursor: pointer; }
-        td { padding: 8px; border-bottom: 1px solid #f1f5f9; font-size: 13px; vertical-align: middle; }
+        /* 表格优化 - 字号加大 */
+        .table-container { width: 100%; overflow-x: auto; padding-bottom: 60px; }
+        table { width: 100%; border-collapse: collapse; min-width: 1400px; }
+        th { font-size: 14px; font-weight: 700; color: #475569; padding: 14px 12px; background: #f1f5f9; border-bottom: 2px solid #e2e8f0; white-space: nowrap; text-align: left; cursor: pointer; }
+        th:hover { background: #e2e8f0; color: #0f172a; }
+        td { padding: 12px; border-bottom: 1px solid #f1f5f9; font-size: 14px; vertical-align: middle; }
         tr:hover td { background: #f8fafc; }
 
-        /* 2. 行内编辑组件 */
-        .table-input { width: 100%; padding: 4px 6px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 13px; background: white; outline: none; transition: all 0.2s; height: 30px; }
-        .table-input:focus { border-color: #3b82f6; box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1); }
+        /* 输入框 - 高度舒适 */
+        .table-input { width: 100%; padding: 6px 8px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 14px; background: white; outline: none; transition: all 0.2s; height: 36px; }
+        .table-input:focus { border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1); }
         .editing { background: #eff6ff !important; }
 
-        /* 3. 多选弹出菜单 (Checkbox Menu) */
-        .multi-menu { position: absolute; z-index: 50; background: white; border: 1px solid #cbd5e1; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); border-radius: 6px; padding: 4px; width: 180px; max-height: 200px; overflow-y: auto; display: none; }
+        /* 多选菜单 */
+        .multi-menu { position: absolute; z-index: 50; background: white; border: 1px solid #e2e8f0; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); border-radius: 8px; padding: 6px; width: 200px; max-height: 240px; overflow-y: auto; display: none; }
         .multi-menu.show { display: block; }
-        .multi-option { display: flex; items-center; gap: 6px; padding: 6px; cursor: pointer; font-size: 12px; border-radius: 4px; }
-        .multi-option:hover { background: #f1f5f9; }
-        .multi-option input { pointer-events: none; } /* 让点击整个行都触发 */
+        .multi-option { display: flex; items-center; gap: 8px; padding: 8px; cursor: pointer; font-size: 13px; border-radius: 6px; color: #334155; }
+        .multi-option:hover { background: #f1f5f9; color: #2563eb; }
 
-        /* 4. 筛选面板动画 */
+        /* 筛选面板动画 */
         #filter-panel { transition: max-height 0.3s ease-out; overflow: hidden; max-height: 0; background: white; border-bottom: 1px solid #e2e8f0; }
-        #filter-panel.open { max-height: 500px; }
+        #filter-panel.open { max-height: 600px; }
 
-        /* 5. 视觉元素 */
-        .pill { padding: 2px 6px; border-radius: 4px; font-size: 11px; font-weight: 500; display: inline-block; margin-right: 2px; border: 1px solid transparent; white-space: nowrap; }
-        .img-zone { width: 40px; height: 40px; border-radius: 4px; border: 1px solid #e2e8f0; background: #fff; overflow: hidden; cursor: pointer; position: relative; }
-        .img-zone:hover::after { content: '+'; position: absolute; inset: 0; background: rgba(0,0,0,0.4); color: white; display: flex; justify-content: center; align-items: center; font-weight: bold; }
-
-        /* 6. 模态框 (新增/导入) */
-        .modal { opacity: 0; pointer-events: none; transition: opacity 0.2s; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 60; display: flex; align-items: center; justify-content: center; padding: 20px; }
+        /* 视觉元素 */
+        .pill { padding: 4px 10px; border-radius: 6px; font-size: 12px; font-weight: 600; display: inline-block; margin-right: 4px; border: 1px solid transparent; white-space: nowrap; line-height: 1.2; }
+        .img-zone { width: 48px; height: 48px; border-radius: 6px; border: 1px solid #e2e8f0; background: #fff; overflow: hidden; cursor: pointer; position: relative; }
+        .img-zone:hover { border-color: #3b82f6; transform: scale(1.05); transition: transform 0.2s; }
+        
+        /* 模态框 */
+        .modal { opacity: 0; pointer-events: none; transition: opacity 0.2s; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 60; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(2px); }
         .modal.active { opacity: 1; pointer-events: auto; }
-        .modal-content { background: white; border-radius: 12px; shadow: 2xl; width: 100%; max-width: 700px; max-height: 90vh; overflow-y: auto; }
+        
+        /* 进度条 */
+        .progress-bar { height: 8px; background: #f1f5f9; border-radius: 99px; overflow: hidden; margin-top: 12px; display: none; }
+        .progress-val { height: 100%; background: #3b82f6; width: 0%; transition: width 0.2s; }
     </style>
 </head>
 <body class="flex flex-col h-screen overflow-hidden bg-slate-50">
 
-    <div class="h-14 bg-white border-b border-slate-200 flex justify-between items-center px-4 md:px-6 shrink-0 z-40">
+    <div class="h-16 bg-white border-b border-slate-200 flex justify-between items-center px-6 shrink-0 z-40">
         <div class="flex items-center gap-3">
-            <div class="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white font-bold shadow">V</div>
-            <h1 class="text-lg font-bold text-slate-800 hidden md:block">VideoHub <span class="text-slate-400 font-normal text-xs">V8.0</span></h1>
+            <div class="w-9 h-9 bg-blue-600 rounded-xl flex items-center justify-center text-white font-bold text-xl shadow-md shadow-blue-100">V</div>
+            <h1 class="text-xl font-bold text-slate-800 hidden md:block">VideoHub <span class="text-slate-400 font-normal text-sm">V9.0</span></h1>
         </div>
         
-        <div class="flex gap-2 items-center">
-            <div class="relative">
-                <svg class="absolute left-2.5 top-2.5 w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
-                <input id="global-search" onkeydown="if(event.key==='Enter') loadData(1)" placeholder="搜索..." class="pl-8 pr-3 py-1.5 w-32 md:w-64 bg-slate-100 border-transparent rounded-lg text-sm focus:bg-white focus:border-blue-500 focus:ring-2 outline-none transition-all">
+        <div class="flex gap-3 items-center">
+            <div class="relative group">
+                <svg class="absolute left-3 top-3 w-4 h-4 text-slate-400 group-focus-within:text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                <input id="global-search" onkeydown="if(event.key==='Enter') loadData(1)" placeholder="全局搜索..." class="pl-10 pr-4 py-2 w-40 md:w-80 bg-slate-100 border-transparent rounded-lg text-sm focus:bg-white focus:border-blue-500 focus:ring-2 outline-none transition-all">
             </div>
-            <button onclick="toggleFilters()" class="text-slate-500 hover:text-blue-600 p-2"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"></path></svg></button>
-            <button onclick="openAddModal()" class="bg-blue-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow hover:bg-blue-700 whitespace-nowrap">+ 新增</button>
+            <button onclick="toggleFilters()" class="text-slate-600 hover:text-blue-600 p-2 rounded-lg hover:bg-slate-100 transition-colors" title="高级筛选">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"></path></svg>
+            </button>
+            <button onclick="openAddModal()" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-bold shadow-md hover:bg-blue-700 transition-transform active:scale-95 flex items-center gap-1">
+                <span>+</span> <span class="hidden md:inline">新增资产</span>
+            </button>
         </div>
     </div>
 
-    <div class="bg-white border-b border-slate-200 px-4 py-4 shrink-0 z-30">
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-6">
-            <div class="bg-slate-50 border border-slate-100 p-3 rounded-xl flex items-center justify-between">
-                <div><div class="text-[10px] font-bold text-slate-400 uppercase">总资产</div><div class="text-2xl font-black text-slate-800" id="st-total">-</div></div>
-                <div class="text-2xl opacity-50">📦</div>
+    <div class="bg-white border-b border-slate-200 px-6 py-4 shrink-0 z-30">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="bg-slate-50 border border-slate-100 p-4 rounded-xl flex items-center justify-between">
+                <div><div class="text-xs font-bold text-slate-400 uppercase tracking-wider">总资产</div><div class="text-2xl font-black text-slate-800" id="st-total">-</div></div>
+                <div class="text-3xl opacity-50 grayscale">📦</div>
             </div>
-            <div class="bg-orange-50 border border-orange-100 p-3 rounded-xl flex items-center justify-between">
-                <div><div class="text-[10px] font-bold text-orange-400 uppercase">待发布</div><div class="text-2xl font-black text-orange-500" id="st-pending">-</div></div>
-                <div class="text-2xl opacity-50">🔥</div>
+            <div class="bg-orange-50 border border-orange-100 p-4 rounded-xl flex items-center justify-between">
+                <div><div class="text-xs font-bold text-orange-400 uppercase tracking-wider">待发布</div><div class="text-2xl font-black text-orange-500" id="st-pending">-</div></div>
+                <div class="text-3xl opacity-50 grayscale">🔥</div>
             </div>
-            <div class="bg-emerald-50 border border-emerald-100 p-3 rounded-xl flex items-center justify-between hidden md:flex">
-                <div><div class="text-[10px] font-bold text-emerald-400 uppercase">本月劳模</div><div class="text-2xl font-black text-emerald-600" id="st-host">-</div></div>
-                <div class="text-2xl opacity-50">🏆</div>
+            <div class="bg-emerald-50 border border-emerald-100 p-4 rounded-xl flex items-center justify-between hidden md:flex">
+                <div><div class="text-xs font-bold text-emerald-400 uppercase tracking-wider">本月劳模</div><div class="text-2xl font-black text-emerald-600" id="st-host">-</div></div>
+                <div class="text-3xl opacity-50 grayscale">🏆</div>
             </div>
         </div>
     </div>
 
-    <div id="filter-panel" class="shrink-0 px-4 md:px-6">
-        <div class="py-4 grid grid-cols-2 md:grid-cols-6 gap-3">
-            <div><label class="text-[10px] text-slate-400 font-bold block mb-1">产品编号</label><input id="s-pid" list="dl-pids" class="table-input" placeholder="输入..."></div>
-            <div><label class="text-[10px] text-slate-400 font-bold block mb-1">视频标题</label><input id="s-title" class="table-input" placeholder="输入..."></div>
-            <div><label class="text-[10px] text-slate-400 font-bold block mb-1">主播</label><select id="s-host" class="table-input"></select></div>
-            <div><label class="text-[10px] text-slate-400 font-bold block mb-1">状态</label><select id="s-status" class="table-input"></select></div>
-            <div><label class="text-[10px] text-slate-400 font-bold block mb-1">平台</label><select id="s-plat" class="table-input"></select></div>
-            <div><label class="text-[10px] text-slate-400 font-bold block mb-1">类型</label><select id="s-cat" class="table-input"></select></div>
-            <div class="col-span-2"><label class="text-[10px] text-slate-400 font-bold block mb-1">发布时间</label><div class="flex gap-2"><input type="date" id="s-pub-start" class="table-input"><input type="date" id="s-pub-end" class="table-input"></div></div>
+    <div id="filter-panel" class="shrink-0 px-6">
+        <div class="py-5 grid grid-cols-2 md:grid-cols-6 gap-4">
+            <div><label class="text-xs font-bold text-slate-500 block mb-1.5">产品编号</label><input id="s-pid" list="dl-pids" class="table-input" placeholder="输入..."></div>
+            <div><label class="text-xs font-bold text-slate-500 block mb-1.5">视频标题</label><input id="s-title" class="table-input" placeholder="输入..."></div>
+            
+            <div><label class="text-xs font-bold text-slate-500 block mb-1.5">产品类型</label><select id="s-cat" class="table-input"></select></div>
+            <div><label class="text-xs font-bold text-slate-500 block mb-1.5">视频类型</label><select id="s-type" class="table-input"></select></div>
+            <div><label class="text-xs font-bold text-slate-500 block mb-1.5">发布状态</label><select id="s-status" class="table-input"></select></div>
+            <div><label class="text-xs font-bold text-slate-500 block mb-1.5">主播</label><select id="s-host" class="table-input"></select></div>
+            
+            <div class="col-span-2"><label class="text-xs font-bold text-slate-500 block mb-1.5">完成时间</label><div class="flex gap-2"><input type="date" id="s-fin-start" class="table-input"><input type="date" id="s-fin-end" class="table-input"></div></div>
+            <div class="col-span-2"><label class="text-xs font-bold text-slate-500 block mb-1.5">发布时间</label><div class="flex gap-2"><input type="date" id="s-pub-start" class="table-input"><input type="date" id="s-pub-end" class="table-input"></div></div>
+            
             <div class="col-span-2 flex items-end gap-2">
-                <button onclick="loadData(1)" class="bg-slate-800 text-white text-xs font-bold py-2 px-4 rounded w-full">应用筛选</button>
-                <button onclick="resetFilters()" class="bg-white border border-slate-300 text-slate-600 text-xs font-bold py-2 px-4 rounded">重置</button>
+                <button onclick="loadData(1)" class="flex-1 bg-slate-800 text-white text-sm font-bold py-2 rounded hover:bg-black transition-colors">应用筛选</button>
+                <button onclick="resetFilters()" class="flex-1 bg-white border border-slate-300 text-slate-600 text-sm font-bold py-2 rounded hover:bg-slate-50">重置</button>
             </div>
         </div>
     </div>
 
-    <div class="flex-1 overflow-hidden relative w-full">
+    <div class="flex-1 overflow-hidden relative w-full border-t border-slate-200">
         <div class="absolute inset-0 table-container">
             <table class="w-full text-left">
                 <thead class="sticky top-0 z-20 shadow-sm">
                     <tr>
-                        <th class="w-14 text-center">图</th>
-                        <th onclick="sortBy('product_id')" class="w-24">编号 ↕</th>
-                        <th onclick="sortBy('title')" style="width: 240px">视频标题 ↕</th>
-                        <th onclick="sortBy('category')" class="w-24">类型 ↕</th>
-                        <th onclick="sortBy('finish_time')" class="w-28">完成时间 ↕</th>
-                        <th onclick="sortBy('video_type')" class="w-24">视类 ↕</th>
+                        <th class="w-16 text-center">预览</th>
+                        <th onclick="sortBy('product_id')" class="w-28">编号 ↕</th>
+                        <th onclick="sortBy('title')" style="width: 280px; min-width: 280px;">视频标题 ↕</th> <th onclick="sortBy('category')" class="w-28">产品类型 ↕</th>
+                        <th onclick="sortBy('finish_time')" class="w-32">完成时间 ↕</th>
+                        <th onclick="sortBy('video_type')" class="w-28">视频类型 ↕</th>
                         <th onclick="sortBy('host')" class="w-32">主播(多选) ↕</th>
-                        <th onclick="sortBy('status')" class="w-24 text-center">状态 ↕</th>
+                        <th onclick="sortBy('status')" class="w-28 text-center">状态 ↕</th>
                         <th onclick="sortBy('platform')" class="w-32">平台(多选) ↕</th>
-                        <th onclick="sortBy('publish_time')" class="w-32">发布时间 ↕</th>
-                        <th onclick="sortBy('remark')" class="w-32">备注 ↕</th>
+                        <th onclick="sortBy('publish_time')" class="w-36">发布时间 ↕</th>
+                        <th onclick="sortBy('remark')" class="w-40">备注 ↕</th>
                         <th class="w-24 text-center sticky right-0 bg-slate-100 border-l">操作</th>
                     </tr>
                 </thead>
@@ -118,47 +128,14 @@
         </div>
     </div>
 
-    <div class="h-10 bg-white border-t border-slate-200 px-4 flex justify-between items-center shrink-0 text-xs text-slate-500 z-30">
-        <span id="page-info">0 条</span>
-        <div class="flex gap-2">
-            <button onclick="changePage(-1)" id="btn-prev" class="px-2 py-1 bg-slate-100 rounded disabled:opacity-50">◀</button>
-            <button onclick="changePage(1)" id="btn-next" class="px-2 py-1 bg-slate-100 rounded disabled:opacity-50">▶</button>
+    <div class="h-12 bg-white border-t border-slate-200 px-6 flex justify-between items-center shrink-0 text-sm text-slate-500 font-medium z-30">
+        <div class="flex gap-4">
+            <span id="page-info">共 0 条</span>
+            <button onclick="openImport()" class="text-blue-600 hover:underline flex items-center gap-1"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path></svg> 导入数据</button>
         </div>
-    </div>
-
-    <div id="add-modal" class="modal">
-        <div class="modal-content p-6">
-            <h3 class="font-bold mb-4 text-lg">新增资产</h3>
-            <form id="addForm" class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div class="col-span-1 border-2 border-dashed border-slate-300 rounded-lg flex flex-col items-center justify-center bg-slate-50 h-40 md:h-full cursor-pointer relative"
-                     onclick="document.getElementById('add-file').click()"
-                     ondragover="event.preventDefault()" ondrop="handleAddDrop(event)">
-                    <img id="add-preview" class="absolute inset-0 w-full h-full object-cover hidden rounded-lg">
-                    <div class="text-center text-slate-400 pointer-events-none">
-                        <div class="text-2xl mb-1">📷</div>
-                        <div class="text-xs">点击 / 拖拽 / 粘贴</div>
-                    </div>
-                    <input type="file" id="add-file" class="hidden" onchange="uploadAddFile(this.files[0])">
-                    <input type="hidden" name="image_url" id="add-img-val">
-                </div>
-
-                <div class="col-span-1 md:col-span-2 grid grid-cols-2 gap-3">
-                    <div class="col-span-2"><input name="title" placeholder="视频标题 *" required class="table-input border-slate-300 h-9"></div>
-                    <div><input name="product_id" placeholder="产品编号 *" required class="table-input border-slate-300 h-9"></div>
-                    <div><input name="category" placeholder="类型" list="dl-cat" class="table-input border-slate-300 h-9"></div>
-                    <div><input name="host" placeholder="主播 (逗号分隔)" list="dl-host" class="table-input border-slate-300 h-9"></div>
-                    <div><input name="platform" placeholder="平台 (逗号分隔)" list="dl-plat" class="table-input border-slate-300 h-9"></div>
-                    <div><select name="status" id="add-status" class="table-input border-slate-300 h-9"></select></div>
-                    <div><input name="finish_time" placeholder="完成时间" type="date" class="table-input border-slate-300 h-9"></div>
-                    <div><input name="publish_time" placeholder="发布时间" type="datetime-local" class="table-input border-slate-300 h-9"></div>
-                    <div><input name="remark" placeholder="备注" class="table-input border-slate-300 h-9"></div>
-                </div>
-                
-                <div class="col-span-1 md:col-span-3 flex justify-end gap-3 pt-4 border-t">
-                    <button type="button" onclick="closeModal('add-modal')" class="text-slate-500 text-sm font-bold">取消</button>
-                    <button type="submit" class="bg-blue-600 text-white px-6 py-2 rounded-lg text-sm font-bold">保存</button>
-                </div>
-            </form>
+        <div class="flex gap-2">
+            <button onclick="changePage(-1)" id="btn-prev" class="px-3 py-1 bg-slate-100 rounded hover:bg-slate-200 disabled:opacity-50 transition-colors">◀ 上一页</button>
+            <button onclick="changePage(1)" id="btn-next" class="px-3 py-1 bg-slate-100 rounded hover:bg-slate-200 disabled:opacity-50 transition-colors">下一页 ▶</button>
         </div>
     </div>
 
@@ -166,9 +143,59 @@
         <img id="big-img" src="" class="max-h-[90vh] max-w-[95vw] object-contain">
     </div>
 
+    <div id="add-modal" class="modal">
+        <div class="modal-content p-8">
+            <h3 class="font-bold mb-6 text-xl">新增资产</h3>
+            <form id="addForm" class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="col-span-1 border-2 border-dashed border-slate-300 rounded-xl flex flex-col items-center justify-center bg-slate-50 h-48 md:h-full cursor-pointer relative group transition-colors hover:border-blue-400 hover:bg-blue-50"
+                     onclick="document.getElementById('add-file').click()"
+                     ondragover="event.preventDefault()" ondrop="handleAddDrop(event)">
+                    <img id="add-preview" class="absolute inset-0 w-full h-full object-cover hidden rounded-xl">
+                    <div class="text-center text-slate-400 group-hover:text-blue-500 pointer-events-none">
+                        <div class="text-4xl mb-2">📷</div>
+                        <div class="text-sm font-medium">点击 / 拖拽 / 粘贴</div>
+                    </div>
+                    <input type="file" id="add-file" class="hidden" onchange="uploadAddFile(this.files[0])">
+                    <input type="hidden" name="image_url" id="add-img-val">
+                </div>
+
+                <div class="col-span-1 md:col-span-2 grid grid-cols-2 gap-4">
+                    <div class="col-span-2"><label class="text-xs font-bold text-slate-500 mb-1 block">视频标题 *</label><input name="title" required class="table-input"></div>
+                    <div><label class="text-xs font-bold text-slate-500 mb-1 block">产品编号 *</label><input name="product_id" required class="table-input"></div>
+                    <div><label class="text-xs font-bold text-slate-500 mb-1 block">产品类型</label><select name="category" id="add-cat" class="table-input"></select></div>
+                    <div><label class="text-xs font-bold text-slate-500 mb-1 block">视频类型</label><select name="video_type" id="add-type" class="table-input"></select></div>
+                    <div><label class="text-xs font-bold text-slate-500 mb-1 block">主播 (逗号分隔)</label><input name="host" list="dl-host" class="table-input"></div>
+                    <div><label class="text-xs font-bold text-slate-500 mb-1 block">平台 (逗号分隔)</label><input name="platform" list="dl-plat" class="table-input"></div>
+                    <div><label class="text-xs font-bold text-slate-500 mb-1 block">发布状态</label><select name="status" id="add-status" class="table-input"></select></div>
+                    <div><label class="text-xs font-bold text-slate-500 mb-1 block">完成时间</label><input name="finish_time" type="date" class="table-input"></div>
+                    <div><label class="text-xs font-bold text-slate-500 mb-1 block">发布时间</label><input name="publish_time" type="datetime-local" class="table-input"></div>
+                    <div><label class="text-xs font-bold text-slate-500 mb-1 block">备注</label><input name="remark" class="table-input"></div>
+                </div>
+                
+                <div class="col-span-1 md:col-span-3 flex justify-end gap-3 pt-4 border-t">
+                    <button type="button" onclick="closeModal('add-modal')" class="text-slate-500 font-bold px-4 py-2 hover:bg-slate-100 rounded">取消</button>
+                    <button type="submit" class="bg-blue-600 text-white px-8 py-2 rounded-lg font-bold hover:bg-blue-700 shadow-md">保存</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="import-modal" class="modal">
+        <div class="bg-white rounded-xl w-[400px] p-8 text-center shadow-2xl">
+            <div class="text-5xl mb-4">📂</div>
+            <h3 class="font-bold mb-2 text-xl">导入数据</h3>
+            <p class="text-sm text-slate-500 mb-6">确保 Excel 文件已放入 NAS 的 <code class="bg-slate-100 px-1 rounded font-mono">temp_uploads</code> 目录</p>
+            
+            <div class="progress-bar" id="prog-bar"><div class="progress-val" id="prog-val"></div></div>
+            
+            <button onclick="startImport()" class="w-full bg-slate-800 text-white px-6 py-3 rounded-lg font-bold hover:bg-black mt-4">开始扫描并导入</button>
+            <button onclick="closeModal('import-modal')" class="mt-4 text-slate-400 text-xs hover:text-slate-600">关闭</button>
+        </div>
+    </div>
+
     <div id="multi-menu" class="multi-menu"></div>
 
-    <datalist id="dl-pids"></datalist><datalist id="dl-host"></datalist><datalist id="dl-cat"></datalist><datalist id="dl-plat"></datalist>
+    <datalist id="dl-pids"></datalist><datalist id="dl-host"></datalist><datalist id="dl-plat"></datalist>
 
     <script>
         let currPage = 1, totalPages = 1, currentSort = { col: 'id', order: 'desc' };
@@ -179,13 +206,11 @@
             await loadOptions();
             await loadData(1);
             updateStats();
-            // 全局粘贴监听 (用于新增弹窗)
             document.addEventListener('paste', e => {
                 if(document.getElementById('add-modal').classList.contains('active') && e.clipboardData.files.length) {
                     uploadAddFile(e.clipboardData.files[0]);
                 }
             });
-            // 点击外部关闭多选菜单
             document.addEventListener('click', e => {
                 if(!e.target.closest('.multi-menu') && !e.target.closest('.multi-trigger')) {
                     document.getElementById('multi-menu').classList.remove('show');
@@ -198,18 +223,24 @@
             const res = await fetch('/api/options');
             globalOptions = await res.json();
             
+            // 筛选下拉 (包含 s-type)
             const fill = (id, list) => document.getElementById(id).innerHTML = `<option value="">全部</option>` + list.map(i=>`<option value="${i}">${i}</option>`).join('');
-            fill('s-host', globalOptions.hosts); fill('s-cat', globalOptions.categories);
-            fill('s-status', globalOptions.statuses); fill('s-plat', globalOptions.platforms);
+            fill('s-cat', globalOptions.categories);
+            fill('s-type', globalOptions.video_types); // 修复：视频类型
+            fill('s-host', globalOptions.hosts);
+            fill('s-status', globalOptions.statuses);
             
-            // 新增弹窗的下拉
+            // 新增下拉 (包含 add-type)
             const fillReq = (id, list) => document.getElementById(id).innerHTML = list.map(i=>`<option value="${i}">${i}</option>`).join('');
+            fillReq('add-cat', globalOptions.categories);
+            fillReq('add-type', globalOptions.video_types); // 修复：视频类型
             fillReq('add-status', globalOptions.statuses);
             
             // Datalists
             const fillDL = (id, list) => document.getElementById(id).innerHTML = list.map(i=>`<option value="${i}">`).join('');
-            fillDL('dl-pids', globalOptions.product_ids); fillDL('dl-host', globalOptions.hosts);
-            fillDL('dl-cat', globalOptions.categories); fillDL('dl-plat', globalOptions.platforms);
+            fillDL('dl-pids', globalOptions.product_ids);
+            fillDL('dl-host', globalOptions.hosts);
+            fillDL('dl-plat', globalOptions.platforms);
         }
 
         async function loadData(p) {
@@ -220,19 +251,21 @@
                 keyword: document.getElementById('global-search').value,
                 product_id: document.getElementById('s-pid').value,
                 title: document.getElementById('s-title').value,
+                category: document.getElementById('s-cat').value,
+                video_type: document.getElementById('s-type').value,
                 host: document.getElementById('s-host').value,
                 status: document.getElementById('s-status').value,
-                category: document.getElementById('s-cat').value,
-                platform: document.getElementById('s-plat').value,
                 pub_start: document.getElementById('s-pub-start').value,
-                pub_end: document.getElementById('s-pub-end').value
+                pub_end: document.getElementById('s-pub-end').value,
+                fin_start: document.getElementById('s-fin-start').value,
+                fin_end: document.getElementById('s-fin-end').value
             });
             const res = await fetch(`/api/videos?${params}`);
             const data = await res.json();
             globalData = data.items;
             totalPages = data.total_pages;
             
-            document.getElementById('page-info').innerText = `${data.total} 条 · ${data.page}/${data.total_pages} 页`;
+            document.getElementById('page-info').innerText = `共 ${data.total} 条 · ${data.page}/${data.total_pages} 页`;
             document.getElementById('btn-prev').disabled = (data.page <= 1);
             document.getElementById('btn-next').disabled = (data.page >= data.total_pages);
             
@@ -242,7 +275,11 @@
         // --- 渲染 ---
         const getColor = (str, type) => {
             if(!str || str==='nan') return {bg:'#f1f5f9', t:'#94a3b8'};
-            if(type==='status') return str.includes('已') ? {bg:'#dcfce7',t:'#166534'} : {bg:'#fff7ed',t:'#c2410c'};
+            if(type==='status') {
+                if(str.includes('已')) return {bg:'#dcfce7',t:'#166534'};
+                if(str.includes('待')) return {bg:'#fff7ed',t:'#c2410c'};
+                return {bg:'#f1f5f9',t:'#475569'};
+            }
             const c=[{bg:'#fee2e2',t:'#991b1b'},{bg:'#dbeafe',t:'#1e40af'},{bg:'#fef3c7',t:'#92400e'},{bg:'#f3e8ff',t:'#6b21a8'}];
             let h=0; for(let i=0;i<str.length;i++) h=str.charCodeAt(i)+((h<<5)-h);
             return c[Math.abs(h)%c.length];
@@ -256,61 +293,61 @@
                 
                 if (v.id === editingId) {
                     // 编辑行
-                    const sel = (k, list) => `<select id="ed-${k}" class="table-input bg-blue-50">${list.map(o => `<option ${o===v[k]?'selected':''}>${o}</option>`).join('')}</select>`;
-                    // 多选输入框
-                    const multi = (k, type) => `<input id="ed-${k}" class="table-input bg-blue-50 multi-trigger" value="${cln(v[k])}" readonly onclick="openMulti(this, '${type}')" placeholder="点击选择">`;
+                    const sel = (k, list) => `<select id="ed-${k}" class="table-input bg-blue-50 border-blue-300">${list.map(o => `<option ${o===v[k]?'selected':''}>${o}</option>`).join('')}</select>`;
+                    const multi = (k, type) => `<input id="ed-${k}" class="table-input bg-blue-50 multi-trigger cursor-pointer" value="${cln(v[k])}" readonly onclick="openMulti(this, '${type}')" placeholder="点击选择">`;
                     
                     return `
                     <tr class="editing border-b border-blue-200">
-                        <td class="p-1 text-center"><div class="w-10 h-10 bg-slate-200 rounded mx-auto"></div></td>
+                        <td class="p-2 text-center"><div class="w-10 h-10 bg-slate-200 rounded mx-auto"></div></td>
                         <td><input id="ed-pid" class="table-input" value="${cln(v.product_id)}"></td>
                         <td><input id="ed-title" class="table-input font-bold" value="${cln(v.title)}"></td>
-                        <td><input id="ed-cat" class="table-input" value="${cln(v.category)}" list="dl-cat"></td>
+                        <td>${sel('cat', globalOptions.categories)}</td>
                         <td><input id="ed-fin" type="date" class="table-input" value="${cln(v.finish_time)}"></td>
-                        <td><input id="ed-type" class="table-input" value="${cln(v.video_type)}"></td>
-                        <td>${multi('host', 'hosts')}</td> <td>${sel('status', globalOptions.statuses)}</td>
-                        <td>${multi('plat', 'platforms')}</td> <td><input id="ed-pub" type="datetime-local" class="table-input" value="${cln(v.publish_time).replace(' ','T')}"></td>
+                        <td>${sel('type', globalOptions.video_types)}</td>
+                        <td>${multi('host', 'hosts')}</td>
+                        <td>${sel('status', globalOptions.statuses)}</td>
+                        <td>${multi('plat', 'platforms')}</td>
+                        <td><input id="ed-pub" type="datetime-local" class="table-input" value="${cln(v.publish_time).replace(' ','T')}"></td>
                         <td><input id="ed-rem" class="table-input" value="${cln(v.remark)}"></td>
-                        <td class="text-center sticky right-0 bg-blue-50 border-l">
-                            <button onclick="saveRow(${v.id})" class="text-white bg-blue-600 px-2 py-1 rounded text-xs">保存</button>
-                            <button onclick="cancelEdit()" class="text-slate-400 text-xs ml-1">取消</button>
+                        <td class="text-center">
+                            <button onclick="saveRow(${v.id})" class="text-white bg-blue-600 px-3 py-1 rounded text-xs font-bold shadow">保存</button>
+                            <button onclick="cancelEdit()" class="text-slate-400 text-xs ml-1 hover:text-slate-600">取消</button>
                         </td>
                     </tr>`;
                 }
 
                 return `
-                <tr class="hover:bg-slate-50 group border-b border-slate-100 last:border-0">
-                    <td class="p-1 text-center">
+                <tr class="hover:bg-slate-50 group border-b border-slate-100 last:border-0 transition-colors">
+                    <td class="p-2 text-center">
                         <div class="img-zone mx-auto" onclick="showBigImg('${img}')" onpaste="handleRowPaste(event,${v.id})" ondrop="handleRowDrop(event,${v.id})" ondragover="event.preventDefault()">
                             <img src="${img}" class="w-full h-full object-cover pointer-events-none">
                         </div>
                     </td>
-                    <td class="font-mono text-slate-500 text-xs">${cln(v.product_id)}</td>
-                    <td class="font-bold text-slate-700 text-sm truncate" style="max-width: 200px;" title="${cln(v.title)}">${cln(v.title)}</td>
+                    <td class="font-mono text-slate-500">${cln(v.product_id)}</td>
+                    <td class="font-bold text-slate-700 truncate" style="max-width: 280px;" title="${cln(v.title)}">${cln(v.title)}</td>
                     <td>${pill(cln(v.category))}</td>
-                    <td class="text-slate-400 font-mono text-xs">${cln(v.finish_time)}</td>
+                    <td class="text-slate-400 text-xs font-mono">${cln(v.finish_time)}</td>
                     <td>${pill(cln(v.video_type))}</td>
                     <td>${pill(cln(v.host))}</td>
                     <td class="text-center">${pill(cln(v.status), 'status')}</td>
                     <td>${pill(cln(v.platform))}</td>
                     <td class="text-slate-400 font-mono text-xs whitespace-nowrap">${cln(v.publish_time).replace('T',' ')}</td>
-                    <td class="text-slate-400 truncate max-w-[100px] text-xs">${cln(v.remark)}</td>
+                    <td class="text-slate-400 truncate max-w-[120px] text-xs">${cln(v.remark)}</td>
                     <td class="text-center sticky right-0 bg-white group-hover:bg-slate-50 border-l">
-                        <button onclick="startEdit(${v.id})" class="text-blue-600 font-bold text-xs mr-2">编辑</button>
-                        <button onclick="delVideo(${v.id})" class="text-red-400 text-xs">删</button>
+                        <button onclick="startEdit(${v.id})" class="text-blue-600 font-bold text-xs mr-2 hover:underline">编辑</button>
+                        <button onclick="delVideo(${v.id})" class="text-red-400 text-xs hover:text-red-600">删</button>
                     </td>
                 </tr>`;
             }).join('');
         }
 
-        // --- 多选交互逻辑 (点击弹出菜单) ---
+        // --- 多选交互 ---
         function openMulti(input, type) {
             const menu = document.getElementById('multi-menu');
             const rect = input.getBoundingClientRect();
             const opts = globalOptions[type] || [];
             const current = input.value.split(/[,，]/).map(s => s.trim());
             
-            // 生成复选框列表
             menu.innerHTML = opts.map(o => {
                 const isChk = current.includes(o);
                 return `<div class="multi-option" onclick="toggleOption('${input.id}', '${o}')">
@@ -318,7 +355,6 @@
                 </div>`;
             }).join('');
             
-            // 定位
             menu.style.top = (rect.bottom + window.scrollY) + 'px';
             menu.style.left = (rect.left + window.scrollX) + 'px';
             menu.classList.add('show');
@@ -327,39 +363,13 @@
         function toggleOption(inputId, val) {
             const input = document.getElementById(inputId);
             let vals = input.value.split(/[,，]/).map(s => s.trim()).filter(s => s);
-            
             if(vals.includes(val)) vals = vals.filter(v => v !== val);
             else vals.push(val);
-            
             input.value = vals.join(', ');
-            openMulti(input, inputId.includes('host') ? 'hosts' : 'platforms'); // 重新渲染保持状态
+            openMulti(input, inputId.includes('host') ? 'hosts' : 'platforms');
         }
 
-        // --- 新增图片逻辑 ---
-        async function uploadAddFile(file) {
-            const fd = new FormData(); fd.append('file', file);
-            const res = await fetch('/api/upload', {method:'POST', body:fd});
-            const d = await res.json();
-            document.getElementById('add-preview').src = d.url;
-            document.getElementById('add-preview').classList.remove('hidden');
-            document.getElementById('add-img-val').value = d.url;
-        }
-        function handleAddDrop(e) { e.preventDefault(); if(e.dataTransfer.files[0]) uploadAddFile(e.dataTransfer.files[0]); }
-
-        // --- 表格图片逻辑 ---
-        async function uploadRowImg(file, id) {
-            const fd = new FormData(); fd.append('file', file);
-            const res = await fetch('/api/upload', {method:'POST', body:fd});
-            const d = await res.json();
-            const row = globalData.find(v => v.id === id);
-            const sfd = new FormData(); sfd.append('id', id); sfd.append('image_url', d.url); sfd.append('product_id', row.product_id);
-            await fetch('/api/video/save', {method:'POST', body:sfd});
-            loadData();
-        }
-        function handleRowDrop(e, id) { e.preventDefault(); if(e.dataTransfer.files[0]) uploadRowImg(e.dataTransfer.files[0], id); }
-        function handleRowPaste(e, id) { e.stopPropagation(); if(e.clipboardData.files[0]) uploadRowImg(e.clipboardData.files[0], id); }
-
-        // --- 编辑保存 ---
+        // --- 编辑逻辑 ---
         function startEdit(id) { editingId = id; renderTable(globalData); }
         function cancelEdit() { editingId = null; renderTable(globalData); }
         async function saveRow(id) {
@@ -372,6 +382,29 @@
             await fetch('/api/video/save', {method:'POST', body:fd});
             editingId = null; loadData(); updateStats();
         }
+
+        // --- 图片交互 ---
+        async function uploadAddFile(file) {
+            const fd = new FormData(); fd.append('file', file);
+            const res = await fetch('/api/upload', {method:'POST', body:fd});
+            const d = await res.json();
+            document.getElementById('add-preview').src = d.url;
+            document.getElementById('add-preview').classList.remove('hidden');
+            document.getElementById('add-img-val').value = d.url;
+        }
+        function handleAddDrop(e) { e.preventDefault(); if(e.dataTransfer.files[0]) uploadAddFile(e.dataTransfer.files[0]); }
+        
+        async function uploadRowImg(file, id) {
+            const fd = new FormData(); fd.append('file', file);
+            const res = await fetch('/api/upload', {method:'POST', body:fd});
+            const d = await res.json();
+            const row = globalData.find(v => v.id === id);
+            const sfd = new FormData(); sfd.append('id', id); sfd.append('image_url', d.url); sfd.append('product_id', row.product_id);
+            await fetch('/api/video/save', {method:'POST', body:sfd});
+            loadData();
+        }
+        function handleRowDrop(e, id) { e.preventDefault(); if(e.dataTransfer.files[0]) uploadRowImg(e.dataTransfer.files[0], id); }
+        function handleRowPaste(e, id) { e.stopPropagation(); if(e.clipboardData.files[0]) uploadRowImg(e.clipboardData.files[0], id); }
 
         // --- 杂项 ---
         function toggleFilters() { document.getElementById('filter-panel').classList.toggle('open'); }
@@ -389,7 +422,19 @@
             await fetch('/api/video/save', {method:'POST', body:fd});
             closeModal('add-modal'); loadData(1); updateStats();
         };
-        async function delVideo(id) { if(confirm('删?')) { await fetch(`/api/video/${id}`, {method:'DELETE'}); loadData(); updateStats(); }}
+        
+        // 导入带进度条
+        function openImport() { document.getElementById('import-modal').classList.add('active'); }
+        async function startImport() {
+            const bar = document.getElementById('prog-bar'); const val = document.getElementById('prog-val');
+            bar.style.display = 'block'; val.style.width = '20%';
+            setTimeout(() => val.style.width = '80%', 500); // 模拟进度
+            await fetch('/api/import/local', {method:'POST'});
+            val.style.width = '100%';
+            setTimeout(() => { alert('任务已启动'); closeModal('import-modal'); bar.style.display='none'; width='0%'; }, 500);
+        }
+        
+        async function delVideo(id) { if(confirm('删?')) { await fetch(`/api/video/${id}`, {method:'DELETE'}); loadData(); updateStats(); } }
         async function updateStats() { try{const r=await fetch('/api/stats');const d=await r.json();document.getElementById('st-total').innerText=d.total;document.getElementById('st-pending').innerText=d.pending;if(d.host!=='暂无') document.getElementById('st-host').innerText=d.host;}catch{} }
     </script>
 </body>
