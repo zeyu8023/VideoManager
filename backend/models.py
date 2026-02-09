@@ -5,8 +5,8 @@ from typing import Optional
 class Video(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     product_id: str = Field(index=True)
-    title: str
-    image_url: str
+    title: str = Field(default="")
+    image_url: str = Field(default="")
     category: Optional[str] = None
     finish_time: Optional[str] = None
     video_type: Optional[str] = None

@@ -5,33 +5,15 @@ import uuid
 from fastapi import FastAPI, UploadFile, BackgroundTasks, Form, HTTPException
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
-from sqlmodel import Session, create_engine, SQLModel, select, col, or_, Field
+from sqlmodel import Session, create_engine, SQLModel, select, col, or_
 from sqlalchemy import func
 from typing import Optional
 
-# 导入处理逻辑
+# 关键修改：从 models 导入 Video，而不是在这里定义
+from .models import Video, AppSettings
 from .processor import process_excel_background
 
-# === 模型定义 ===
-class Video(SQLModel, table=True):
-    id: Optional[int] = Field(default=None, primary_key=True)
-    product_id: str = Field(index=True)
-    title: str = Field(default="")
-    image_url: str = Field(default="")
-    category: Optional[str] = None
-    finish_time: Optional[str] = None
-    video_type: Optional[str] = None
-    host: Optional[str] = Field(default=None, index=True)
-    status: Optional[str] = Field(default=None, index=True)
-    platform: Optional[str] = None
-    publish_time: Optional[str] = None
-    remark: Optional[str] = None
-
-class AppSettings(SQLModel, table=True):
-    key: str = Field(primary_key=True)
-    value: str
-
-main_app = FastAPI(title="VideoHub Pro Ultimate")
+main_app = FastAPI(title="VideoHub Pro Final")
 engine = create_engine("sqlite:///data/inventory.db")
 
 @main_app.on_event("startup")
@@ -130,7 +112,7 @@ def list_videos(
 
         return {"items": results, "total": total, "page": page, "size": size, "total_pages": math.ceil(total / size)}
 
-# === 关键修复：允许字段为空 ===
+# === 保存接口 (支持局部更新) ===
 @main_app.post("/api/video/save")
 async def save_video(
     id: Optional[int] = Form(None),
@@ -151,12 +133,14 @@ async def save_video(
             video = session.get(Video, id)
             if not video: raise HTTPException(404, "视频不存在")
         else:
-            # 新增时，必须有 product_id (虽然参数是Optional，但业务逻辑需要)
-            if not product_id: product_id = "未命名"
-            if not title: title = "新视频"
-            video = Video(product_id=product_id, title=title, image_url="/assets/default.png")
+            # 新增时给默认值
+            video = Video(
+                product_id=product_id or "未命名", 
+                title=title or "新视频", 
+                image_url="/assets/default.png"
+            )
 
-        # 逐个更新字段，只有当参数不为 None 时才更新 (image_url除外，空字符串也是一种状态)
+        # 仅更新不为 None 的字段
         if product_id is not None: video.product_id = product_id
         if title is not None: video.title = title
         if host is not None: video.host = host
@@ -168,8 +152,8 @@ async def save_video(
         if publish_time is not None: video.publish_time = publish_time
         if remark is not None: video.remark = remark
         
-        # 图片逻辑：如果传了有效 URL，则更新
-        if image_url and image_url != "nan" and image_url != "undefined": 
+        # 图片逻辑：有效 URL 才更新
+        if image_url and image_url not in ["nan", "undefined", "null"]: 
             video.image_url = image_url
             
         session.add(video)
