@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>VideoHub</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-50 p-8">
+    <div class="max-w-5xl mx-auto">
+        <div class="flex justify-between mb-8">
+            <h1 class="text-2xl font-bold">🎬 VideoHub | zeyu8023</h1>
+            <input type="file" id="up" class="hidden" onchange="upload()">
+            <button onclick="document.getElementById('up').click()" class="bg-blue-600 text-white px-4 py-2 rounded">导入 400M 表格</button>
+        </div>
+        <div id="grid" class="grid grid-cols-4 gap-4"></div>
+    </div>
+    <script>
+        async function load() {
+            const res = await fetch('/api/videos');
+            const data = await res.json();
+            document.getElementById('grid').innerHTML = data.map(v => `
+                <div class="bg-white p-2 rounded shadow">
+                    <img src="${v.image_url}" class="w-full h-32 object-cover mb-2">
+                    <div class="text-sm font-bold">${v.product_id}</div>
+                    <div class="text-xs text-slate-500">${v.status} | ${v.host}</div>
+                </div>
+            `).join('');
+        }
+        async function upload() {
+            const file = document.getElementById('up').files[0];
+            const fd = new FormData(); fd.append('file', file);
+            await fetch('/api/import', {method:'POST', body:fd});
+            alert('上传成功，后台处理中...');
+        }
+        load();
+    </script>
+</body>
+</html>

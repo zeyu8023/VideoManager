@@ -1,0 +1,12 @@
+version: '3.8'
+services:
+  video-manager:
+    image: your_dockerhub_username/video-manager:latest
+    container_name: video-inventory
+    ports:
+      - "10309:10309"
+    volumes:
+      - ./data:/app/data
+      - ./assets:/app/assets
+      - ./temp_uploads:/app/temp_uploads
+    restart: always
