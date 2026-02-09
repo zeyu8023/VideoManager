@@ -3,265 +3,254 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>VideoHub V10</title>
+    <title>VideoHub V11.0</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/echarts/5.4.3/echarts.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'Inter', 'Noto Sans SC', sans-serif; background: #f1f5f9; color: #334155; }
+        body { font-family: 'Inter', 'Noto Sans SC', sans-serif; background: #f8fafc; color: #1e293b; }
         
-        /* 侧边栏 */
-        .sidebar { width: 240px; background: #1e293b; color: #94a3b8; flex-shrink: 0; transition: width 0.2s; }
-        .sidebar-item { padding: 12px 20px; cursor: pointer; display: flex; align-items: center; gap: 10px; font-weight: 500; transition: all 0.2s; border-left: 3px solid transparent; }
-        .sidebar-item:hover { background: #334155; color: white; }
-        .sidebar-item.active { background: #334155; color: white; border-left-color: #3b82f6; }
+        /* 布局容器 */
+        .container-fluid { max-width: 100%; padding: 0 16px; }
         
-        /* 移动端侧边栏适配 */
-        @media (max-width: 768px) {
-            .sidebar { width: 60px; }
-            .sidebar-text { display: none; }
-            .sidebar-title { display: none; }
-            .sidebar-logo { justify-content: center; }
-            .sidebar-item { justify-content: center; padding: 16px 0; }
-        }
-
-        /* 表格样式 */
-        .table-container { width: 100%; overflow-x: auto; background: white; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-        table { width: 100%; border-collapse: collapse; min-width: 1400px; }
-        th { font-size: 14px; font-weight: 700; color: #475569; padding: 16px 12px; background: #f8fafc; border-bottom: 2px solid #e2e8f0; text-align: left; }
-        td { padding: 12px; border-bottom: 1px solid #f1f5f9; font-size: 14px; vertical-align: middle; }
+        /* 导航 Tab */
+        .nav-tab { padding: 8px 16px; font-weight: 600; color: #64748b; cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.2s; }
+        .nav-tab.active { color: #2563eb; border-bottom-color: #2563eb; }
+        
+        /* 表格优化 */
+        .table-wrap { overflow-x: auto; min-height: 500px; padding-bottom: 80px; }
+        table { width: 100%; min-width: 1400px; border-collapse: collapse; }
+        th { font-size: 14px; font-weight: 700; color: #475569; padding: 12px; background: #f1f5f9; border-bottom: 2px solid #e2e8f0; text-align: left; white-space: nowrap; }
+        td { padding: 8px 12px; border-bottom: 1px solid #f1f5f9; font-size: 14px; vertical-align: middle; }
         tr:hover td { background: #f8fafc; }
 
         /* 行内编辑 */
-        .table-input { width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 14px; outline: none; background: white; }
-        .table-input:focus { border-color: #3b82f6; box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1); }
+        .t-input { width: 100%; padding: 6px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 14px; outline: none; background: white; transition: border 0.2s; }
+        .t-input:focus { border-color: #3b82f6; box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1); }
         .editing { background: #eff6ff !important; }
-        .new-row { background: #f0fdf4 !important; } /* 新增行高亮 */
-
-        /* 多选菜单 */
-        .multi-menu { position: absolute; z-index: 50; background: white; border: 1px solid #e2e8f0; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); border-radius: 8px; width: 200px; max-height: 240px; overflow-y: auto; display: none; }
-        .multi-menu.show { display: block; }
-        .multi-option { display: flex; items-center; gap: 8px; padding: 8px; cursor: pointer; font-size: 13px; }
-        .multi-option:hover { background: #f1f5f9; }
+        .new-row { background: #f0fdf4 !important; animation: fadeIn 0.3s; }
 
         /* 筛选面板 */
-        #filter-panel { transition: max-height 0.3s ease-out; overflow: hidden; max-height: 0; background: white; border-bottom: 1px solid #e2e8f0; }
+        #filter-panel { transition: max-height 0.3s ease; overflow: hidden; max-height: 0; background: white; border-bottom: 1px solid #e2e8f0; }
         #filter-panel.open { max-height: 600px; }
 
-        /* 标签 */
-        .pill { padding: 4px 10px; border-radius: 6px; font-size: 12px; font-weight: 600; display: inline-block; margin-right: 4px; border: 1px solid transparent; }
-        
         /* 统计图表 */
-        .chart-card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+        .chart-box { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); border: 1px solid #e2e8f0; height: 360px; }
+
+        /* 标签 & 图片 */
+        .pill { padding: 2px 8px; border-radius: 6px; font-size: 12px; font-weight: 600; display: inline-block; margin-right: 4px; border: 1px solid transparent; }
+        .img-cell { width: 44px; height: 44px; border-radius: 6px; border: 1px solid #e2e8f0; background: white; overflow: hidden; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+        .img-cell:hover::after { content:'+'; position:absolute; color:white; font-weight:bold; background:rgba(0,0,0,0.4); width:44px; height:44px; display:flex; align-items:center; justify-content:center; }
+
+        /* 弹窗 */
+        .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 50; opacity: 0; pointer-events: none; transition: opacity 0.2s; }
+        .modal.active { opacity: 1; pointer-events: auto; }
+        
+        /* 多选菜单 */
+        .multi-pop { position: absolute; background: white; border: 1px solid #cbd5e1; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); border-radius: 6px; width: 200px; max-height: 200px; overflow-y: auto; z-index: 40; display: none; }
+        .multi-pop.show { display: block; }
+        .multi-opt { padding: 8px; cursor: pointer; display: flex; align-items: center; gap: 8px; font-size: 13px; }
+        .multi-opt:hover { background: #f1f5f9; }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
     </style>
 </head>
-<body class="flex h-screen overflow-hidden">
+<body class="flex flex-col h-screen overflow-hidden">
 
-    <aside class="sidebar flex flex-col">
-        <div class="h-16 flex items-center px-6 sidebar-logo gap-3">
-            <div class="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white font-bold shrink-0">V</div>
-            <h1 class="text-lg font-bold text-white sidebar-title">VideoHub</h1>
+    <header class="h-16 bg-white border-b border-slate-200 flex justify-between items-center px-6 shrink-0 z-40">
+        <div class="flex items-center gap-8">
+            <div class="flex items-center gap-2">
+                <div class="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white font-bold text-xl">V</div>
+                <h1 class="text-xl font-bold text-slate-800">VideoHub <span class="text-xs text-slate-400 font-normal">V11.0</span></h1>
+            </div>
+            <div class="flex gap-4 ml-4">
+                <div class="nav-tab active" onclick="switchTab('assets', this)">资产管理</div>
+                <div class="nav-tab" onclick="switchTab('report', this)">数据报表</div>
+            </div>
         </div>
-        <nav class="flex-1 py-4 space-y-1">
-            <div class="sidebar-item active" onclick="switchView('assets', this)">
-                <span class="text-xl">📦</span> <span class="sidebar-text">资产管理</span>
-            </div>
-            <div class="sidebar-item" onclick="switchView('stats', this)">
-                <span class="text-xl">📊</span> <span class="sidebar-text">数据统计</span>
-            </div>
-        </nav>
-        <div class="p-4 border-t border-slate-700 text-xs text-slate-500 text-center sidebar-text">V10.0 Pro</div>
-    </aside>
-
-    <main class="flex-1 flex flex-col min-w-0 bg-slate-50 relative">
         
-        <header class="h-16 bg-white border-b border-slate-200 flex justify-between items-center px-6 shrink-0 z-30">
-            <div class="flex items-center gap-4 w-full max-w-2xl">
-                <h2 class="text-lg font-bold text-slate-800" id="page-title">资产库</h2>
-                <div class="relative flex-1 max-w-md hidden md:block">
-                    <svg class="absolute left-3 top-2.5 w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
-                    <input id="global-search" onkeydown="if(event.key==='Enter') loadData(1)" placeholder="全局搜索: 编号 / 标题 / 备注" class="pl-10 pr-4 py-2 w-full bg-slate-100 border-transparent rounded-lg text-sm focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none transition-all">
+        <div class="flex items-center gap-3">
+            <div class="relative hidden md:block">
+                <input id="g-search" onkeydown="if(event.key==='Enter') loadData(1)" placeholder="全局搜索..." class="pl-3 pr-3 py-1.5 w-64 bg-slate-100 border-none rounded text-sm focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none">
+            </div>
+            <button onclick="toggleFilters()" class="text-slate-500 hover:text-blue-600 p-2" title="高级筛选"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"></path></svg></button>
+            <button onclick="openSettings()" class="text-slate-500 hover:text-blue-600 p-2" title="配置"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg></button>
+        </div>
+    </header>
+
+    <div id="view-assets" class="flex-1 flex flex-col overflow-hidden">
+        
+        <div class="bg-white border-b border-slate-200 px-6 py-3 flex gap-6 shrink-0 overflow-x-auto">
+            <div class="bg-blue-50 px-4 py-2 rounded-lg border border-blue-100 flex items-center gap-3 min-w-[160px]">
+                <div class="text-2xl">📦</div>
+                <div><div class="text-xs text-blue-400 font-bold uppercase">总资产</div><div class="text-xl font-black text-slate-800" id="st-total">-</div></div>
+            </div>
+            <div class="bg-orange-50 px-4 py-2 rounded-lg border border-orange-100 flex items-center gap-3 min-w-[160px]">
+                <div class="text-2xl">🔥</div>
+                <div><div class="text-xs text-orange-400 font-bold uppercase">待发布</div><div class="text-xl font-black text-slate-800" id="st-pending">-</div></div>
+            </div>
+        </div>
+
+        <div id="filter-panel" class="shrink-0 px-6">
+            <div class="py-4 grid grid-cols-2 md:grid-cols-6 gap-4">
+                <div><label class="text-xs font-bold text-slate-400 block mb-1">产品编号</label><input id="s-pid" list="dl-pids" class="t-input" placeholder="输入..."></div>
+                <div><label class="text-xs font-bold text-slate-400 block mb-1">视频标题</label><input id="s-title" class="t-input" placeholder="输入..."></div>
+                <div><label class="text-xs font-bold text-slate-400 block mb-1">类型</label><select id="s-cat" class="t-input"></select></div>
+                <div><label class="text-xs font-bold text-slate-400 block mb-1">视频类型</label><select id="s-type" class="t-input"></select></div>
+                <div><label class="text-xs font-bold text-slate-400 block mb-1">主播</label><select id="s-host" class="t-input"></select></div>
+                <div><label class="text-xs font-bold text-slate-400 block mb-1">状态</label><select id="s-status" class="t-input"></select></div>
+                <div class="col-span-2"><label class="text-xs font-bold text-slate-400 block mb-1">发布时间</label><div class="flex gap-2"><input type="date" id="s-pub-start" class="t-input"><input type="date" id="s-pub-end" class="t-input"></div></div>
+                <div class="col-span-2 flex items-end gap-2">
+                    <button onclick="loadData(1)" class="bg-slate-800 text-white text-sm font-bold py-1.5 px-4 rounded w-full">筛选</button>
+                    <button onclick="resetFilters()" class="bg-white border text-slate-600 text-sm font-bold py-1.5 px-4 rounded">重置</button>
                 </div>
             </div>
+        </div>
+
+        <div class="px-6 py-2 bg-slate-50 flex justify-between items-center shrink-0 border-b border-slate-200">
+            <span class="text-xs text-slate-500" id="page-info">共 0 条</span>
             <div class="flex gap-2">
-                <button onclick="toggleFilters()" class="text-slate-500 hover:text-blue-600 p-2 rounded hover:bg-slate-100" title="筛选"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"></path></svg></button>
-                <button onclick="openSettings()" class="text-slate-500 hover:text-blue-600 p-2 rounded hover:bg-slate-100" title="配置"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg></button>
-            </div>
-        </header>
-
-        <div id="view-assets" class="flex-1 flex flex-col overflow-hidden h-full">
-            
-            <div id="filter-panel" class="shrink-0 px-6">
-                <div class="py-5 grid grid-cols-2 md:grid-cols-6 gap-4">
-                    <div><label class="text-xs font-bold text-slate-500 mb-1 block">编号</label><input id="s-pid" list="dl-pids" class="table-input"></div>
-                    <div><label class="text-xs font-bold text-slate-500 mb-1 block">标题</label><input id="s-title" class="table-input"></div>
-                    <div><label class="text-xs font-bold text-slate-500 mb-1 block">类型</label><select id="s-cat" class="table-input"></select></div>
-                    <div><label class="text-xs font-bold text-slate-500 mb-1 block">主播</label><select id="s-host" class="table-input"></select></div>
-                    <div><label class="text-xs font-bold text-slate-500 mb-1 block">状态</label><select id="s-status" class="table-input"></select></div>
-                    <div><label class="text-xs font-bold text-slate-500 mb-1 block">平台</label><select id="s-plat" class="table-input"></select></div>
-                    <div class="col-span-6 flex justify-end gap-2 border-t pt-3 mt-1">
-                        <button onclick="resetFilters()" class="px-4 py-2 bg-white border rounded text-sm text-slate-600">重置</button>
-                        <button onclick="loadData(1)" class="px-6 py-2 bg-slate-800 text-white rounded text-sm font-bold">查询</button>
-                    </div>
-                </div>
-            </div>
-
-            <div class="px-6 py-4 flex justify-between items-center shrink-0">
-                <div class="text-sm text-slate-500">共 <b id="total-count" class="text-slate-900">0</b> 条数据</div>
-                <div class="flex gap-3">
-                    <button onclick="openImport()" class="text-blue-600 text-sm hover:underline font-bold">批量导入</button>
-                    <button onclick="addNewRow()" class="bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold px-4 py-2 rounded-lg shadow flex items-center gap-1">
-                        <span>+</span> 新增一行
-                    </button>
-                </div>
-            </div>
-
-            <div class="flex-1 overflow-hidden relative w-full px-6 pb-6">
-                <div class="absolute inset-0 table-container">
-                    <table class="w-full text-left">
-                        <thead class="sticky top-0 z-20 shadow-sm">
-                            <tr>
-                                <th class="w-14 text-center">图</th>
-                                <th onclick="sortBy('product_id')" class="w-24">编号 ↕</th>
-                                <th onclick="sortBy('title')" style="width: 240px">视频标题 ↕</th>
-                                <th onclick="sortBy('category')" class="w-24">类型 ↕</th>
-                                <th onclick="sortBy('finish_time')" class="w-28">完成时间 ↕</th>
-                                <th onclick="sortBy('video_type')" class="w-24">视类 ↕</th>
-                                <th onclick="sortBy('host')" class="w-32">主播 ↕</th>
-                                <th onclick="sortBy('status')" class="w-24 text-center">状态 ↕</th>
-                                <th onclick="sortBy('platform')" class="w-32">平台 ↕</th>
-                                <th onclick="sortBy('publish_time')" class="w-32">发布时间 ↕</th>
-                                <th onclick="sortBy('remark')" class="w-32">备注 ↕</th>
-                                <th class="w-20 text-center sticky right-0 bg-slate-50 border-l">操作</th>
-                            </tr>
-                        </thead>
-                        <tbody id="table-body"></tbody>
-                    </table>
-                </div>
-            </div>
-            
-            <div class="h-12 bg-white border-t border-slate-200 px-6 flex justify-end items-center shrink-0 gap-2">
-                <button onclick="changePage(-1)" id="btn-prev" class="px-3 py-1 bg-slate-100 rounded disabled:opacity-50 text-sm">◀</button>
-                <span id="page-info" class="text-sm font-mono">1/1</span>
-                <button onclick="changePage(1)" id="btn-next" class="px-3 py-1 bg-slate-100 rounded disabled:opacity-50 text-sm">▶</button>
+                <button onclick="openImport()" class="text-blue-600 text-sm font-bold hover:underline px-2">批量导入</button>
+                <button onclick="addNewRow()" class="bg-emerald-600 text-white text-sm font-bold px-3 py-1.5 rounded shadow hover:bg-emerald-700 flex items-center gap-1"><span>+</span> 新增一行</button>
             </div>
         </div>
 
-        <div id="view-stats" class="hidden flex-1 overflow-y-auto p-6">
-            <div class="flex justify-between items-center mb-6">
-                <h2 class="text-xl font-bold text-slate-800">数据驾驶舱</h2>
-                <div class="flex bg-white rounded-lg border border-slate-200 p-1">
-                    <button onclick="loadReport('day')" class="px-3 py-1 text-sm rounded hover:bg-slate-50 active-dim">按日</button>
-                    <button onclick="loadReport('week')" class="px-3 py-1 text-sm rounded hover:bg-slate-50 active-dim">按周</button>
-                    <button onclick="loadReport('month')" class="px-3 py-1 text-sm rounded bg-blue-50 text-blue-600 font-bold active-dim">按月</button>
-                </div>
+        <div class="flex-1 overflow-hidden relative w-full bg-white">
+            <div class="absolute inset-0 table-wrap">
+                <table class="w-full text-left">
+                    <thead class="sticky top-0 z-20 shadow-sm">
+                        <tr>
+                            <th class="w-16 text-center">图</th>
+                            <th class="w-24">编号</th>
+                            <th style="width: 260px">视频标题</th>
+                            <th class="w-24">类型</th>
+                            <th class="w-28">完成时间</th>
+                            <th class="w-24">视类</th>
+                            <th style="width: 140px">主播(多选)</th>
+                            <th class="w-24 text-center">状态</th>
+                            <th style="width: 140px">平台(多选)</th>
+                            <th class="w-32">发布时间</th>
+                            <th class="w-32">备注</th>
+                            <th class="w-20 text-center sticky right-0 bg-slate-50 border-l">操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="table-body"></tbody>
+                </table>
             </div>
+        </div>
+        
+        <div class="h-10 bg-white border-t border-slate-200 px-6 flex justify-end items-center shrink-0 gap-2">
+            <button id="btn-prev" onclick="changePage(-1)" class="px-2 py-1 bg-slate-100 rounded text-xs disabled:opacity-50">◀</button>
+            <button id="btn-next" onclick="changePage(1)" class="px-2 py-1 bg-slate-100 rounded text-xs disabled:opacity-50">▶</button>
+        </div>
+    </div>
 
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <div class="chart-card col-span-1 lg:col-span-2">
-                    <h3 class="font-bold text-slate-600 mb-4">入库 vs 发布 趋势</h3>
-                    <div id="chart-trend" style="height: 350px;"></div>
+    <div id="view-report" class="flex-1 overflow-y-auto p-6 hidden bg-slate-50">
+        <div class="flex justify-between items-center mb-6">
+            <h2 class="text-xl font-bold text-slate-800">运营数据统计</h2>
+            <div class="flex bg-white rounded border border-slate-200 p-1">
+                <button onclick="loadReport('day')" class="px-4 py-1 text-sm rounded hover:bg-slate-100 r-btn">按日</button>
+                <button onclick="loadReport('week')" class="px-4 py-1 text-sm rounded hover:bg-slate-100 r-btn">按周</button>
+                <button onclick="loadReport('month')" class="px-4 py-1 text-sm rounded bg-blue-50 text-blue-600 font-bold r-btn">按月</button>
+            </div>
+        </div>
+        
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div class="chart-box col-span-1 lg:col-span-2">
+                <h3 class="font-bold text-slate-600 mb-4">入库 vs 发布 趋势对比</h3>
+                <div id="chart-trend" style="height: 300px;"></div>
+            </div>
+            <div class="chart-box">
+                <h3 class="font-bold text-slate-600 mb-4">各平台发布占比</h3>
+                <div id="chart-plat" style="height: 300px;"></div>
+            </div>
+            <div class="chart-box flex flex-col justify-center gap-4">
+                <div class="bg-blue-50 p-6 rounded-xl border border-blue-100 text-center">
+                    <div class="text-sm text-blue-500 font-bold">本期入库总数</div>
+                    <div class="text-4xl font-black text-blue-700 mt-2" id="cnt-in">-</div>
                 </div>
-                <div class="chart-card">
-                    <h3 class="font-bold text-slate-600 mb-4">平台发布占比</h3>
-                    <div id="chart-plat" style="height: 300px;"></div>
-                </div>
-                <div class="chart-card flex flex-col justify-center gap-4">
-                    <div class="bg-blue-50 p-4 rounded-xl">
-                        <div class="text-xs text-blue-500 font-bold uppercase">本期入库</div>
-                        <div class="text-3xl font-black text-blue-700" id="stat-in">-</div>
-                    </div>
-                    <div class="bg-emerald-50 p-4 rounded-xl">
-                        <div class="text-xs text-emerald-500 font-bold uppercase">本期发布</div>
-                        <div class="text-3xl font-black text-emerald-700" id="stat-out">-</div>
-                    </div>
+                <div class="bg-emerald-50 p-6 rounded-xl border border-emerald-100 text-center">
+                    <div class="text-sm text-emerald-500 font-bold">本期发布总数</div>
+                    <div class="text-4xl font-black text-emerald-700 mt-2" id="cnt-out">-</div>
                 </div>
             </div>
         </div>
-
-    </main>
+    </div>
 
     <div id="preview-modal" class="modal bg-black/95" onclick="this.classList.remove('active')"><img id="big-img" src="" class="max-h-[90vh] max-w-[95vw] object-contain"></div>
-    <div id="multi-menu" class="multi-menu"></div>
-    <datalist id="dl-pids"></datalist><datalist id="dl-host"></datalist><datalist id="dl-plat"></datalist>
-
+    <div id="multi-pop" class="multi-pop"></div>
+    
     <div id="import-modal" class="modal">
-        <div class="bg-white rounded-xl w-[400px] p-8 text-center shadow-2xl">
+        <div class="bg-white rounded-xl w-[400px] p-8 text-center">
             <h3 class="font-bold text-xl mb-4">批量导入</h3>
-            <p class="text-sm text-slate-500 mb-6">请确认文件已在 NAS 的 temp_uploads 目录</p>
-            <div class="progress-bar mb-4" id="prog-bar"><div class="progress-val" id="prog-val"></div></div>
-            <button onclick="startImport()" class="w-full bg-slate-800 text-white py-3 rounded font-bold">开始扫描</button>
-            <button onclick="document.getElementById('import-modal').classList.remove('active')" class="mt-4 text-slate-400 text-xs">关闭</button>
+            <p class="text-sm text-slate-500 mb-6">请确认文件已在 NAS <code class="bg-slate-100 px-1">temp_uploads</code> 目录</p>
+            <button onclick="startImport()" class="w-full bg-slate-800 text-white py-2 rounded font-bold">开始扫描</button>
+            <button onclick="document.getElementById('import-modal').classList.remove('active')" class="mt-4 text-slate-400 text-xs">取消</button>
         </div>
     </div>
 
     <div id="settings-modal" class="modal">
-        <div class="bg-white rounded-xl w-[400px] p-6 shadow-2xl">
+        <div class="bg-white rounded-xl w-[400px] p-6">
             <h3 class="font-bold mb-4">全局配置</h3>
-            <textarea id="set-hosts" class="table-input h-20 mb-3" placeholder="主播..."></textarea>
-            <input id="set-cats" class="table-input mb-3" placeholder="类型...">
-            <input id="set-plats" class="table-input mb-3" placeholder="平台...">
-            <input id="set-types" class="table-input mb-4" placeholder="视频类型...">
+            <textarea id="set-hosts" class="t-input h-20 mb-3" placeholder="主播..."></textarea>
+            <input id="set-cats" class="t-input mb-3" placeholder="类型...">
+            <input id="set-types" class="t-input mb-3" placeholder="视频类型...">
+            <input id="set-plats" class="t-input mb-4" placeholder="平台...">
             <button onclick="saveSettings()" class="w-full bg-blue-600 text-white py-2 rounded font-bold">保存</button>
-            <button onclick="document.getElementById('settings-modal').classList.remove('active')" class="w-full mt-2 text-sm text-slate-400">关闭</button>
+            <button onclick="document.getElementById('settings-modal').classList.remove('active')" class="w-full mt-2 text-slate-400 text-sm">关闭</button>
         </div>
     </div>
 
-    <script>
-        let currPage = 1, totalPages = 1, currentSort = { col: 'id', order: 'desc' };
-        let globalOptions = {}, editingId = null, globalData = [];
-        let chartTrend, chartPlat;
+    <datalist id="dl-pids"></datalist><datalist id="dl-host"></datalist><datalist id="dl-plat"></datalist>
 
-        // 初始化
+    <script>
+        let currPage = 1, totalPages = 1, globalData = [], globalOptions = {}, editingId = null;
+        let charts = {};
+
         (async () => {
             await loadOptions();
             await loadData(1);
-            
-            // 绑定多选关闭
+            updateStats();
             document.addEventListener('click', e => {
-                if(!e.target.closest('.multi-menu') && !e.target.closest('.multi-trigger')) {
-                    document.getElementById('multi-menu').classList.remove('show');
-                }
+                if(!e.target.closest('.multi-pop') && !e.target.closest('.multi-trig')) 
+                    document.getElementById('multi-pop').classList.remove('show');
             });
         })();
 
         // --- 视图切换 ---
-        function switchView(view, btn) {
-            document.querySelectorAll('.sidebar-item').forEach(el => el.classList.remove('active'));
+        function switchTab(view, btn) {
+            document.querySelectorAll('.nav-tab').forEach(e => e.classList.remove('active'));
             btn.classList.add('active');
-            document.getElementById('view-assets').classList.add('hidden');
-            document.getElementById('view-stats').classList.add('hidden');
-            document.getElementById(`view-${view}`).classList.remove('hidden');
-            document.getElementById('page-title').innerText = view === 'assets' ? '资产库' : '数据统计';
-            
-            if(view === 'stats') loadReport('month'); // 默认按月加载
+            document.getElementById('view-assets').style.display = view==='assets'?'flex':'none';
+            document.getElementById('view-report').style.display = view==='report'?'block':'none';
+            if(view==='report') loadReport('day');
         }
 
         // --- 核心数据 ---
         async function loadOptions() {
-            const res = await fetch('/api/options');
-            globalOptions = await res.json();
-            // 填充筛选
+            const res = await fetch('/api/options'); globalOptions = await res.json();
             const fill = (id, list) => document.getElementById(id).innerHTML = `<option value="">全部</option>` + list.map(i=>`<option value="${i}">${i}</option>`).join('');
             fill('s-cat', globalOptions.categories); fill('s-host', globalOptions.hosts);
             fill('s-status', globalOptions.statuses); fill('s-plat', globalOptions.platforms);
-            // Datalist
+            fill('s-type', globalOptions.video_types); // 修复视频类型
+            
             const dl = (id, list) => document.getElementById(id).innerHTML = list.map(i=>`<option value="${i}">`).join('');
             dl('dl-pids', globalOptions.product_ids); dl('dl-host', globalOptions.hosts); dl('dl-plat', globalOptions.platforms);
         }
 
         async function loadData(p) {
             currPage = p || currPage;
-            // 收集参数略 (同V9)... 这里直接复用逻辑
             const params = new URLSearchParams({
-                page: currPage, size: 100, sort_by: currentSort.col, order: currentSort.order,
-                keyword: document.getElementById('global-search').value,
+                page: currPage, size: 100,
+                keyword: document.getElementById('g-search').value,
                 product_id: document.getElementById('s-pid').value,
                 title: document.getElementById('s-title').value,
+                category: document.getElementById('s-cat').value,
+                video_type: document.getElementById('s-type').value,
                 host: document.getElementById('s-host').value,
                 status: document.getElementById('s-status').value,
-                category: document.getElementById('s-cat').value,
-                platform: document.getElementById('s-plat').value
+                pub_start: document.getElementById('s-pub-start').value,
+                pub_end: document.getElementById('s-pub-end').value
             });
             const res = await fetch(`/api/videos?${params}`);
             const data = await res.json();
@@ -276,57 +265,48 @@
             renderTable(data.items);
         }
 
-        // --- 渲染表格 (真·行内新增) ---
+        // --- 行内编辑逻辑 ---
         function addNewRow() {
-            // 在数据最前面插一个空对象，ID='new'
-            const newRow = { id: 'new', product_id: '', title: '', isNew: true };
-            globalData.unshift(newRow);
+            globalData.unshift({ id: 'new', product_id: '', title: '', isNew: true });
             editingId = 'new';
             renderTable(globalData);
         }
 
         function renderTable(items) {
-            const tbody = document.getElementById('table-body');
-            tbody.innerHTML = items.map(v => {
+            document.getElementById('table-body').innerHTML = items.map(v => {
                 const isEdit = (v.id === editingId);
                 const cln = s => (s && s!=='nan' && s!=='None') ? s : '';
-                const img = (v.image_url && !v.image_url.includes('default')) ? v.image_url : '/assets/default.png';
+                const img = (v.image_url && !v.image_url.includes('default')) ? v.image_url : '';
 
                 if (isEdit) {
-                    const sel = (k, list) => `<select id="ed-${k}" class="table-input bg-blue-50">${list.map(o => `<option ${o===v[k]?'selected':''}>${o}</option>`).join('')}</select>`;
-                    const multi = (k, type) => `<input id="ed-${k}" class="table-input bg-blue-50 multi-trigger cursor-pointer" value="${cln(v[k])}" readonly onclick="openMulti(this, '${type}')" placeholder="点击选择">`;
+                    const sel = (k, list) => `<select id="ed-${k}" class="t-input">${list.map(o => `<option ${o===v[k]?'selected':''}>${o}</option>`).join('')}</select>`;
+                    const multi = (k, type) => `<input id="ed-${k}" class="t-input multi-trig cursor-pointer" value="${cln(v[k])}" readonly onclick="openMulti(this, '${type}')" placeholder="点击选择">`;
                     
                     return `
                     <tr class="editing ${v.isNew?'new-row':''}">
-                        <td class="p-2 text-center">
-                            <div class="img-zone mx-auto" onclick="document.getElementById('row-file-${v.id}').click()">
-                                <img src="${img}" id="prev-${v.id}" class="w-full h-full object-cover">
-                            </div>
-                            <input type="file" id="row-file-${v.id}" class="hidden" onchange="uploadRowFile(this, '${v.id}')">
-                            <input type="hidden" id="ed-img" value="${cln(v.image_url)}">
-                        </td>
-                        <td><input id="ed-pid" class="table-input" value="${cln(v.product_id)}" placeholder="编号"></td>
-                        <td><input id="ed-title" class="table-input font-bold" value="${cln(v.title)}" placeholder="标题"></td>
+                        <td class="p-2"><div class="img-cell mx-auto" onclick="document.getElementById('up-${v.id}').click()">${img?`<img src="${img}" class="w-full h-full object-cover">`:'+'}</div><input type="file" id="up-${v.id}" class="hidden" onchange="upImg(this,'${v.id}')"><input type="hidden" id="ed-img" value="${cln(v.image_url)}"></td>
+                        <td><input id="ed-pid" class="t-input" value="${cln(v.product_id)}"></td>
+                        <td><input id="ed-title" class="t-input font-bold" value="${cln(v.title)}"></td>
                         <td>${sel('cat', globalOptions.categories)}</td>
-                        <td><input id="ed-fin" type="date" class="table-input" value="${cln(v.finish_time)}"></td>
+                        <td><input id="ed-fin" type="date" class="t-input" value="${cln(v.finish_time)}"></td>
                         <td>${sel('type', globalOptions.video_types)}</td>
                         <td>${multi('host', 'hosts')}</td>
                         <td>${sel('status', globalOptions.statuses)}</td>
                         <td>${multi('plat', 'platforms')}</td>
-                        <td><input id="ed-pub" type="datetime-local" class="table-input" value="${cln(v.publish_time).replace(' ','T')}"></td>
-                        <td><input id="ed-rem" class="table-input" value="${cln(v.remark)}"></td>
+                        <td><input id="ed-pub" type="datetime-local" class="t-input" value="${cln(v.publish_time).replace(' ','T')}"></td>
+                        <td><input id="ed-rem" class="t-input" value="${cln(v.remark)}"></td>
                         <td class="text-center sticky right-0 bg-blue-50 border-l">
-                            <button onclick="saveRow('${v.id}')" class="text-white bg-blue-600 px-3 py-1 rounded text-xs font-bold shadow hover:bg-blue-700">保存</button>
-                            <button onclick="cancelEdit()" class="text-slate-400 text-xs ml-1 hover:text-slate-600">取消</button>
+                            <button onclick="saveRow('${v.id}')" class="text-white bg-blue-600 px-3 py-1 rounded text-xs font-bold shadow">保存</button>
+                            <button onclick="cancelEdit()" class="text-slate-400 text-xs ml-1">取消</button>
                         </td>
                     </tr>`;
                 }
                 
-                // 正常行 (代码略简化，保持V9风格)
+                // 正常行
                 return `<tr class="hover:bg-slate-50 border-b border-slate-100 last:border-0">
-                    <td class="p-2 text-center"><div class="w-10 h-10 rounded mx-auto bg-slate-200 overflow-hidden cursor-pointer" onclick="showBigImg('${img}')"><img src="${img}" class="w-full h-full object-cover"></div></td>
+                    <td class="p-2 text-center"><div class="w-10 h-10 rounded mx-auto bg-slate-100 overflow-hidden cursor-pointer" onclick="showBig('${img}')"><img src="${img||'/assets/default.png'}" class="w-full h-full object-cover"></div></td>
                     <td class="font-mono text-slate-500">${cln(v.product_id)}</td>
-                    <td class="font-bold text-slate-700 truncate" style="max-width: 240px" title="${cln(v.title)}">${cln(v.title)}</td>
+                    <td class="font-bold text-slate-700 truncate" style="max-width: 260px" title="${cln(v.title)}">${cln(v.title)}</td>
                     <td><span class="pill bg-slate-100 text-slate-600">${cln(v.category)}</span></td>
                     <td class="text-slate-400 text-xs font-mono">${cln(v.finish_time)}</td>
                     <td><span class="pill bg-slate-100 text-slate-600">${cln(v.video_type)}</span></td>
@@ -345,127 +325,107 @@
 
         // --- 逻辑函数 ---
         function startEdit(id) { editingId = id; renderTable(globalData); }
-        function cancelEdit() { editingId = null; loadData(); } // 重新加载清除新增行
+        function cancelEdit() { editingId = null; loadData(); }
         
         async function saveRow(id) {
             const fd = new FormData();
-            if (id !== 'new') fd.append('id', id); // 新增时不传ID或传空
-            
-            const ids = ['pid','title','cat','fin','type','host','status','plat','pub','rem'];
-            const keys = ['product_id','title','category','finish_time','video_type','host','status','platform','publish_time','remark'];
-            ids.forEach((eid, i) => fd.append(keys[i], document.getElementById('ed-'+eid).value.replace('T',' ')));
-            
-            // 图片单独处理
-            const imgVal = document.getElementById('ed-img').value;
-            if(imgVal) fd.append('image_url', imgVal);
-
+            if (id !== 'new') fd.append('id', id);
+            const map = {'pid':'product_id','title':'title','cat':'category','fin':'finish_time','type':'video_type','host':'host','status':'status','plat':'platform','pub':'publish_time','rem':'remark'};
+            for(let [eid, key] of Object.entries(map)) fd.append(key, document.getElementById('ed-'+eid).value.replace('T',' '));
+            fd.append('image_url', document.getElementById('ed-img').value);
             await fetch('/api/video/save', {method:'POST', body:fd});
-            editingId = null; loadData();
+            editingId = null; loadData(); updateStats();
         }
 
-        // 简易图片上传 (行内)
-        async function uploadRowFile(input, id) {
-            if(!input.files[0]) return;
+        async function upImg(input, id) {
             const fd = new FormData(); fd.append('file', input.files[0]);
             const res = await fetch('/api/upload', {method:'POST', body:fd});
             const d = await res.json();
-            document.getElementById(`prev-${id}`).src = d.url;
             document.getElementById('ed-img').value = d.url;
+            // 重新渲染该行保持图片显示
+            const row = globalData.find(v => v.id == id || v.id === 'new');
+            row.image_url = d.url;
+            renderTable(globalData);
         }
 
-        // --- 统计图表 (ECharts) ---
+        // --- 多选菜单 ---
+        function openMulti(input, type) {
+            const pop = document.getElementById('multi-pop');
+            const rect = input.getBoundingClientRect();
+            const opts = globalOptions[type] || [];
+            const curr = input.value.split(/[,，]/).map(s=>s.trim());
+            pop.innerHTML = opts.map(o => `<div class="multi-opt" onclick="togMulti('${input.id}', '${o}', '${type}')">
+                <span class="${curr.includes(o)?'text-blue-600 font-bold':'text-slate-300'}">✓</span> ${o}</div>`).join('');
+            pop.style.top = (rect.bottom + window.scrollY) + 'px';
+            pop.style.left = (rect.left + window.scrollX) + 'px';
+            pop.classList.add('show');
+        }
+        function togMulti(eid, val, type) {
+            const input = document.getElementById(eid);
+            let vals = input.value.split(/[,，]/).map(s=>s.trim()).filter(s=>s);
+            if(vals.includes(val)) vals = vals.filter(v=>v!==val); else vals.push(val);
+            input.value = vals.join(',');
+            openMulti(input, type); // 刷新
+        }
+
+        // --- 统计报表 ---
         async function loadReport(dim) {
-            // 按钮高亮处理
-            document.querySelectorAll('.active-dim').forEach(b => b.className = 'px-3 py-1 text-sm rounded hover:bg-slate-50');
-            event.target.className = 'px-3 py-1 text-sm rounded bg-blue-50 text-blue-600 font-bold active-dim';
-
             const res = await fetch(`/api/report?dim=${dim}`);
-            const data = await res.json();
+            const d = await res.json();
             
-            document.getElementById('stat-in').innerText = data.trend.in.reduce((a,b)=>a+b, 0);
-            document.getElementById('stat-out').innerText = data.trend.out.reduce((a,b)=>a+b, 0);
+            document.getElementById('cnt-in').innerText = d.series_in.reduce((a,b)=>a+b, 0);
+            document.getElementById('cnt-out').innerText = d.series_out.reduce((a,b)=>a+b, 0);
 
-            // 1. 趋势图
-            if(!chartTrend) chartTrend = echarts.init(document.getElementById('chart-trend'));
-            chartTrend.setOption({
+            // 趋势图
+            if(!charts.trend) charts.trend = echarts.init(document.getElementById('chart-trend'));
+            charts.trend.setOption({
                 tooltip: { trigger: 'axis' },
-                legend: { data: ['入库', '发布'] },
-                xAxis: { type: 'category', data: data.trend.dates },
+                legend: { data: ['入库', '发布'], bottom: 0 },
+                xAxis: { type: 'category', data: d.dates },
                 yAxis: { type: 'value' },
                 series: [
-                    { name: '入库', type: 'line', data: data.trend.in, smooth: true, itemStyle: {color:'#3b82f6'} },
-                    { name: '发布', type: 'bar', data: data.trend.out, itemStyle: {color:'#10b981'} }
+                    { name: '入库', type: 'line', data: d.series_in, smooth: true, itemStyle: {color:'#3b82f6'}, areaStyle: {opacity:0.1} },
+                    { name: '发布', type: 'line', data: d.series_out, smooth: true, itemStyle: {color:'#10b981'} }
                 ]
             });
 
-            // 2. 饼图
-            if(!chartPlat) chartPlat = echarts.init(document.getElementById('chart-plat'));
-            chartPlat.setOption({
+            // 饼图
+            if(!charts.plat) charts.plat = echarts.init(document.getElementById('chart-plat'));
+            charts.plat.setOption({
                 tooltip: { trigger: 'item' },
-                series: [{
-                    type: 'pie', radius: ['40%', '70%'],
-                    data: data.platform,
-                    itemStyle: { borderRadius: 5 }
-                }]
+                series: [{ type: 'bar', data: d.platforms.map(p=>p.value), label: {show:true} }],
+                xAxis: { type: 'category', data: d.platforms.map(p=>p.name) },
+                yAxis: { type: 'value' }
             });
-            
-            // 响应式重绘
-            window.onresize = () => { chartTrend.resize(); chartPlat.resize(); };
         }
 
-        // --- 其他工具函数 (多选/排序/弹窗) 保持不变 ---
-        function openMulti(input, type) { /* ...同V9... */ 
-            const menu = document.getElementById('multi-menu');
-            const rect = input.getBoundingClientRect();
-            const opts = globalOptions[type] || [];
-            const current = input.value.split(/[,，]/).map(s => s.trim());
-            menu.innerHTML = opts.map(o => {
-                const isChk = current.includes(o);
-                return `<div class="multi-option" onclick="toggleOption('${input.id}', '${o}')">
-                    <span class="${isChk?'text-blue-600':'text-slate-300'} font-bold w-4">${isChk?'✓':''}</span> ${o}
-                </div>`;
-            }).join('');
-            menu.style.top = (rect.bottom + window.scrollY) + 'px';
-            menu.style.left = (rect.left + window.scrollX) + 'px';
-            menu.classList.add('show');
-        }
-        function toggleOption(inputId, val) { /* ...同V9... */ 
-            const input = document.getElementById(inputId);
-            let vals = input.value.split(/[,，]/).map(s => s.trim()).filter(s => s);
-            if(vals.includes(val)) vals = vals.filter(v => v !== val); else vals.push(val);
-            input.value = vals.join(', ');
-            openMulti(input, inputId.includes('host')?'hosts':'platforms');
-        }
+        // --- 杂项 ---
         function toggleFilters() { document.getElementById('filter-panel').classList.toggle('open'); }
-        function showBigImg(src) { document.getElementById('big-img').src=src; document.getElementById('preview-modal').classList.add('active'); }
+        function showBig(src) { if(src) {document.getElementById('big-img').src=src; document.getElementById('preview-modal').classList.add('active');} }
+        function resetFilters() { document.querySelectorAll('#filter-panel input, #filter-panel select').forEach(e=>e.value=''); loadData(1); }
+        function changePage(d) { if(currPage+d>0 && currPage+d<=totalPages) loadData(currPage+d); }
+        async function delVideo(id) { if(confirm('删?')) { await fetch(`/api/video/${id}`, {method:'DELETE'}); loadData(); updateStats(); }}
+        async function updateStats() { try{const r=await fetch('/api/stats');const d=await r.json();document.getElementById('st-total').innerText=d.total;document.getElementById('st-pending').innerText=d.pending;}catch{} }
+        
+        // 导入
         function openImport() { document.getElementById('import-modal').classList.add('active'); }
-        function openSettings() { 
-            document.getElementById('settings-modal').classList.add('active'); 
+        async function startImport() { await fetch('/api/import/local', {method:'POST'}); alert('后台任务已启动'); document.getElementById('import-modal').classList.remove('active'); }
+        
+        // 配置
+        function openSettings() { document.getElementById('settings-modal').classList.add('active'); 
             document.getElementById('set-hosts').value = globalOptions.hosts.join(',');
             document.getElementById('set-cats').value = globalOptions.categories.join(',');
-            document.getElementById('set-plats').value = globalOptions.platforms.join(',');
             document.getElementById('set-types').value = globalOptions.video_types.join(',');
+            document.getElementById('set-plats').value = globalOptions.platforms.join(',');
         }
         async function saveSettings() {
-            const fd = new FormData();
-            const save = (k, v) => fetch('/api/settings', {method:'POST', body: new URLSearchParams({key:k, value:v})});
+            const save = (k,v) => fetch('/api/settings', {method:'POST', body:new URLSearchParams({key:k, value:v})});
             await save('hosts', document.getElementById('set-hosts').value);
-            await save('platforms', document.getElementById('set-plats').value);
             await save('categories', document.getElementById('set-cats').value);
             await save('video_types', document.getElementById('set-types').value);
+            await save('platforms', document.getElementById('set-plats').value);
             document.getElementById('settings-modal').classList.remove('active'); loadOptions();
         }
-        async function startImport() {
-            document.getElementById('prog-bar').style.display='block';
-            document.getElementById('prog-val').style.width='50%';
-            await fetch('/api/import/local', {method:'POST'});
-            document.getElementById('prog-val').style.width='100%';
-            setTimeout(() => { alert('任务已启动'); document.getElementById('import-modal').classList.remove('active'); }, 500);
-        }
-        function resetFilters() { document.querySelectorAll('#filter-panel input, #filter-panel select').forEach(e => e.value=''); loadData(1); }
-        function changePage(d) { if(currPage+d>0 && currPage+d<=totalPages) loadData(currPage+d); }
-        function sortBy(col) { currentSort.col = col; currentSort.order = currentSort.order === 'asc' ? 'desc' : 'asc'; loadData(1); }
-        async function delVideo(id) { if(confirm('删?')) { await fetch(`/api/video/${id}`, {method:'DELETE'}); loadData(); } }
     </script>
 </body>
 </html>

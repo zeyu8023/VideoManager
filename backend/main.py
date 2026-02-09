@@ -8,12 +8,12 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from sqlmodel import Session, create_engine, SQLModel, select, col, or_, desc, asc, text
 from sqlalchemy import func
-from typing import Optional, List
+from typing import Optional
 
 from .processor import process_excel_background
 from .models import Video, AppSettings
 
-main_app = FastAPI(title="VideoHub V10.0")
+main_app = FastAPI(title="VideoHub V11.0")
 engine = create_engine("sqlite:///data/inventory.db")
 
 @main_app.on_event("startup")
@@ -23,25 +23,25 @@ def on_startup():
     os.makedirs("temp_uploads", exist_ok=True)
     SQLModel.metadata.create_all(engine)
     
-    # === 智能数据库迁移 (防止旧版DB报错) ===
+    # === 数据库自动升级 & 默认值填充 ===
     with Session(engine) as session:
+        # 1. 检查并添加 created_at 字段
         try:
-            # 尝试查询 created_at，如果报错说明是旧表
             session.exec(text("SELECT created_at FROM video LIMIT 1"))
         except Exception:
-            print("正在升级数据库结构...")
-            # 手动添加列 (SQLite ALTER TABLE)
             session.exec(text("ALTER TABLE video ADD COLUMN created_at DATETIME"))
             session.commit()
+            # 给旧数据补全时间(防止统计图报错)
+            session.exec(text(f"UPDATE video SET created_at = '{datetime.datetime.now()}' WHERE created_at IS NULL"))
+            session.commit()
 
-    # 初始化配置
-    with Session(engine) as session:
+        # 2. 补全默认配置
         defaults = {
             "hosts": "小梨,VIVI,七七,杨总",
-            "statuses": "待发布,已发布,剪辑中,拍摄中",
-            "categories": "球服,球鞋,球拍,周边",
-            "platforms": "抖音,小红书,视频号",
-            "video_types": "产品展示,剧情,口播,Vlog"
+            "statuses": "待发布,已发布,剪辑中,拍摄中,脚本中",
+            "categories": "球服,球鞋,球拍,周边,配件",
+            "platforms": "抖音,小红书,视频号,B站",
+            "video_types": "产品展示,剧情,口播,Vlog,花絮"
         }
         for k, v in defaults.items():
             if not session.get(AppSettings, k):
@@ -54,72 +54,60 @@ main_app.mount("/assets", StaticFiles(directory="assets"), name="assets")
 async def read_index():
     return FileResponse(os.path.join("frontend", "index.html"))
 
-# === 统计报表接口 (新) ===
+# === 核心统计接口 (增强版) ===
 @main_app.get("/api/report")
 def get_report(dim: str = "day"): # dim: day, week, month
     with Session(engine) as session:
-        # 1. 平台分布 (饼图)
-        plat_data = []
-        plats = session.exec(select(Video.platform).where(Video.status == "已发布")).all()
-        # 简单的Python计数 (处理逗号分隔)
-        p_counts = {}
-        for p_str in plats:
-            if p_str:
-                for p in p_str.split(','): # 处理多选
-                    p = p.strip()
-                    if p: p_counts[p] = p_counts.get(p, 0) + 1
-        plat_data = [{"name": k, "value": v} for k, v in p_counts.items()]
-
-        # 2. 趋势图 (入库 vs 发布)
-        # 简化逻辑：按日期聚合。真实环境可能需要更复杂的SQL Group By
-        # 这里为了兼容性，取回数据在内存处理 (适用于 <10w条数据)
+        # 1. 获取所有数据
         videos = session.exec(select(Video)).all()
         
-        trend_map = {}
+        # 2. 初始化聚合容器
+        stats = {} # key: date_str, val: {in: 0, out: 0}
         
+        # 3. 辅助函数：根据维度格式化日期
+        def fmt_date(dt):
+            if not dt: return None
+            if isinstance(dt, str):
+                try: dt = datetime.datetime.strptime(dt[:10], "%Y-%m-%d")
+                except: return None
+            
+            if dim == 'day': return dt.strftime("%Y-%m-%d")
+            if dim == 'week': return dt.strftime("%Y-W%W")
+            if dim == 'month': return dt.strftime("%Y-%m")
+            return None
+
+        # 4. 遍历聚合
         for v in videos:
-            # 确定日期键
-            d_key = ""
-            date_ref = v.created_at if hasattr(v, 'created_at') and v.created_at else None
-            # 如果没有 created_at (旧数据)，用 finish_time 兜底，再不行忽略
-            if not date_ref and v.finish_time:
-                try: date_ref = datetime.datetime.strptime(v.finish_time, "%Y-%m-%d")
-                except: pass
+            # 统计入库 (created_at)
+            d_in = fmt_date(v.created_at)
+            if d_in:
+                if d_in not in stats: stats[d_in] = {"in": 0, "out": 0}
+                stats[d_in]["in"] += 1
             
-            if not date_ref: continue # 跳过无日期数据
-
-            if dim == 'day': d_key = date_ref.strftime("%Y-%m-%d")
-            elif dim == 'month': d_key = date_ref.strftime("%Y-%m")
-            elif dim == 'week': d_key = date_ref.strftime("%Y-%W周")
-            
-            if d_key not in trend_map: trend_map[d_key] = {"in": 0, "out": 0}
-            trend_map[d_key]["in"] += 1
-            
-            # 统计发布
+            # 统计发布 (publish_time) - 仅限已发布状态
             if v.status == "已发布" and v.publish_time:
-                try:
-                    p_date = datetime.datetime.strptime(v.publish_time[:10], "%Y-%m-%d")
-                    p_key = ""
-                    if dim == 'day': p_key = p_date.strftime("%Y-%m-%d")
-                    elif dim == 'month': p_key = p_date.strftime("%Y-%m")
-                    elif dim == 'week': p_key = p_date.strftime("%Y-%W周")
-                    
-                    if p_key not in trend_map: trend_map[p_key] = {"in": 0, "out": 0}
-                    trend_map[p_key]["out"] += 1
-                except: pass
+                d_out = fmt_date(v.publish_time)
+                if d_out:
+                    if d_out not in stats: stats[d_out] = {"in": 0, "out": 0}
+                    stats[d_out]["out"] += 1
 
-        # 排序并转数组
-        sorted_keys = sorted(trend_map.keys())
-        # 只取最近 30 个单位的数据，防止图表太挤
-        if len(sorted_keys) > 30: sorted_keys = sorted_keys[-30:]
+        # 5. 排序并截取最近 15 个周期
+        keys = sorted(stats.keys())[-15:] 
         
-        trend_data = {
-            "dates": sorted_keys,
-            "in": [trend_map[k]["in"] for k in sorted_keys],
-            "out": [trend_map[k]["out"] for k in sorted_keys]
+        # 6. 平台分布统计
+        plat_map = {}
+        for v in videos:
+            if v.status == "已发布" and v.platform:
+                for p in v.platform.replace('，', ',').split(','):
+                    p = p.strip()
+                    if p: plat_map[p] = plat_map.get(p, 0) + 1
+        
+        return {
+            "dates": keys,
+            "series_in": [stats[k]["in"] for k in keys],
+            "series_out": [stats[k]["out"] for k in keys],
+            "platforms": [{"name": k, "value": v} for k, v in plat_map.items()]
         }
-
-        return {"platform": plat_data, "trend": trend_data}
 
 # === 选项接口 ===
 @main_app.get("/api/options")
@@ -130,7 +118,7 @@ def get_options():
             db_vals = session.exec(select(col).distinct()).all()
             clean = []
             for item in db_vals:
-                if item and str(item) != 'nan': clean.extend([x.strip() for x in str(item).split(',')])
+                if item and str(item).lower() != 'nan': clean.extend([x.strip() for x in str(item).replace('，', ',').split(',')])
             preset = [x.strip() for x in settings.get(key, []) if x.strip()]
             return sorted(list(set(clean + preset)))
         return {
@@ -184,7 +172,7 @@ async def upload_image(file: UploadFile):
 
 @main_app.post("/api/video/save")
 async def save_video(
-    id: Optional[str] = Form(None), # 允许接收 "temp" 或 int
+    id: Optional[str] = Form(None), 
     product_id: Optional[str] = Form(None), title: Optional[str] = Form(None),
     host: Optional[str] = Form(None), status: Optional[str] = Form(None),
     category: Optional[str] = Form(None), video_type: Optional[str] = Form(None),
@@ -193,8 +181,8 @@ async def save_video(
     image_url: Optional[str] = Form(None)
 ):
     with Session(engine) as session:
-        # 新增逻辑：如果 ID 是 None, 'new', 'temp'，则创建新对象
-        if not id or id in ['new', 'temp', 'undefined', 'null']:
+        # 判断是新增还是编辑
+        if not id or id in ['new', 'temp', 'undefined']:
             video = Video(
                 product_id=product_id or "未命名", 
                 title=title or "新建视频", 
@@ -203,11 +191,10 @@ async def save_video(
             )
             session.add(video)
         else:
-            # 编辑逻辑
             video = session.get(Video, int(id))
             if not video: raise HTTPException(404, "Not found")
         
-        # 统一更新字段
+        # 更新字段
         if product_id is not None: video.product_id = product_id
         if title is not None: video.title = title
         if host is not None: video.host = host
@@ -221,8 +208,7 @@ async def save_video(
         if image_url and "nan" not in image_url: video.image_url = image_url
             
         session.commit()
-        session.refresh(video)
-        return {"message": "Saved", "id": video.id}
+        return {"message": "Saved"}
 
 @main_app.delete("/api/video/{video_id}")
 def delete_video(video_id: int):
@@ -231,8 +217,8 @@ def delete_video(video_id: int):
         session.commit()
     return {"message": "Deleted"}
 
-@main_app.get("/api/stats_summary") # 简单摘要
-def get_stats_summary():
+@main_app.get("/api/stats")
+def get_stats_basic(): # 顶部仪表盘用
     with Session(engine) as session:
         total = session.exec(select(func.count(Video.id))).one()
         pending = session.exec(select(func.count(Video.id)).where(Video.status == "待发布")).one()
@@ -254,4 +240,4 @@ async def import_local(bg_tasks: BackgroundTasks):
     files = [f for f in os.listdir("temp_uploads") if f.endswith(".xlsx")]
     if not files: raise HTTPException(404)
     bg_tasks.add_task(process_excel_background, os.path.join("temp_uploads", files[0]), engine)
-    return {"message": "ok"}
+    return {"message": "Starting..."}
