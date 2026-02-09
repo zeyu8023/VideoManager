@@ -2,22 +2,36 @@ import os
 import shutil
 import math
 import uuid
-from fastapi import FastAPI, UploadFile, BackgroundTasks, Form, HTTPException, Query
+from fastapi import FastAPI, UploadFile, BackgroundTasks, Form, HTTPException
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from sqlmodel import Session, create_engine, SQLModel, select, col, or_, Field
 from sqlalchemy import func
-from typing import Optional, List
+from typing import Optional
 
-from .models import Video
+# 导入 processor (确保 backend/processor.py 文件存在且逻辑正确)
 from .processor import process_excel_background
 
-# === 新增：全局配置模型 ===
+# === 模型定义 ===
+class Video(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    product_id: str = Field(index=True)
+    title: str
+    image_url: str
+    category: Optional[str] = None
+    finish_time: Optional[str] = None
+    video_type: Optional[str] = None
+    host: Optional[str] = Field(default=None, index=True)
+    status: Optional[str] = Field(default=None, index=True)
+    platform: Optional[str] = None
+    publish_time: Optional[str] = None
+    remark: Optional[str] = None
+
 class AppSettings(SQLModel, table=True):
     key: str = Field(primary_key=True)
-    value: str # 用逗号分隔的字符串存储，例如 "小梨,VIVI,七七"
+    value: str
 
-main_app = FastAPI(title="VideoHub Pro Max")
+main_app = FastAPI(title="VideoHub Pro Final")
 engine = create_engine("sqlite:///data/inventory.db")
 
 @main_app.on_event("startup")
@@ -63,7 +77,7 @@ def update_settings(key: str = Form(...), value: str = Form(...)):
         session.commit()
     return {"message": "配置已更新"}
 
-# === 图片上传接口 (支持拖拽/粘贴) ===
+# === 图片上传接口 ===
 @main_app.post("/api/upload")
 async def upload_image(file: UploadFile):
     os.makedirs("assets/previews", exist_ok=True)
@@ -76,7 +90,7 @@ async def upload_image(file: UploadFile):
     
     return {"url": f"/assets/previews/{filename}"}
 
-# === 现有接口 (保持不变) ===
+# === 核心数据接口 ===
 @main_app.get("/api/stats")
 def get_stats():
     with Session(engine) as session:
@@ -122,11 +136,11 @@ def list_videos(
 async def save_video(
     id: Optional[int] = Form(None),
     product_id: str = Form(...), title: str = Form(...),
-    host: str = Form(...), status: str = Form(...),
-    category: str = Form(...), video_type: str = Form(""),
+    host: str = Form(""), status: str = Form(""),
+    category: str = Form(""), video_type: str = Form(""),
     platform: str = Form(""), finish_time: str = Form(""),
     publish_time: str = Form(""), remark: str = Form(""),
-    image_url: str = Form("") # 改动：直接接收 URL，或者上面的 file
+    image_url: str = Form("")
 ):
     with Session(engine) as session:
         if id:
@@ -145,7 +159,14 @@ async def save_video(
         video.finish_time = finish_time
         video.publish_time = publish_time
         video.remark = remark
-        if image_url: video.image_url = image_url # 更新图片
+        
+        # 只有当 image_url 有值且不是 nan 时才更新
+        if image_url and image_url != "nan": 
+            video.image_url = image_url
+        
+        # 确保新增时如果有空图，给默认值
+        if not video.image_url:
+            video.image_url = "/assets/default.png"
         
         session.add(video)
         session.commit()
@@ -166,4 +187,4 @@ async def import_local(bg_tasks: BackgroundTasks):
     files = [f for f in os.listdir("temp_uploads") if f.endswith(".xlsx")]
     if not files: raise HTTPException(404, "无文件")
     bg_tasks.add_task(process_excel_background, os.path.join("temp_uploads", files[0]), engine)
-    return {"message": "后台处理中..."}
+    return {"message": "已启动后台导入任务，请稍后刷新"}
