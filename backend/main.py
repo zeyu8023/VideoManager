@@ -5,15 +5,33 @@ import uuid
 from fastapi import FastAPI, UploadFile, BackgroundTasks, Form, HTTPException
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
-from sqlmodel import Session, create_engine, SQLModel, select, col, or_
+from sqlmodel import Session, create_engine, SQLModel, select, col, or_, Field
 from sqlalchemy import func
 from typing import Optional
 
-# 关键修改：从 models 导入 Video，而不是在这里定义
-from .models import Video, AppSettings
+# 导入处理逻辑
 from .processor import process_excel_background
 
-main_app = FastAPI(title="VideoHub Pro Final")
+# === 模型定义 ===
+class Video(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    product_id: str = Field(index=True)
+    title: str = Field(default="")
+    image_url: str = Field(default="")
+    category: Optional[str] = None
+    finish_time: Optional[str] = None
+    video_type: Optional[str] = None
+    host: Optional[str] = Field(default=None, index=True)
+    status: Optional[str] = Field(default=None, index=True)
+    platform: Optional[str] = None
+    publish_time: Optional[str] = None
+    remark: Optional[str] = None
+
+class AppSettings(SQLModel, table=True):
+    key: str = Field(primary_key=True)
+    value: str
+
+main_app = FastAPI(title="VideoHub Pro Ultimate")
 engine = create_engine("sqlite:///data/inventory.db")
 
 @main_app.on_event("startup")
@@ -23,7 +41,7 @@ def on_startup():
     os.makedirs("temp_uploads", exist_ok=True)
     SQLModel.metadata.create_all(engine)
     
-    # 初始化配置
+    # 初始化默认配置
     with Session(engine) as session:
         if not session.get(AppSettings, "hosts"):
             session.add(AppSettings(key="hosts", value="小梨,VIVI,七七,杨总"))
@@ -59,7 +77,7 @@ def update_settings(key: str = Form(...), value: str = Form(...)):
         session.commit()
     return {"message": "配置已更新"}
 
-# === 上传接口 ===
+# === 图片上传接口 ===
 @main_app.post("/api/upload")
 async def upload_image(file: UploadFile):
     os.makedirs("assets/previews", exist_ok=True)
@@ -70,7 +88,7 @@ async def upload_image(file: UploadFile):
         shutil.copyfileobj(file.file, buffer)
     return {"url": f"/assets/previews/{filename}"}
 
-# === 数据接口 ===
+# === 核心数据接口 ===
 @main_app.get("/api/stats")
 def get_stats():
     with Session(engine) as session:
@@ -112,36 +130,46 @@ def list_videos(
 
         return {"items": results, "total": total, "page": page, "size": size, "total_pages": math.ceil(total / size)}
 
+# === 关键修复：允许字段为空 ===
 @main_app.post("/api/video/save")
 async def save_video(
     id: Optional[int] = Form(None),
-    product_id: str = Form(...), title: str = Form(...),
-    host: str = Form(""), status: str = Form(""),
-    category: str = Form(""), video_type: str = Form(""),
-    platform: str = Form(""), finish_time: str = Form(""),
-    publish_time: str = Form(""), remark: str = Form(""),
-    image_url: str = Form("")
+    product_id: Optional[str] = Form(None), 
+    title: Optional[str] = Form(None),
+    host: Optional[str] = Form(None), 
+    status: Optional[str] = Form(None),
+    category: Optional[str] = Form(None), 
+    video_type: Optional[str] = Form(None),
+    platform: Optional[str] = Form(None), 
+    finish_time: Optional[str] = Form(None),
+    publish_time: Optional[str] = Form(None), 
+    remark: Optional[str] = Form(None),
+    image_url: Optional[str] = Form(None)
 ):
     with Session(engine) as session:
         if id:
             video = session.get(Video, id)
             if not video: raise HTTPException(404, "视频不存在")
         else:
+            # 新增时，必须有 product_id (虽然参数是Optional，但业务逻辑需要)
+            if not product_id: product_id = "未命名"
+            if not title: title = "新视频"
             video = Video(product_id=product_id, title=title, image_url="/assets/default.png")
 
-        video.product_id = product_id
-        video.title = title
-        video.host = host
-        video.status = status
-        video.category = category
-        video.video_type = video_type
-        video.platform = platform
-        video.finish_time = finish_time
-        video.publish_time = publish_time
-        video.remark = remark
+        # 逐个更新字段，只有当参数不为 None 时才更新 (image_url除外，空字符串也是一种状态)
+        if product_id is not None: video.product_id = product_id
+        if title is not None: video.title = title
+        if host is not None: video.host = host
+        if status is not None: video.status = status
+        if category is not None: video.category = category
+        if video_type is not None: video.video_type = video_type
+        if platform is not None: video.platform = platform
+        if finish_time is not None: video.finish_time = finish_time
+        if publish_time is not None: video.publish_time = publish_time
+        if remark is not None: video.remark = remark
         
-        # 仅当 image_url 有效时更新
-        if image_url and image_url != "nan": 
+        # 图片逻辑：如果传了有效 URL，则更新
+        if image_url and image_url != "nan" and image_url != "undefined": 
             video.image_url = image_url
             
         session.add(video)

@@ -3,215 +3,154 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VideoHub Pro</title>
+    <title>VideoHub Pro Ultimate</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
     <style>
+        /* 1. 字体统一 */
         body { font-family: 'Inter', 'Noto Sans SC', sans-serif; background: #f8fafc; color: #334155; }
         
-        /* 表格优化 */
-        th { font-size: 13px; font-weight: 700; color: #475569; padding: 12px 16px; background: #f1f5f9; border-bottom: 2px solid #e2e8f0; white-space: nowrap; }
-        td { padding: 10px 16px; border-bottom: 1px solid #f1f5f9; font-size: 14px; vertical-align: middle; }
+        /* 2. 表格列宽拖动相关 */
+        table { border-collapse: collapse; table-layout: fixed; width: 100%; }
+        th { position: relative; font-size: 13px; font-weight: 700; color: #475569; padding: 12px 8px; background: #f1f5f9; border-bottom: 2px solid #e2e8f0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; user-select: none; }
+        td { padding: 8px; border-bottom: 1px solid #f1f5f9; font-size: 14px; vertical-align: middle; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         tr:hover td { background: #f8fafc; }
         
-        /* 输入框样式 */
-        .table-input { width: 100%; border: 1px solid transparent; background: transparent; padding: 4px 6px; border-radius: 4px; font-size: 14px; transition: all 0.2s; }
+        /* 拖拽手柄 */
+        .resizer { position: absolute; top: 0; right: 0; width: 5px; cursor: col-resize; user-select: none; height: 100%; z-index: 10; }
+        .resizer:hover, .resizing { background-color: #3b82f6; }
+
+        /* 编辑框 */
+        .table-input { width: 100%; border: 1px solid transparent; background: transparent; padding: 4px; border-radius: 4px; font-size: 14px; color: inherit; transition: all 0.2s; }
         .table-input:focus, .editing .table-input { background: white; border-color: #3b82f6; box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1); outline: none; }
         
-        /* 图片上传区 */
-        .img-zone { position: relative; overflow: hidden; cursor: pointer; transition: transform 0.2s; }
-        .img-zone:hover { transform: scale(1.05); box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
-        .img-zone::after { content: '替换'; position: absolute; inset: 0; background: rgba(0,0,0,0.6); color: white; display: flex; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.2s; font-size: 12px; font-weight: bold; }
-        .img-zone:hover::after { opacity: 1; }
+        /* 图片区域 */
+        .img-zone { position: relative; overflow: hidden; cursor: pointer; border-radius: 6px; border: 1px solid #e2e8f0; background: #f8fafc; }
+        .img-zone:hover::after { content: '替换'; position: absolute; inset: 0; background: rgba(0,0,0,0.5); color: white; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: bold; }
         
         /* 状态标签 */
-        .badge { padding: 2px 8px; border-radius: 6px; font-size: 12px; font-weight: 600; display: inline-block; }
+        .badge { padding: 2px 8px; border-radius: 99px; font-size: 12px; font-weight: 600; display: inline-flex; align-items: center; justify-content: center; }
         .badge-wait { background: #fff7ed; color: #c2410c; border: 1px solid #ffedd5; }
         .badge-done { background: #f0fdf4; color: #15803d; border: 1px solid #dcfce7; }
-        
+
         /* 模态框 */
-        #settings-modal, #add-modal { transition: opacity 0.2s ease; }
-        .modal-active { display: flex !important; opacity: 1 !important; }
+        .modal { transition: opacity 0.2s; opacity: 0; pointer-events: none; }
+        .modal.active { opacity: 1; pointer-events: auto; }
     </style>
 </head>
 <body class="flex flex-col h-screen overflow-hidden">
 
-    <div class="bg-white border-b border-slate-200 px-6 py-3 flex justify-between items-center shrink-0 z-30 shadow-sm">
-        <div class="flex items-center gap-3">
-            <div class="w-9 h-9 bg-blue-600 rounded-lg flex items-center justify-center text-white font-bold text-xl shadow-md">V</div>
-            <h1 class="text-xl font-bold text-slate-800 tracking-tight">VideoHub <span class="text-slate-400 font-normal text-sm">Pro</span></h1>
+    <div class="h-14 bg-white border-b border-slate-200 flex items-center justify-between px-6 shrink-0 z-30">
+        <div class="flex items-center gap-2">
+            <div class="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white font-bold shadow">V</div>
+            <h1 class="text-lg font-bold text-slate-800">VideoHub <span class="text-xs font-normal text-slate-400">Ult</span></h1>
         </div>
-        
-        <button onclick="openSettings()" class="flex items-center gap-2 text-slate-500 hover:text-blue-600 hover:bg-slate-50 px-3 py-1.5 rounded-lg transition-all">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
-            <span class="text-sm font-medium">全局配置</span>
-        </button>
-    </div>
-
-    <div class="bg-white border-b border-slate-200 px-6 py-6 z-20">
-        <div class="max-w-[2000px] mx-auto grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div class="bg-slate-50 border border-slate-100 p-5 rounded-2xl flex justify-between items-center group hover:border-blue-200 transition-all">
-                <div>
-                    <div class="text-slate-400 text-xs font-bold uppercase mb-1">总视频资产</div>
-                    <div class="text-4xl font-black text-slate-800 group-hover:text-blue-600 transition-colors" id="st-total">--</div>
-                </div>
-                <div class="text-4xl opacity-80">📦</div>
-            </div>
-            <div class="bg-orange-50 border border-orange-100 p-5 rounded-2xl flex justify-between items-center group hover:border-orange-200 transition-all">
-                <div>
-                    <div class="text-orange-600/70 text-xs font-bold uppercase mb-1">待发布库存</div>
-                    <div class="text-4xl font-black text-orange-500" id="st-pending">--</div>
-                </div>
-                <div class="text-4xl opacity-80">🔥</div>
-            </div>
-            <div class="bg-emerald-50 border border-emerald-100 p-5 rounded-2xl flex justify-between items-center group hover:border-emerald-200 transition-all">
-                <div>
-                    <div class="text-emerald-600/70 text-xs font-bold uppercase mb-1">本月劳模</div>
-                    <div class="text-4xl font-black text-emerald-600" id="st-host">--</div>
-                </div>
-                <div class="text-4xl opacity-80">🏆</div>
+        <div class="flex items-center gap-4">
+            <button onclick="openSettings()" class="text-xs font-bold text-slate-500 hover:text-blue-600 flex items-center gap-1 bg-slate-50 px-3 py-1.5 rounded-full border border-slate-100">
+                <span>⚙️ 全局配置</span>
+            </button>
+            <div class="flex items-center gap-2">
+                <div class="w-8 h-8 bg-slate-100 rounded-full flex items-center justify-center text-xs font-bold text-slate-500">ZY</div>
             </div>
         </div>
     </div>
 
-    <div class="flex-1 p-6 overflow-hidden max-w-[2000px] mx-auto w-full flex flex-col">
-        
-        <div class="flex flex-wrap items-center gap-3 mb-4 bg-white p-3 rounded-xl border border-slate-200 shadow-sm shrink-0">
-            <input id="q-key" onkeydown="if(event.key==='Enter') loadData(1)" placeholder="🔍 搜索 编号 / 标题 / 备注" class="pl-3 pr-3 py-2 w-64 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all">
-            
-            <select id="q-host" onchange="loadData(1)" class="filter-select"></select>
-            <select id="q-status" onchange="loadData(1)" class="filter-select"></select>
-            <select id="q-cat" onchange="loadData(1)" class="filter-select"></select>
-
-            <div class="flex items-center gap-2 border-l border-slate-200 pl-3 ml-1 bg-slate-50 p-1 rounded-lg">
-                <input type="date" id="q-start" onchange="loadData(1)" class="bg-transparent text-sm text-slate-600 outline-none">
-                <span class="text-slate-300">-</span>
-                <input type="date" id="q-end" onchange="loadData(1)" class="bg-transparent text-sm text-slate-600 outline-none">
+    <div class="bg-white border-b border-slate-200 px-6 py-4 z-20 shrink-0">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-[2000px] mx-auto">
+            <div class="bg-slate-50 border border-slate-100 p-4 rounded-xl flex justify-between items-center">
+                <div><div class="text-xs font-bold text-slate-400 uppercase">总视频资产</div><div class="text-3xl font-black text-slate-800" id="st-total">-</div></div>
+                <div class="text-3xl">📦</div>
             </div>
-
-            <div class="ml-auto flex gap-2">
-                <button onclick="resetFilters()" class="px-3 py-2 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-lg text-sm font-medium transition-colors flex items-center">
-                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
-                    重置
-                </button>
-                <button onclick="loadData(1)" class="px-5 py-2 bg-blue-600 text-white font-bold text-sm rounded-lg hover:bg-blue-700 shadow-md shadow-blue-200 transition-all">查询</button>
-                <button onclick="scanLocal()" class="px-4 py-2 bg-slate-800 text-white font-bold text-sm rounded-lg hover:bg-slate-900 shadow-md transition-all ml-2">导入 (NAS)</button>
-                <button onclick="openAddModal()" class="px-4 py-2 bg-blue-600 text-white font-bold text-sm rounded-lg hover:bg-blue-700 shadow-md transition-all">手动新增</button>
+            <div class="bg-orange-50 border border-orange-100 p-4 rounded-xl flex justify-between items-center">
+                <div><div class="text-xs font-bold text-orange-400 uppercase">待发布库存</div><div class="text-3xl font-black text-orange-500" id="st-pending">-</div></div>
+                <div class="text-3xl">🔥</div>
+            </div>
+            <div class="bg-emerald-50 border border-emerald-100 p-4 rounded-xl flex justify-between items-center">
+                <div><div class="text-xs font-bold text-emerald-400 uppercase">本月劳模</div><div class="text-3xl font-black text-emerald-600" id="st-host">-</div></div>
+                <div class="text-3xl">🏆</div>
             </div>
         </div>
+    </div>
 
-        <div class="bg-white border border-slate-200 rounded-xl shadow-sm flex flex-col flex-1 overflow-hidden">
-            <div class="overflow-auto flex-1">
-                <table class="w-full text-left border-collapse">
-                    <thead class="sticky top-0 z-10 shadow-sm">
-                        <tr>
-                            <th class="w-16 text-center">图</th>
-                            <th class="w-24">编号</th>
-                            <th class="w-auto">标题</th> <th class="w-20">类型</th>
-                            <th class="w-20">主播</th>
-                            <th class="w-24 text-center">状态</th>
-                            <th class="w-28">平台</th>
-                            <th class="w-32">发布时间</th>
-                            <th class="w-32">备注</th>
-                            <th class="w-24 text-center sticky right-0 bg-slate-50 border-l border-slate-200">操作</th>
+    <div class="flex-1 p-4 overflow-hidden flex flex-col max-w-[2000px] mx-auto w-full">
+        <div class="flex flex-wrap items-center gap-2 mb-3 bg-white p-2 rounded-lg border border-slate-200 shadow-sm shrink-0">
+            <input id="q-key" onkeydown="if(event.key==='Enter') loadData(1)" placeholder="🔍 搜索..." class="px-3 py-1.5 w-48 bg-slate-50 border border-slate-200 rounded text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+            <select id="q-host" onchange="loadData(1)" class="px-2 py-1.5 bg-slate-50 border border-slate-200 rounded text-sm outline-none"></select>
+            <select id="q-status" onchange="loadData(1)" class="px-2 py-1.5 bg-slate-50 border border-slate-200 rounded text-sm outline-none"></select>
+            <select id="q-cat" onchange="loadData(1)" class="px-2 py-1.5 bg-slate-50 border border-slate-200 rounded text-sm outline-none"></select>
+            <button onclick="loadData(1)" class="px-4 py-1.5 bg-blue-600 text-white font-bold text-sm rounded hover:bg-blue-700 ml-auto">查询</button>
+            <button onclick="scanLocal()" class="px-3 py-1.5 bg-slate-700 text-white font-bold text-sm rounded hover:bg-slate-800">导入</button>
+            <button onclick="openAddModal()" class="px-3 py-1.5 bg-emerald-600 text-white font-bold text-sm rounded hover:bg-emerald-700">新增</button>
+        </div>
+
+        <div class="bg-white border border-slate-200 rounded-lg shadow-sm flex flex-col flex-1 overflow-hidden relative">
+            <div class="overflow-auto flex-1 w-full h-full" id="table-container">
+                <table id="main-table">
+                    <thead class="sticky top-0 z-10">
+                        <tr id="table-header">
+                            <th data-key="img" style="width: 60px">图<div class="resizer"></div></th>
+                            <th data-key="pid" contenteditable="true" onblur="saveHeader(this)" style="width: 100px">编号<div class="resizer"></div></th>
+                            <th data-key="title" contenteditable="true" onblur="saveHeader(this)" style="width: 250px">标题<div class="resizer"></div></th>
+                            <th data-key="type" contenteditable="true" onblur="saveHeader(this)" style="width: 80px">类型<div class="resizer"></div></th>
+                            <th data-key="host" contenteditable="true" onblur="saveHeader(this)" style="width: 80px">主播<div class="resizer"></div></th>
+                            <th data-key="status" contenteditable="true" onblur="saveHeader(this)" style="width: 80px">状态<div class="resizer"></div></th>
+                            <th data-key="plat" contenteditable="true" onblur="saveHeader(this)" style="width: 100px">平台<div class="resizer"></div></th>
+                            <th data-key="pub_time" contenteditable="true" onblur="saveHeader(this)" style="width: 120px">发布时间<div class="resizer"></div></th>
+                            <th data-key="remark" contenteditable="true" onblur="saveHeader(this)" style="width: 150px">备注<div class="resizer"></div></th>
+                            <th data-key="op" style="width: 100px; text-align: center;">操作</th>
                         </tr>
                     </thead>
-                    <tbody id="table-body" class="divide-y divide-slate-100">
-                        </tbody>
+                    <tbody id="table-body" class="divide-y divide-slate-100"></tbody>
                 </table>
             </div>
-            
-            <div class="border-t border-slate-200 px-4 py-3 flex justify-between items-center bg-slate-50 shrink-0 text-sm font-medium text-slate-500">
-                <span>共 <span id="total-count" class="text-slate-800 font-bold">0</span> 条 · 第 <span id="curr-page" class="text-slate-800 font-bold">1</span> 页</span>
-                <div class="space-x-2">
-                    <button onclick="changePage(-1)" class="px-3 py-1.5 bg-white border border-slate-200 rounded-md hover:border-slate-300 hover:text-blue-600 disabled:opacity-50">上一页</button>
-                    <button onclick="changePage(1)" class="px-3 py-1.5 bg-white border border-slate-200 rounded-md hover:border-slate-300 hover:text-blue-600 disabled:opacity-50">下一页</button>
+            <div class="border-t border-slate-200 px-4 py-2 flex justify-between items-center bg-slate-50 shrink-0 text-sm">
+                <span class="text-slate-500">共 <b id="total-count">0</b> 条</span>
+                <div class="space-x-1">
+                    <button onclick="changePage(-1)" class="px-2 py-1 border rounded bg-white hover:bg-slate-100">上一页</button>
+                    <button onclick="changePage(1)" class="px-2 py-1 border rounded bg-white hover:bg-slate-100">下一页</button>
                 </div>
             </div>
         </div>
     </div>
 
-    <div id="settings-modal" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center backdrop-blur-sm">
-        <div class="bg-white rounded-2xl w-[500px] shadow-2xl p-6">
-            <div class="flex justify-between items-center mb-6 border-b border-slate-100 pb-4">
-                <h3 class="text-lg font-bold text-slate-800">系统全局配置</h3>
-                <button onclick="closeSettings()" class="text-slate-400 hover:text-slate-600">✕</button>
-            </div>
-            <div class="space-y-4">
-                <div>
-                    <label class="block text-xs font-bold text-slate-500 mb-1">主播列表 (逗号分隔)</label>
-                    <textarea id="set-hosts" class="w-full p-3 border border-slate-200 rounded-lg text-sm h-20 focus:ring-2 focus:ring-blue-500 outline-none"></textarea>
-                </div>
-                <div>
-                    <label class="block text-xs font-bold text-slate-500 mb-1">视频分类</label>
-                    <input id="set-cats" class="w-full p-3 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none">
-                </div>
-                <div>
-                    <label class="block text-xs font-bold text-slate-500 mb-1">发布平台</label>
-                    <input id="set-plats" class="w-full p-3 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none">
-                </div>
-                <div class="flex justify-end pt-4">
-                    <button onclick="saveSettings()" class="px-6 py-2 bg-slate-800 text-white font-bold rounded-lg hover:bg-black">保存配置</button>
-                </div>
-            </div>
+    <div id="settings-modal" class="modal fixed inset-0 bg-black/50 z-50 flex items-center justify-center">
+        <div class="bg-white rounded-xl w-[400px] p-6 shadow-2xl">
+            <h3 class="font-bold mb-4">全局配置</h3>
+            <textarea id="set-hosts" class="w-full p-2 border rounded mb-2 text-sm h-20" placeholder="主播列表..."></textarea>
+            <input id="set-cats" class="w-full p-2 border rounded mb-2 text-sm" placeholder="分类...">
+            <input id="set-plats" class="w-full p-2 border rounded mb-4 text-sm" placeholder="平台...">
+            <button onclick="saveSettings()" class="w-full bg-blue-600 text-white py-2 rounded font-bold">保存</button>
+            <button onclick="closeSettings()" class="w-full mt-2 text-slate-400 text-sm">关闭</button>
         </div>
     </div>
-
-    <div id="add-modal" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center backdrop-blur-sm">
-        <div class="bg-white rounded-2xl w-[600px] shadow-2xl p-6">
-            <h3 class="text-lg font-bold text-slate-800 mb-4">手动录入新资产</h3>
-            <form id="addForm" class="grid grid-cols-2 gap-4">
-                <div class="col-span-2"><input name="title" placeholder="视频标题 (必填)" class="w-full p-2 border border-slate-300 rounded text-sm" required></div>
-                <div><input name="product_id" placeholder="产品编号 (必填)" class="w-full p-2 border border-slate-300 rounded text-sm" required></div>
-                <div><select name="host" class="w-full p-2 border border-slate-300 rounded text-sm" id="add-host"></select></div>
-                <div><select name="category" class="w-full p-2 border border-slate-300 rounded text-sm" id="add-cat"></select></div>
-                <div><select name="status" class="w-full p-2 border border-slate-300 rounded text-sm" id="add-status"></select></div>
-                <div class="col-span-2 pt-4 flex justify-end gap-3 border-t border-slate-100">
-                    <button type="button" onclick="closeAddModal()" class="px-4 py-2 text-slate-500 font-bold text-sm">取消</button>
-                    <button type="submit" class="px-6 py-2 bg-blue-600 text-white rounded text-sm font-bold shadow hover:bg-blue-700">保存</button>
-                </div>
+    
+    <div id="add-modal" class="modal fixed inset-0 bg-black/50 z-50 flex items-center justify-center">
+        <div class="bg-white rounded-xl w-[500px] p-6 shadow-2xl">
+            <h3 class="font-bold mb-4">新增资产</h3>
+            <form id="addForm" class="grid grid-cols-2 gap-3">
+                <input name="product_id" placeholder="编号*" required class="p-2 border rounded text-sm">
+                <input name="title" placeholder="标题*" required class="p-2 border rounded text-sm">
+                <select name="host" id="add-host" class="p-2 border rounded text-sm"></select>
+                <select name="status" id="add-status" class="p-2 border rounded text-sm"></select>
+                <button type="button" onclick="closeAddModal()" class="text-slate-500 text-sm">取消</button>
+                <button type="submit" class="bg-blue-600 text-white py-2 rounded font-bold text-sm">保存</button>
             </form>
         </div>
     </div>
 
-    <style>
-        .filter-select { padding: 8px 12px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 13px; color: #475569; outline: none; min-width: 100px; cursor: pointer; }
-        .filter-select:hover { border-color: #cbd5e1; }
-    </style>
-
     <script>
-        let currPage = 1, totalPages = 1;
-        let globalOptions = {};
-        let editingId = null;
-        let globalData = []; // 存储当前页数据
+        let currPage = 1, totalPages = 1, globalData = [], globalOptions = {}, editingId = null;
 
         // 初始化
-        (async function init() {
-            await loadSettings(); 
+        (async () => {
+            initResizers(); // 1. 初始化列宽拖动
+            loadHeaderLabels(); // 2. 加载表头名称
+            await loadSettings();
             await loadData(1);
             updateStats();
         })();
 
-        async function loadSettings() {
-            const res = await fetch('/api/settings');
-            globalOptions = await res.json();
-            
-            // 填充筛选框
-            fillSelect('q-host', globalOptions.hosts, '全部主播');
-            fillSelect('q-status', globalOptions.statuses, '全部状态');
-            fillSelect('q-cat', globalOptions.categories, '全部分类');
-
-            // 填充新增弹窗的下拉框
-            fillSelect('add-host', globalOptions.hosts, '选择主播');
-            fillSelect('add-cat', globalOptions.categories, '选择分类');
-            fillSelect('add-status', globalOptions.statuses, '选择状态');
-        }
-
-        function fillSelect(id, items, def) {
-            const el = document.getElementById(id);
-            if(el) el.innerHTML = `<option value="">${def}</option>` + items.map(i => `<option value="${i.trim()}">${i.trim()}</option>`).join('');
-        }
-
+        // --- 核心逻辑 ---
         async function loadData(p) {
             currPage = p || currPage;
             const params = new URLSearchParams({
@@ -219,177 +158,210 @@
                 keyword: document.getElementById('q-key').value,
                 host: document.getElementById('q-host').value,
                 status: document.getElementById('q-status').value,
-                category: document.getElementById('q-cat').value,
-                pub_start: document.getElementById('q-start').value,
-                pub_end: document.getElementById('q-end').value
+                category: document.getElementById('q-cat').value
             });
-
             const res = await fetch(`/api/videos?${params}`);
             const data = await res.json();
             globalData = data.items;
-            totalPages = data.total_pages;
-
             document.getElementById('total-count').innerText = data.total;
-            document.getElementById('curr-page').innerText = data.page;
-            
             renderTable(data.items);
         }
 
         function renderTable(items) {
             const tbody = document.getElementById('table-body');
             tbody.innerHTML = items.map(v => {
+                const img = (v.image_url && v.image_url.length > 5 && v.image_url !== 'nan') ? v.image_url : '/assets/default.png';
                 const isEdit = (v.id === editingId);
-                // 图片URL处理：如果为空或nan，显示默认图
-                const imgUrl = (v.image_url && v.image_url.length > 5 && v.image_url !== 'nan') ? v.image_url : '/assets/default.png';
-                const makeSel = (key, val, opts) => `<select id="ed-${key}-${v.id}" class="table-input bg-white border border-blue-200">${opts.map(o => `<option ${o.trim()===val?'selected':''}>${o.trim()}</option>`).join('')}</select>`;
                 
-                let stClass = "bg-slate-100 text-slate-500 border border-slate-200";
+                // 状态颜色
+                let stClass = "bg-slate-100 text-slate-500";
                 if(v.status === '待发布') stClass = "badge-wait";
                 if(v.status === '已发布') stClass = "badge-done";
 
-                if (isEdit) {
-                    return `
-                    <tr class="bg-blue-50/30 editing border-l-2 border-blue-500">
-                        <td class="p-2 text-center text-xs text-slate-400">图</td>
-                        <td><input id="ed-pid-${v.id}" class="table-input" value="${clean(v.product_id)}"></td>
-                        <td><input id="ed-title-${v.id}" class="table-input font-bold text-slate-700" value="${clean(v.title)}"></td>
-                        <td>${makeSel('cat', v.category, globalOptions.categories)}</td>
-                        <td>${makeSel('host', v.host, globalOptions.hosts)}</td>
-                        <td class="text-center">${makeSel('status', v.status, globalOptions.statuses)}</td>
-                        <td>${makeSel('plat', v.platform, globalOptions.platforms)}</td>
-                        <td><input id="ed-pub-${v.id}" type="datetime-local" class="table-input" value="${fmtDate(v.publish_time)}"></td>
-                        <td><input id="ed-remark-${v.id}" class="table-input text-xs" value="${clean(v.remark)}"></td>
-                        <td class="text-center bg-white/50 sticky right-0 border-l border-slate-200/50">
-                            <button onclick="saveRow(${v.id})" class="text-white bg-blue-600 px-2 py-1 rounded text-xs hover:bg-blue-700 mr-1">保存</button>
-                            <button onclick="cancelEdit()" class="text-slate-400 text-xs hover:text-slate-600">取消</button>
+                if(isEdit) return `
+                    <tr class="bg-blue-50/50 editing">
+                        <td class="text-center text-xs">图</td>
+                        <td><input id="ed-pid" class="table-input" value="${v.product_id}"></td>
+                        <td><input id="ed-title" class="table-input" value="${v.title}"></td>
+                        <td><input id="ed-type" class="table-input" value="${v.video_type||''}"></td>
+                        <td><input id="ed-host" class="table-input" value="${v.host||''}"></td>
+                        <td><input id="ed-status" class="table-input" value="${v.status||''}"></td>
+                        <td><input id="ed-plat" class="table-input" value="${v.platform||''}"></td>
+                        <td><input id="ed-pub" type="datetime-local" class="table-input" value="${(v.publish_time||'').replace(' ','T')}"></td>
+                        <td><input id="ed-rem" class="table-input" value="${v.remark||''}"></td>
+                        <td class="text-center">
+                            <button onclick="saveRow(${v.id})" class="text-blue-600 font-bold text-xs mr-2">保存</button>
+                            <button onclick="cancelEdit()" class="text-slate-400 text-xs">取消</button>
                         </td>
                     </tr>`;
-                }
 
                 return `
-                <tr class="group border-b border-slate-50 last:border-0 hover:bg-blue-50/20">
-                    <td class="p-2 text-center">
-                        <div class="w-10 h-10 rounded-lg bg-slate-100 border border-slate-200 overflow-hidden relative img-zone mx-auto"
-                             onpaste="handlePaste(event, ${v.id})"
-                             ondragover="event.preventDefault()" 
-                             ondrop="handleDrop(event, ${v.id})"
-                             title="粘贴或拖拽图片以替换">
-                            <img src="${imgUrl}" class="w-full h-full object-cover">
+                <tr class="hover:bg-slate-50 group">
+                    <td class="p-1">
+                        <div class="w-10 h-10 rounded mx-auto img-zone" 
+                             onpaste="handlePaste(event, ${v.id})" 
+                             ondrop="handleDrop(event, ${v.id})" 
+                             ondragover="event.preventDefault()">
+                            <img src="${img}" class="w-full h-full object-cover pointer-events-none">
                         </div>
                     </td>
-                    <td class="font-mono text-xs text-slate-500">${clean(v.product_id)}</td>
-                    <td class="font-bold text-slate-700 text-sm break-all pr-2" title="${clean(v.title)}">${clean(v.title)}</td>
-                    <td class="text-xs text-slate-500">${clean(v.category)}</td>
-                    <td class="text-xs font-bold text-slate-600">${clean(v.host)}</td>
-                    <td class="text-center"><span class="badge ${stClass}">${clean(v.status)}</span></td>
-                    <td class="text-xs text-slate-500">${clean(v.platform)}</td>
-                    <td class="text-xs text-slate-400 font-mono">${(v.publish_time||'').replace('T',' ')}</td>
-                    <td class="text-xs text-slate-400 truncate max-w-[150px]">${clean(v.remark)}</td>
-                    <td class="text-center sticky right-0 bg-white group-hover:bg-blue-50/20 border-l border-slate-100">
-                        <button onclick="editRow(${v.id})" class="text-blue-600 font-bold text-xs hover:underline mr-2">编辑</button>
-                        <button onclick="delVideo(${v.id})" class="text-slate-400 hover:text-red-500 text-xs">删除</button>
+                    <td title="${v.product_id}">${v.product_id}</td>
+                    <td title="${v.title}" class="font-bold text-slate-700">${v.title}</td>
+                    <td>${v.video_type||'-'}</td>
+                    <td class="font-bold">${v.host||'-'}</td>
+                    <td class="text-center"><span class="badge ${stClass}">${v.status||'-'}</span></td>
+                    <td>${v.platform||'-'}</td>
+                    <td class="text-xs text-slate-400 font-mono">${(v.publish_time||'').split(' ')[0]}</td>
+                    <td class="text-xs text-slate-400">${v.remark||''}</td>
+                    <td class="text-center">
+                        <button onclick="editRow(${v.id})" class="text-blue-600 text-xs font-bold mr-2">编辑</button>
+                        <button onclick="delVideo(${v.id})" class="text-red-400 text-xs">删</button>
                     </td>
                 </tr>`;
             }).join('');
         }
 
-        // --- 核心逻辑 ---
-
-        function clean(v) { return (v && v!=='nan') ? v : ''; }
-        function fmtDate(s) { return s ? s.replace(' ', 'T').substring(0, 16) : ''; }
-
-        function editRow(id) { editingId = id; renderTable(globalData); }
-        function cancelEdit() { editingId = null; renderTable(globalData); }
-        
-        async function saveRow(id) {
-            const fd = new FormData();
-            fd.append('id', id);
-            // 从编辑框取值
-            ['pid', 'title', 'cat', 'host', 'status', 'plat', 'pub', 'remark'].forEach(key => {
-                const el = document.getElementById(`ed-${key}-${id}`);
-                if(el) fd.append(key === 'pid' ? 'product_id' : (key === 'cat' ? 'category' : (key === 'plat' ? 'platform' : (key === 'pub' ? 'publish_time' : key))), el.value.replace('T', ' '));
-            });
-            await fetch('/api/video/save', {method:'POST', body:fd});
-            cancelEdit();
-            loadData();
-            updateStats();
-        }
-
-        // 图片粘贴/拖拽逻辑 (修复版)
+        // --- 图片修复逻辑 ---
         async function uploadImg(file, id) {
-            // 1. 上传图片换取 URL
+            // 1. 上传文件
             const fd = new FormData();
             fd.append('file', file);
             const res = await fetch('/api/upload', {method:'POST', body:fd});
-            const data = await res.json();
-            
-            // 2. 获取当前行的旧数据，防止其他字段丢失
-            const oldRow = globalData.find(v => v.id === id);
-            if (!oldRow) return;
+            const data = await res.json(); // {url: "..."}
 
-            // 3. 构造全量更新请求
-            const updateFd = new FormData();
-            updateFd.append('id', id);
-            updateFd.append('product_id', oldRow.product_id); // 必填
-            updateFd.append('title', oldRow.title);           // 必填
-            updateFd.append('image_url', data.url);           // 更新图片
+            // 2. 获取旧数据，防止覆盖清空
+            const row = globalData.find(v => v.id === id);
             
-            // 补充非必填字段
-            ['host', 'status', 'category', 'video_type', 'platform', 'finish_time', 'publish_time', 'remark'].forEach(k => {
-                updateFd.append(k, clean(oldRow[k]));
+            // 3. 构造保存请求 (必须带上 ID 和其他必填项)
+            const saveFd = new FormData();
+            saveFd.append('id', id);
+            saveFd.append('image_url', data.url); 
+            // 补全必填项 (虽然我们后端改成了 Optional，但为了保险起见带上主要信息)
+            saveFd.append('product_id', row.product_id);
+            saveFd.append('title', row.title);
+
+            await fetch('/api/video/save', {method:'POST', body:saveFd});
+            loadData(); // 刷新
+        }
+        function handleDrop(e, id) { e.preventDefault(); if(e.dataTransfer.files[0]) uploadImg(e.dataTransfer.files[0], id); }
+        function handlePaste(e, id) { if(e.clipboardData.files[0]) uploadImg(e.clipboardData.files[0], id); }
+
+        // --- 列宽拖拽 (Resizing) ---
+        function initResizers() {
+            const table = document.getElementById('main-table');
+            const ths = table.getElementsByTagName('th');
+            
+            // 恢复保存的列宽
+            const saved = JSON.parse(localStorage.getItem('colWidths') || '{}');
+            for(let th of ths) {
+                const key = th.getAttribute('data-key');
+                if(saved[key]) th.style.width = saved[key];
+            }
+
+            // 绑定拖拽事件
+            document.querySelectorAll('.resizer').forEach(resizer => {
+                let x = 0, w = 0, col = null;
+                resizer.addEventListener('mousedown', e => {
+                    col = e.target.parentElement;
+                    x = e.pageX;
+                    w = col.offsetWidth;
+                    document.addEventListener('mousemove', mouseMoveHandler);
+                    document.addEventListener('mouseup', mouseUpHandler);
+                    col.classList.add('resizing');
+                });
+                
+                function mouseMoveHandler(e) {
+                    const dx = e.pageX - x;
+                    col.style.width = `${w + dx}px`;
+                }
+                
+                function mouseUpHandler() {
+                    document.removeEventListener('mousemove', mouseMoveHandler);
+                    document.removeEventListener('mouseup', mouseUpHandler);
+                    col.classList.remove('resizing');
+                    // 保存宽度
+                    const current = JSON.parse(localStorage.getItem('colWidths') || '{}');
+                    current[col.getAttribute('data-key')] = col.style.width;
+                    localStorage.setItem('colWidths', JSON.stringify(current));
+                }
             });
+        }
+
+        // --- 表头编辑 ---
+        function saveHeader(el) {
+            const key = el.parentElement.getAttribute('data-key');
+            const labels = JSON.parse(localStorage.getItem('colLabels') || '{}');
+            labels[key] = el.innerText.trim(); // 保存新名字
+            localStorage.setItem('colLabels', JSON.stringify(labels));
+        }
+        function loadHeaderLabels() {
+            const labels = JSON.parse(localStorage.getItem('colLabels') || '{}');
+            document.querySelectorAll('th[data-key]').forEach(th => {
+                const key = th.getAttribute('data-key');
+                // 只替换文本节点，保留 resizer div
+                if(labels[key]) th.firstChild.textContent = labels[key]; 
+            });
+        }
+
+        // --- 常规逻辑 ---
+        function editRow(id) { editingId = id; renderTable(globalData); }
+        function cancelEdit() { editingId = null; renderTable(globalData); }
+        async function saveRow(id) {
+            const fd = new FormData();
+            fd.append('id', id);
+            fd.append('product_id', document.getElementById('ed-pid').value);
+            fd.append('title', document.getElementById('ed-title').value);
+            fd.append('host', document.getElementById('ed-host').value);
+            fd.append('status', document.getElementById('ed-status').value);
+            fd.append('video_type', document.getElementById('ed-type').value);
+            fd.append('platform', document.getElementById('ed-plat').value);
+            fd.append('publish_time', document.getElementById('ed-pub').value.replace('T', ' '));
+            fd.append('remark', document.getElementById('ed-rem').value);
+            await fetch('/api/video/save', {method:'POST', body:fd});
+            cancelEdit(); loadData(); updateStats();
+        }
+
+        async function loadSettings() {
+            const res = await fetch('/api/settings');
+            globalOptions = await res.json();
+            fillSel('q-host', globalOptions.hosts, '全部主播');
+            fillSel('q-status', globalOptions.statuses, '全部状态');
+            fillSel('q-cat', globalOptions.categories, '全部分类');
             
-            await fetch('/api/video/save', {method:'POST', body:updateFd});
-            alert("图片更新成功！");
-            loadData(); // 刷新显示
+            fillSel('add-host', globalOptions.hosts, '选择主播');
+            fillSel('add-status', globalOptions.statuses, '选择状态');
+        }
+        function fillSel(id, items, def) {
+            const el = document.getElementById(id);
+            if(el) el.innerHTML = `<option value="">${def}</option>` + (items||[]).map(i=>`<option value="${i}">${i}</option>`).join('');
         }
 
-        async function handleDrop(e, id) { e.preventDefault(); if(e.dataTransfer.files.length) uploadImg(e.dataTransfer.files[0], id); }
-        async function handlePaste(e, id) { if(e.clipboardData.files.length) uploadImg(e.clipboardData.files[0], id); }
-
-        function resetFilters() {
-            document.getElementById('q-key').value = '';
-            document.getElementById('q-host').value = '';
-            document.getElementById('q-status').value = '';
-            document.getElementById('q-cat').value = '';
-            document.getElementById('q-start').value = '';
-            document.getElementById('q-end').value = '';
-            loadData(1);
-        }
-
-        // 设置面板
-        function openSettings() {
+        function openSettings() { 
+            document.getElementById('settings-modal').classList.add('active'); 
             document.getElementById('set-hosts').value = globalOptions.hosts.join(',');
             document.getElementById('set-cats').value = globalOptions.categories.join(',');
             document.getElementById('set-plats').value = globalOptions.platforms.join(',');
-            document.getElementById('settings-modal').classList.remove('hidden');
         }
-        function closeSettings() { document.getElementById('settings-modal').classList.add('hidden'); }
+        function closeSettings() { document.getElementById('settings-modal').classList.remove('active'); }
         async function saveSettings() {
-            await fetch('/api/settings', {method:'POST', body: new URLSearchParams({key:'hosts', value:document.getElementById('set-hosts').value})});
-            await fetch('/api/settings', {method:'POST', body: new URLSearchParams({key:'categories', value:document.getElementById('set-cats').value})});
-            await fetch('/api/settings', {method:'POST', body: new URLSearchParams({key:'platforms', value:document.getElementById('set-plats').value})});
-            closeSettings();
-            loadSettings();
-            alert("配置已更新");
+            await fetch('/api/settings', {method:'POST', body:new URLSearchParams({key:'hosts', value:document.getElementById('set-hosts').value})});
+            await fetch('/api/settings', {method:'POST', body:new URLSearchParams({key:'categories', value:document.getElementById('set-cats').value})});
+            await fetch('/api/settings', {method:'POST', body:new URLSearchParams({key:'platforms', value:document.getElementById('set-plats').value})});
+            closeSettings(); loadSettings();
         }
 
-        // 新增弹窗
-        function openAddModal() { document.getElementById('add-modal').classList.remove('hidden'); }
-        function closeAddModal() { document.getElementById('add-modal').classList.add('hidden'); }
+        function openAddModal() { document.getElementById('add-modal').classList.add('active'); }
+        function closeAddModal() { document.getElementById('add-modal').classList.remove('active'); }
         document.getElementById('addForm').onsubmit = async (e) => {
             e.preventDefault();
-            const fd = new FormData(e.target);
-            await fetch('/api/video/save', {method:'POST', body:fd});
-            closeAddModal();
-            loadData();
-            updateStats();
+            await fetch('/api/video/save', {method:'POST', body:new FormData(e.target)});
+            closeAddModal(); loadData(1);
         };
-
-        async function delVideo(id) { if(confirm("确定删除？")) { await fetch(`/api/video/${id}`, {method:'DELETE'}); loadData(); updateStats(); }}
-        async function scanLocal() { if(confirm("扫描导入？")) { fetch('/api/import/local', {method:'POST'}); alert("后台导入中，请稍后刷新"); }}
-        async function updateStats() { try { const res = await fetch('/api/stats'); const s = await res.json(); document.getElementById('st-total').innerText = s.total; document.getElementById('st-pending').innerText = s.pending; document.getElementById('st-host').innerText = s.host; } catch(e){} }
-        function changePage(d) { if(currPage+d>0 && currPage+d<=totalPages) loadData(currPage+d); }
+        
+        async function updateStats() { try { const r=await fetch('/api/stats'); const d=await r.json(); document.getElementById('st-total').innerText=d.total; document.getElementById('st-pending').innerText=d.pending; document.getElementById('st-host').innerText=d.host; }catch(e){} }
+        function changePage(d) { if(currPage+d>0) loadData(currPage+d); }
+        async function delVideo(id) { if(confirm('删?')) { await fetch(`/api/video/${id}`, {method:'DELETE'}); loadData(); } }
+        async function scanLocal() { if(confirm('导入?')) { fetch('/api/import/local', {method:'POST'}); alert('导入中'); } }
     </script>
 </body>
 </html>
