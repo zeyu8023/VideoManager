@@ -7,14 +7,12 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from sqlmodel import Session, create_engine, SQLModel, select, col, or_, Field
 from sqlalchemy import func
-from typing import Optional, List
+from typing import Optional
 
-# 导入 processor
 from .processor import process_excel_background
-# 导入 models (确保 models.py 存在且正确)
 from .models import Video, AppSettings
 
-main_app = FastAPI(title="VideoHub Ultimate")
+main_app = FastAPI(title="VideoHub V3")
 engine = create_engine("sqlite:///data/inventory.db")
 
 @main_app.on_event("startup")
@@ -24,16 +22,16 @@ def on_startup():
     os.makedirs("temp_uploads", exist_ok=True)
     SQLModel.metadata.create_all(engine)
     
-    # 初始化默认配置
+    # 初始化默认配置 (防止空库导致下拉框没数据)
     with Session(engine) as session:
         if not session.get(AppSettings, "hosts"):
-            session.add(AppSettings(key="hosts", value="小梨,VIVI,七七,杨总"))
+            session.add(AppSettings(key="hosts", value="小梨,VIVI,七七"))
         if not session.get(AppSettings, "statuses"):
-            session.add(AppSettings(key="statuses", value="待发布,已发布,剪辑中,拍摄中"))
+            session.add(AppSettings(key="statuses", value="待发布,已发布,剪辑中"))
         if not session.get(AppSettings, "categories"):
-            session.add(AppSettings(key="categories", value="球服,球鞋,球拍,周边"))
+            session.add(AppSettings(key="categories", value="球服,球鞋,球拍"))
         if not session.get(AppSettings, "platforms"):
-            session.add(AppSettings(key="platforms", value="抖音,小红书,视频号"))
+            session.add(AppSettings(key="platforms", value="抖音,小红书"))
         session.commit()
 
 main_app.mount("/assets", StaticFiles(directory="assets"), name="assets")
@@ -60,34 +58,32 @@ def update_settings(key: str = Form(...), value: str = Form(...)):
         session.commit()
     return {"message": "配置已更新"}
 
-# === 核心选项接口 (混合模式) ===
+# === 核心选项接口 (混合去重模式) ===
 @main_app.get("/api/options")
 def get_options():
     with Session(engine) as session:
-        # 获取数据库中已有的去重数据
+        # 1. 读库里已有的
         db_hosts = session.exec(select(Video.host).distinct()).all()
         db_cats = session.exec(select(Video.category).distinct()).all()
         db_stats = session.exec(select(Video.status).distinct()).all()
         db_plats = session.exec(select(Video.platform).distinct()).all()
         
-        # 获取设置里的预设数据
+        # 2. 读设置里的
         settings = {item.key: item.value.split(',') for item in session.exec(select(AppSettings)).all()}
         
-        # 合并去重
         def merge(db_list, key):
-            preset = settings.get(key, [])
-            # 过滤掉 None 和空字符串
-            valid_db = [x for x in db_list if x]
-            return list(set(preset + valid_db))
+            preset = [x.strip() for x in settings.get(key, []) if x.strip()]
+            valid_db = [x for x in db_list if x and x != 'nan']
+            # 合并并去重
+            return sorted(list(set(preset + valid_db)))
 
         return {
-            "hosts": sorted(merge(db_hosts, "hosts")),
-            "categories": sorted(merge(db_cats, "categories")),
-            "statuses": sorted(merge(db_stats, "statuses")),
-            "platforms": sorted(merge(db_plats, "platforms"))
+            "hosts": merge(db_hosts, "hosts"),
+            "categories": merge(db_cats, "categories"),
+            "statuses": merge(db_stats, "statuses"),
+            "platforms": merge(db_plats, "platforms")
         }
 
-# === 图片上传 ===
 @main_app.post("/api/upload")
 async def upload_image(file: UploadFile):
     os.makedirs("assets/previews", exist_ok=True)
@@ -98,7 +94,6 @@ async def upload_image(file: UploadFile):
         shutil.copyfileobj(file.file, buffer)
     return {"url": f"/assets/previews/{filename}"}
 
-# === 统计接口 ===
 @main_app.get("/api/stats")
 def get_stats():
     with Session(engine) as session:
@@ -111,7 +106,6 @@ def get_stats():
             host_name = "暂无"
         return {"total": total, "pending": pending, "host": host_name}
 
-# === 列表接口 (含时间筛选) ===
 @main_app.get("/api/videos")
 def list_videos(
     page: int = 1, size: int = 100, 
@@ -130,8 +124,6 @@ def list_videos(
         if host and host != "全部主播": statement = statement.where(Video.host == host)
         if status and status != "全部状态": statement = statement.where(Video.status == status)
         if category and category != "全部分类": statement = statement.where(Video.category == category)
-        
-        # 时间筛选
         if pub_start: statement = statement.where(Video.publish_time >= pub_start)
         if pub_end: statement = statement.where(Video.publish_time <= pub_end)
 
@@ -143,20 +135,14 @@ def list_videos(
 
         return {"items": results, "total": total, "page": page, "size": size, "total_pages": math.ceil(total / size)}
 
-# === 保存接口 ===
 @main_app.post("/api/video/save")
 async def save_video(
     id: Optional[int] = Form(None),
-    product_id: Optional[str] = Form(None), 
-    title: Optional[str] = Form(None),
-    host: Optional[str] = Form(None), 
-    status: Optional[str] = Form(None),
-    category: Optional[str] = Form(None), 
-    video_type: Optional[str] = Form(None),
-    platform: Optional[str] = Form(None), 
-    finish_time: Optional[str] = Form(None),
-    publish_time: Optional[str] = Form(None), 
-    remark: Optional[str] = Form(None),
+    product_id: Optional[str] = Form(None), title: Optional[str] = Form(None),
+    host: Optional[str] = Form(None), status: Optional[str] = Form(None),
+    category: Optional[str] = Form(None), video_type: Optional[str] = Form(None),
+    platform: Optional[str] = Form(None), finish_time: Optional[str] = Form(None),
+    publish_time: Optional[str] = Form(None), remark: Optional[str] = Form(None),
     image_url: Optional[str] = Form(None)
 ):
     with Session(engine) as session:
@@ -164,12 +150,9 @@ async def save_video(
             video = session.get(Video, id)
             if not video: raise HTTPException(404, "视频不存在")
         else:
-            video = Video(
-                product_id=product_id or "未命名", 
-                title=title or "新视频", 
-                image_url="/assets/default.png"
-            )
+            video = Video(product_id=product_id or "New", title=title or "未命名", image_url="/assets/default.png")
 
+        # 允许更新所有字段
         if product_id is not None: video.product_id = product_id
         if title is not None: video.title = title
         if host is not None: video.host = host
@@ -181,8 +164,7 @@ async def save_video(
         if publish_time is not None: video.publish_time = publish_time
         if remark is not None: video.remark = remark
         
-        if image_url and image_url not in ["nan", "undefined", "null"]: 
-            video.image_url = image_url
+        if image_url and "nan" not in image_url: video.image_url = image_url
             
         session.add(video)
         session.commit()
