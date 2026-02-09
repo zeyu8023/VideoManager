@@ -3,319 +3,287 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VideoHub | 资产库存管理</title>
+    <title>VideoHub Pro</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'Inter', sans-serif; background-color: #f1f5f9; }
-        /* 隐藏滚动条但保留功能 */
-        .no-scrollbar::-webkit-scrollbar { display: none; }
-        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-        
-        /* 表格交互 */
-        tr.hover-row:hover td { background-color: #f8fafc; }
-        
-        /* 弹窗动画 */
-        .modal-enter { animation: modalIn 0.2s ease-out forwards; }
-        @keyframes modalIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+        body { font-family: 'Inter', sans-serif; background: #f8fafc; }
+        /* 表格样式 */
+        th { white-space: nowrap; }
+        td { vertical-align: middle; }
+        .table-cell { max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        /* 状态颜色 */
+        .status-wait { background: #fff7ed; color: #c2410c; border: 1px solid #ffedd5; }
+        .status-done { background: #f0fdf4; color: #15803d; border: 1px solid #dcfce7; }
     </style>
 </head>
-<body class="text-slate-800 h-screen flex flex-col overflow-hidden">
+<body class="text-slate-800 min-h-screen flex flex-col">
 
-    <header class="bg-white border-b border-slate-200 px-6 py-3 flex justify-between items-center shrink-0 z-20">
-        <div class="flex items-center space-x-3">
-            <div class="w-9 h-9 bg-blue-600 rounded-lg flex items-center justify-center text-white shadow-md">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
-            </div>
-            <h1 class="text-lg font-bold tracking-tight text-slate-800">VideoHub <span class="text-xs font-normal text-slate-400 ml-1">v2.0</span></h1>
-        </div>
-        <div class="flex items-center space-x-4">
-            <div class="hidden md:flex items-center space-x-6 mr-4 text-sm">
-                <div class="flex flex-col items-end">
-                    <span class="text-xs text-slate-400 uppercase font-bold">Total Assets</span>
-                    <span class="font-bold text-slate-800" id="stat-total">--</span>
+    <div class="bg-white border-b border-slate-200 px-8 py-6 shadow-sm z-10">
+        <div class="max-w-[1800px] mx-auto">
+            <div class="flex justify-between items-center mb-6">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center text-white font-bold text-xl shadow-lg shadow-blue-200">V</div>
+                    <h1 class="text-2xl font-bold text-slate-900">VideoHub <span class="text-sm font-normal text-slate-400">Pro</span></h1>
                 </div>
-                <div class="flex flex-col items-end">
-                    <span class="text-xs text-slate-400 uppercase font-bold">Pending</span>
-                    <span class="font-bold text-orange-500" id="stat-pending">--</span>
+                <div class="flex items-center gap-3">
+                    <div class="text-right mr-2">
+                        <div class="text-xs text-slate-400 font-bold uppercase">Admin</div>
+                        <div class="text-sm font-bold text-slate-800">zeyu8023</div>
+                    </div>
+                    <div class="w-10 h-10 rounded-full bg-slate-100 border border-slate-200 overflow-hidden">
+                        <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=zeyu" />
+                    </div>
                 </div>
             </div>
-            <div class="h-8 w-px bg-slate-200 mx-2"></div>
-            <div class="flex items-center space-x-2">
-                <div class="w-8 h-8 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center text-xs font-bold text-slate-600">
-                    ZY
-                </div>
-                <span class="text-sm font-medium text-slate-600 hidden sm:block">zeyu8023</span>
-            </div>
-        </div>
-    </header>
 
-    <main class="flex-1 flex flex-col p-6 overflow-hidden">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+                <div class="bg-slate-50 border border-slate-100 p-5 rounded-2xl relative overflow-hidden group hover:border-blue-200 transition-colors">
+                    <div class="text-slate-500 text-xs font-bold uppercase mb-1">Total Assets</div>
+                    <div class="text-4xl font-black text-slate-800" id="st-total">--</div>
+                    <div class="absolute right-4 top-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                        <svg class="w-16 h-16" fill="currentColor" viewBox="0 0 20 20"><path d="M2 10a8 8 0 018-8v8h8a8 8 0 11-16 0z"></path><path d="M12 2.252A8.014 8.014 0 0117.748 8H12V2.252z"></path></svg>
+                    </div>
+                </div>
+                <div class="bg-orange-50 border border-orange-100 p-5 rounded-2xl relative overflow-hidden">
+                    <div class="text-orange-600/70 text-xs font-bold uppercase mb-1">Pending Publish</div>
+                    <div class="text-4xl font-black text-orange-500" id="st-pending">--</div>
+                </div>
+                <div class="bg-emerald-50 border border-emerald-100 p-5 rounded-2xl relative overflow-hidden">
+                    <div class="text-emerald-600/70 text-xs font-bold uppercase mb-1">Top Host</div>
+                    <div class="text-4xl font-black text-emerald-600" id="st-host">--</div>
+                </div>
+                <div class="flex flex-col gap-3 justify-center pl-6 border-l border-slate-100">
+                    <button onclick="scanLocal()" class="bg-slate-800 hover:bg-black text-white py-2.5 rounded-xl text-sm font-bold shadow-md transition-all flex justify-center items-center">
+                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+                        扫描导入 (NAS)
+                    </button>
+                    <button onclick="openModal()" class="bg-blue-600 hover:bg-blue-700 text-white py-2.5 rounded-xl text-sm font-bold shadow-md shadow-blue-200 transition-all flex justify-center items-center">
+                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                        新增资产
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="flex-1 p-8 max-w-[1800px] mx-auto w-full">
         
-        <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 gap-4 shrink-0">
-            <div class="flex items-center space-x-3 w-full md:w-auto">
-                <div class="relative group w-full md:w-64">
-                    <svg class="absolute left-3 top-2.5 w-4 h-4 text-slate-400 group-focus-within:text-blue-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
-                    <input type="text" id="keyword" 
-                           onkeydown="if(event.key==='Enter') loadData(1)"
-                           placeholder="搜索标题 / 编号 / 主播" 
-                           class="w-full pl-9 pr-4 py-2 rounded-lg border border-slate-300 bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm shadow-sm transition-all">
-                </div>
-                
-                <select id="status-filter" onchange="loadData(1)" class="py-2 pl-3 pr-8 rounded-lg border border-slate-300 text-sm bg-white focus:ring-2 focus:ring-blue-500 outline-none cursor-pointer shadow-sm hover:border-blue-400 transition-colors">
-                    <option value="">全部状态</option>
-                    <option value="待发布">🟠 待发布</option>
-                    <option value="已发布">🟢 已发布</option>
-                </select>
-
-                <button onclick="loadData(1)" class="bg-white border border-slate-300 text-slate-600 hover:text-blue-600 hover:border-blue-500 px-4 py-2 rounded-lg text-sm font-medium transition-all shadow-sm">
-                    刷新
-                </button>
+        <div class="flex flex-wrap items-center gap-4 mb-4 bg-white p-2 rounded-xl border border-slate-200 shadow-sm w-fit">
+            <div class="relative">
+                <svg class="absolute left-3 top-2.5 w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                <input id="q-key" onkeydown="if(event.key==='Enter') loadData(1)" placeholder="搜索编号/标题/备注" class="pl-9 pr-4 py-2 w-64 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
             </div>
+            
+            <select id="q-host" onchange="loadData(1)" class="py-2 pl-3 pr-8 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none cursor-pointer">
+                <option>全部主播</option>
+                <option>小梨</option><option>VIVI</option><option>七七</option>
+            </select>
+            
+            <select id="q-status" onchange="loadData(1)" class="py-2 pl-3 pr-8 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none cursor-pointer">
+                <option>全部状态</option>
+                <option>待发布</option><option>已发布</option>
+            </select>
 
-            <div class="flex space-x-3">
-                <button onclick="scanLocal()" class="bg-slate-800 hover:bg-black text-white px-4 py-2 rounded-lg text-sm font-bold shadow-md transition-transform active:scale-95 flex items-center">
-                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
-                    扫描导入
-                </button>
-                <button onclick="toggleModal(true)" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-bold shadow-md shadow-blue-200 transition-transform active:scale-95 flex items-center">
-                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
-                    新增资产
-                </button>
-            </div>
+            <select id="q-cat" onchange="loadData(1)" class="py-2 pl-3 pr-8 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none cursor-pointer">
+                <option>全部分类</option>
+                <option>球服</option><option>球鞋</option>
+            </select>
+
+            <button onclick="loadData(1)" class="px-4 py-2 bg-blue-50 text-blue-600 font-bold text-sm rounded-lg hover:bg-blue-100">查询</button>
         </div>
 
-        <div class="flex-1 bg-white border border-slate-200 rounded-xl shadow-sm flex flex-col overflow-hidden">
-            <div class="overflow-x-auto flex-1">
-                <table class="min-w-full divide-y divide-slate-200">
+        <div class="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden flex flex-col h-[calc(100vh-400px)]">
+            <div class="overflow-auto flex-1">
+                <table class="min-w-full divide-y divide-slate-200 text-sm">
                     <thead class="bg-slate-50 sticky top-0 z-10">
                         <tr>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase tracking-wider w-20">封面</th>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase tracking-wider w-32">编号</th>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">标题</th>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase tracking-wider w-24">主播</th>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase tracking-wider w-24">分类</th>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase tracking-wider w-28">状态</th>
-                            <th scope="col" class="px-6 py-3 text-right text-xs font-bold text-slate-500 uppercase tracking-wider w-24">操作</th>
+                            <th class="px-4 py-3 text-left font-bold text-slate-500 w-16">预览</th>
+                            <th class="px-4 py-3 text-left font-bold text-slate-500 w-32">产品编号</th>
+                            <th class="px-4 py-3 text-left font-bold text-slate-500 min-w-[200px]">视频标题</th>
+                            <th class="px-4 py-3 text-left font-bold text-slate-500">类型</th>
+                            <th class="px-4 py-3 text-left font-bold text-slate-500">完成时间</th>
+                            <th class="px-4 py-3 text-left font-bold text-slate-500">主播</th>
+                            <th class="px-4 py-3 text-center font-bold text-slate-500">状态</th>
+                            <th class="px-4 py-3 text-left font-bold text-slate-500">平台</th>
+                            <th class="px-4 py-3 text-left font-bold text-slate-500">发布时间</th>
+                            <th class="px-4 py-3 text-left font-bold text-slate-500 w-48">备注</th>
+                            <th class="px-4 py-3 text-center font-bold text-slate-500 sticky right-0 bg-slate-50 shadow-l">操作</th>
                         </tr>
                     </thead>
-                    <tbody id="table-body" class="bg-white divide-y divide-slate-100">
+                    <tbody id="table-body" class="divide-y divide-slate-100">
                         </tbody>
                 </table>
             </div>
-            
-            <div class="bg-white border-t border-slate-200 px-6 py-3 flex items-center justify-between shrink-0">
-                <div class="text-xs text-slate-500">
-                    第 <span id="page-current" class="font-bold text-slate-800">1</span> / <span id="page-total">1</span> 页
-                    <span class="mx-2 text-slate-300">|</span>
-                    共 <span id="item-total">0</span> 条记录
-                </div>
-                <div class="flex space-x-2">
-                    <button id="btn-prev" onclick="changePage(-1)" class="px-3 py-1 border border-slate-200 rounded text-xs font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed">
-                        上一页
-                    </button>
-                    <button id="btn-next" onclick="changePage(1)" class="px-3 py-1 border border-slate-200 rounded text-xs font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed">
-                        下一页
-                    </button>
+            <div class="border-t border-slate-200 px-4 py-2 flex justify-between items-center bg-slate-50 shrink-0">
+                <span class="text-xs text-slate-500">共 <span id="total-count">0</span> 条，当前第 <span id="curr-page">1</span> 页</span>
+                <div class="space-x-2">
+                    <button onclick="changePage(-1)" class="px-3 py-1 bg-white border border-slate-300 rounded text-xs hover:bg-slate-100">上一页</button>
+                    <button onclick="changePage(1)" class="px-3 py-1 bg-white border border-slate-300 rounded text-xs hover:bg-slate-100">下一页</button>
                 </div>
             </div>
         </div>
+    </div>
 
-    </main>
-
-    <div id="modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden items-center justify-center z-50">
-        <div class="bg-white rounded-2xl w-full max-w-lg shadow-2xl modal-enter overflow-hidden">
-            <div class="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
-                <h3 class="text-lg font-bold text-slate-800">录入新视频</h3>
-                <button onclick="toggleModal(false)" class="text-slate-400 hover:text-red-500 transition-colors">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-                </button>
-            </div>
-            <form id="addForm" class="p-6 space-y-4">
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-xs font-bold text-slate-500 mb-1">产品编号</label>
-                        <input name="product_id" placeholder="例如: 2024-001" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none" required>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-bold text-slate-500 mb-1">主播</label>
-                        <input name="host" placeholder="例如: 小梨" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none" required>
-                    </div>
+    <div id="modal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50">
+        <div class="bg-white rounded-2xl w-[600px] shadow-2xl p-6 scale-in">
+            <h3 class="text-xl font-bold mb-4" id="modal-title">编辑资产</h3>
+            <form id="editForm" class="grid grid-cols-2 gap-4">
+                <input type="hidden" name="id">
+                <div class="col-span-2 space-y-1">
+                    <label class="text-xs font-bold text-slate-400">视频标题</label>
+                    <input name="title" class="w-full p-2 border border-slate-300 rounded text-sm" required>
                 </div>
-                <div>
-                    <label class="block text-xs font-bold text-slate-500 mb-1">视频标题</label>
-                    <input name="title" placeholder="请输入视频完整标题" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none" required>
+                <div class="space-y-1">
+                    <label class="text-xs font-bold text-slate-400">产品编号</label>
+                    <input name="product_id" class="w-full p-2 border border-slate-300 rounded text-sm" required>
                 </div>
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-xs font-bold text-slate-500 mb-1">状态</label>
-                        <select name="status" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none">
-                            <option>待发布</option>
-                            <option>已发布</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-bold text-slate-500 mb-1">分类</label>
-                        <input name="category" placeholder="球服 / 球鞋" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none">
-                    </div>
+                <div class="space-y-1">
+                    <label class="text-xs font-bold text-slate-400">主播</label>
+                    <input name="host" class="w-full p-2 border border-slate-300 rounded text-sm" required>
                 </div>
-                <div class="pt-2">
-                    <label class="block text-xs font-bold text-slate-500 mb-1">封面图片</label>
-                    <input type="file" name="image" class="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 transition-all"/>
+                <div class="space-y-1">
+                    <label class="text-xs font-bold text-slate-400">产品类型</label>
+                    <input name="category" class="w-full p-2 border border-slate-300 rounded text-sm">
                 </div>
-                <div class="pt-4 flex justify-end space-x-3">
-                    <button type="button" onclick="toggleModal(false)" class="px-4 py-2 text-sm font-bold text-slate-500 hover:text-slate-700">取消</button>
-                    <button type="submit" class="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold rounded-lg shadow-lg">确认保存</button>
+                <div class="space-y-1">
+                    <label class="text-xs font-bold text-slate-400">视频类型</label>
+                    <input name="video_type" class="w-full p-2 border border-slate-300 rounded text-sm">
+                </div>
+                <div class="space-y-1">
+                    <label class="text-xs font-bold text-slate-400">状态</label>
+                    <select name="status" class="w-full p-2 border border-slate-300 rounded text-sm">
+                        <option>待发布</option><option>已发布</option>
+                    </select>
+                </div>
+                <div class="space-y-1">
+                    <label class="text-xs font-bold text-slate-400">发布平台</label>
+                    <input name="platform" class="w-full p-2 border border-slate-300 rounded text-sm">
+                </div>
+                <div class="space-y-1">
+                    <label class="text-xs font-bold text-slate-400">完成时间</label>
+                    <input name="finish_time" class="w-full p-2 border border-slate-300 rounded text-sm" placeholder="YYYY/MM/DD">
+                </div>
+                <div class="space-y-1">
+                    <label class="text-xs font-bold text-slate-400">发布时间</label>
+                    <input name="publish_time" class="w-full p-2 border border-slate-300 rounded text-sm">
+                </div>
+                <div class="col-span-2 space-y-1">
+                    <label class="text-xs font-bold text-slate-400">备注</label>
+                    <input name="remark" class="w-full p-2 border border-slate-300 rounded text-sm">
+                </div>
+                <div class="col-span-2 pt-2 border-t mt-2 flex justify-end gap-3">
+                    <button type="button" onclick="closeModal()" class="px-4 py-2 text-sm font-bold text-slate-500">取消</button>
+                    <button type="submit" class="px-6 py-2 bg-blue-600 text-white rounded text-sm font-bold">保存</button>
                 </div>
             </form>
         </div>
     </div>
 
     <script>
-        let currentPage = 1;
-        let totalPages = 1;
-        const pageSize = 20; // 每页20条，适合表格视图
+        let currPage = 1, totalPages = 1;
 
-        // 初始化
-        document.addEventListener('DOMContentLoaded', () => {
-            loadData(1);
-            updateStats();
-        });
-
-        // 加载数据 (分页+搜索+筛选)
-        async function loadData(page) {
-            currentPage = page;
-            const keyword = document.getElementById('keyword').value;
-            const status = document.getElementById('status-filter').value;
-            const tbody = document.getElementById('table-body');
+        async function loadData(p) {
+            currPage = p || currPage;
+            const params = new URLSearchParams({
+                page: currPage, size: 20,
+                keyword: document.getElementById('q-key').value,
+                host: document.getElementById('q-host').value,
+                status: document.getElementById('q-status').value,
+                category: document.getElementById('q-cat').value
+            });
             
-            // Loading 状态
-            tbody.innerHTML = `<tr><td colspan="7" class="py-20 text-center"><div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div></td></tr>`;
-
-            try {
-                const params = new URLSearchParams({ page, size: pageSize, keyword, status });
-                const res = await fetch(`/api/videos?${params}`);
-                const data = await res.json();
-                
-                renderTable(data.items);
-                updatePagination(data);
-            } catch (err) {
-                console.error(err);
-                tbody.innerHTML = `<tr><td colspan="7" class="py-10 text-center text-red-500 font-bold">数据加载失败，请检查网络</td></tr>`;
-            }
-        }
-
-        // 渲染表格
-        function renderTable(items) {
+            const res = await fetch(`/api/videos?${params}`);
+            const data = await res.json();
+            totalPages = data.total_pages;
+            
+            document.getElementById('total-count').innerText = data.total;
+            document.getElementById('curr-page').innerText = data.page;
+            
             const tbody = document.getElementById('table-body');
-            if (!items || items.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="7" class="py-20 text-center text-slate-400">暂无匹配数据</td></tr>`;
-                return;
-            }
-
-            tbody.innerHTML = items.map(v => `
-                <tr class="hover-row transition-colors border-b border-slate-50 last:border-b-0">
-                    <td class="px-6 py-3 whitespace-nowrap">
-                        <div class="relative h-10 w-10 group">
-                            <img class="h-10 w-10 rounded object-cover bg-slate-100 border border-slate-200 cursor-pointer" 
-                                 src="${v.image_url}" 
-                                 onerror="this.src='https://via.placeholder.com/40?text=NA'"
-                                 onclick="window.open('${v.image_url}', '_blank')">
-                            <div class="absolute bottom-full left-0 mb-2 hidden group-hover:block z-50 w-48 shadow-2xl rounded-lg overflow-hidden border border-white">
-                                <img src="${v.image_url}" class="w-full bg-white">
-                            </div>
-                        </div>
+            tbody.innerHTML = data.items.map(v => `
+                <tr class="hover:bg-blue-50/50 transition-colors group">
+                    <td class="px-4 py-2">
+                        <img src="${v.image_url}" class="w-10 h-10 object-cover rounded border border-slate-200 cursor-zoom-in hover:scale-150 transition-transform origin-left relative z-0 hover:z-50" onerror="this.src='/assets/default.png'">
                     </td>
-                    <td class="px-6 py-3 whitespace-nowrap text-sm font-bold text-slate-700 font-mono">${v.product_id}</td>
-                    <td class="px-6 py-3 text-sm text-slate-600 font-medium max-w-xs truncate" title="${v.title}">${v.title}</td>
-                    <td class="px-6 py-3 whitespace-nowrap text-sm text-slate-500">
-                        <div class="flex items-center"><div class="w-1.5 h-1.5 rounded-full bg-slate-300 mr-2"></div>${v.host}</div>
+                    <td class="px-4 py-2 font-mono font-bold text-blue-600">${v.product_id}</td>
+                    <td class="px-4 py-2 font-medium text-slate-700 table-cell" title="${v.title}">${v.title}</td>
+                    <td class="px-4 py-2 text-slate-500">${v.category}</td>
+                    <td class="px-4 py-2 text-slate-500 text-xs">${v.finish_time || '-'}</td>
+                    <td class="px-4 py-2 font-bold text-slate-600">${v.host}</td>
+                    <td class="px-4 py-2 text-center">
+                        <span class="px-2 py-0.5 rounded text-xs font-bold ${v.status==='待发布'?'status-wait':'status-done'}">${v.status}</span>
                     </td>
-                    <td class="px-6 py-3 whitespace-nowrap text-sm text-slate-400 font-mono text-xs uppercase">${v.category || '-'}</td>
-                    <td class="px-6 py-3 whitespace-nowrap">
-                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold border ${getStatusStyle(v.status)}">
-                            ${v.status}
-                        </span>
-                    </td>
-                    <td class="px-6 py-3 whitespace-nowrap text-right text-sm font-medium">
-                        <button class="text-slate-400 hover:text-blue-600 transition-colors">编辑</button>
+                    <td class="px-4 py-2 text-slate-500 text-xs">${v.platform || '-'}</td>
+                    <td class="px-4 py-2 text-slate-500 text-xs">${v.publish_time || '-'}</td>
+                    <td class="px-4 py-2 text-slate-400 text-xs table-cell" title="${v.remark || ''}">${v.remark || ''}</td>
+                    <td class="px-4 py-2 text-center sticky right-0 bg-white group-hover:bg-blue-50/50 shadow-l">
+                        <button onclick='openModal(${JSON.stringify(v)})' class="text-blue-600 hover:text-blue-800 font-bold text-xs mr-2">编辑</button>
+                        <button onclick="delVideo(${v.id})" class="text-red-400 hover:text-red-600 font-bold text-xs">删除</button>
                     </td>
                 </tr>
-            `).join('');
+            `).join('') || '<tr><td colspan="11" class="text-center py-10 text-slate-400">无数据</td></tr>';
+
+            updateStats();
         }
 
-        function getStatusStyle(status) {
-            if (status === '待发布') return 'bg-orange-50 text-orange-600 border-orange-100';
-            if (status === '已发布') return 'bg-emerald-50 text-emerald-600 border-emerald-100';
-            return 'bg-slate-50 text-slate-600 border-slate-100';
-        }
-
-        // 分页更新
-        function updatePagination(data) {
-            totalPages = data.total_pages;
-            document.getElementById('page-current').innerText = data.page;
-            document.getElementById('page-total').innerText = data.total_pages;
-            document.getElementById('item-total').innerText = data.total;
-            
-            document.getElementById('btn-prev').disabled = data.page <= 1;
-            document.getElementById('btn-next').disabled = data.page >= data.total_pages;
-        }
-
-        function changePage(delta) {
-            const target = currentPage + delta;
-            if (target > 0 && target <= totalPages) loadData(target);
-        }
-
-        // 统计更新
         async function updateStats() {
             try {
                 const res = await fetch('/api/stats');
                 const s = await res.json();
-                document.getElementById('stat-total').innerText = s.total;
-                document.getElementById('stat-pending').innerText = s.pending;
-            } catch(e) { console.error("Stats error"); }
+                document.getElementById('st-total').innerText = s.total;
+                document.getElementById('st-pending').innerText = s.pending;
+                document.getElementById('st-host').innerText = s.host;
+            } catch(e){}
         }
 
-        // 目录扫描导入
-        async function scanLocal() {
-            if(!confirm("确认要扫描 NAS 上的 temp_uploads 目录并导入吗？")) return;
-            try {
-                const res = await fetch('/api/import/local', {method:'POST'});
-                const d = await res.json();
-                alert(d.message);
-            } catch(e) { alert("扫描启动失败"); }
+        function changePage(d) {
+            if(currPage + d > 0 && currPage + d <= totalPages) loadData(currPage + d);
         }
 
         // 弹窗逻辑
-        function toggleModal(show) {
-            const m = document.getElementById('modal');
-            m.classList.toggle('hidden', !show);
-            m.classList.toggle('flex', show);
+        function openModal(data) {
+            const form = document.getElementById('editForm');
+            form.reset();
+            document.getElementById('modal').classList.remove('hidden');
+            document.getElementById('modal').classList.add('flex');
+            
+            if(data) {
+                document.getElementById('modal-title').innerText = "编辑资产";
+                for(let k in data) {
+                    if(form[k]) form[k].value = (data[k] === 'null' || data[k] === null) ? '' : data[k];
+                }
+            } else {
+                document.getElementById('modal-title').innerText = "新增资产";
+            }
         }
 
-        // 新增提交
-        document.getElementById('addForm').onsubmit = async (e) => {
-            e.preventDefault();
-            const btn = e.target.querySelector('button[type="submit"]');
-            const originalText = btn.innerText;
-            btn.innerText = "保存中...";
-            btn.disabled = true;
+        function closeModal() {
+            document.getElementById('modal').classList.add('hidden');
+            document.getElementById('modal').classList.remove('flex');
+        }
 
+        document.getElementById('editForm').onsubmit = async (e) => {
+            e.preventDefault();
             const fd = new FormData(e.target);
-            try {
-                const res = await fetch('/api/video/add', {method:'POST', body:fd});
-                if(res.ok) {
-                    toggleModal(false);
-                    e.target.reset();
-                    loadData(1);
-                    updateStats();
-                } else { alert("保存失败"); }
-            } catch(err) { alert("网络错误"); }
-            finally {
-                btn.innerText = originalText;
-                btn.disabled = false;
-            }
+            const res = await fetch('/api/video/save', {method:'POST', body:fd});
+            if(res.ok) { closeModal(); loadData(); } else { alert("保存失败"); }
         };
+
+        async function delVideo(id) {
+            if(!confirm("确定删除该记录吗？")) return;
+            await fetch(`/api/video/${id}`, {method:'DELETE'});
+            loadData();
+        }
+
+        async function scanLocal() {
+            if(!confirm("确认扫描 temp_uploads 目录？")) return;
+            fetch('/api/import/local', {method:'POST'});
+            alert("后台开始导入，请稍后刷新");
+        }
+
+        // 初始加载
+        loadData(1);
     </script>
 </body>
 </html>

@@ -6,146 +6,137 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from sqlmodel import Session, create_engine, SQLModel, select, col, or_
 from sqlalchemy import func
-from typing import Optional, List
+from typing import Optional
 
-# 导入你之前的 processor (确保 backend/processor.py 存在)
-from .processor import process_excel_background
-# 导入模型 (确保 backend/models.py 存在)
+# 确保导入了更新后的模型
 from .models import Video
+from .processor import process_excel_background
 
-# === 初始化 App ===
-main_app = FastAPI(title="VideoHub Backend")
+main_app = FastAPI(title="VideoHub Pro")
 engine = create_engine("sqlite:///data/inventory.db")
 
 @main_app.on_event("startup")
 def on_startup():
-    # 确保目录存在
     os.makedirs("data", exist_ok=True)
     os.makedirs("assets/previews", exist_ok=True)
     os.makedirs("temp_uploads", exist_ok=True)
-    # 创建数据库表
     SQLModel.metadata.create_all(engine)
 
-# 挂载静态资源 (图片)
 main_app.mount("/assets", StaticFiles(directory="assets"), name="assets")
 
-# === 核心路由 ===
-
-# 1. 首页：返回 index.html
 @main_app.get("/")
 async def read_index():
     return FileResponse(os.path.join("frontend", "index.html"))
 
-# 2. 统计接口 (看板数据)
+# --- 核心接口 ---
+
 @main_app.get("/api/stats")
 def get_stats():
     with Session(engine) as session:
-        # 使用 func.count 提高性能
         total = session.exec(select(func.count(Video.id))).one()
         pending = session.exec(select(func.count(Video.id)).where(Video.status == "待发布")).one()
-        
-        # 简单逻辑：获取出现次数最多的主播 (生产环境可用更复杂的 group by)
-        # 这里暂时返回静态或简单的
-        return {
-            "total": total,
-            "pending": pending,
-            "host": "小梨" # 这里的统计逻辑可根据需求复杂化
-        }
+        # 简单统计：获取出现频率最高的主播
+        try:
+            top_host = session.exec(select(Video.host, func.count(Video.host)).group_by(Video.host).order_by(func.count(Video.host).desc()).limit(1)).first()
+            host_name = top_host[0] if top_host else "暂无"
+        except:
+            host_name = "暂无"
+            
+        return {"total": total, "pending": pending, "host": host_name}
 
-# 3. 视频列表接口 (支持分页、搜索、筛选)
 @main_app.get("/api/videos")
 def list_videos(
-    page: int = 1,
-    size: int = 15,
+    page: int = 1, size: int = 20,
     keyword: Optional[str] = None,
-    status: Optional[str] = None
+    host: Optional[str] = None,
+    status: Optional[str] = None,
+    category: Optional[str] = None
 ):
     with Session(engine) as session:
-        # 构建基础查询
         statement = select(Video)
 
-        # 关键词搜索 (同时搜标题、产品ID、主播)
+        # 1. 关键词搜索 (搜标题、编号、备注)
         if keyword:
-            statement = statement.where(
-                or_(
-                    col(Video.title).contains(keyword),
-                    col(Video.product_id).contains(keyword),
-                    col(Video.host).contains(keyword)
-                )
-            )
+            statement = statement.where(or_(
+                col(Video.title).contains(keyword),
+                col(Video.product_id).contains(keyword),
+                col(Video.remark).contains(keyword)
+            ))
         
-        # 状态筛选
-        if status and status != "全部":
-            statement = statement.where(Video.status == status)
+        # 2. 精确筛选
+        if host and host != "全部主播": statement = statement.where(Video.host == host)
+        if status and status != "全部状态": statement = statement.where(Video.status == status)
+        if category and category != "全部分类": statement = statement.where(Video.category == category)
 
-        # 计算总条数 (用于前端计算页码)
-        # 注意：先计算 count 再做 limit
-        count_statement = select(func.count()).select_from(statement.subquery())
-        total = session.exec(count_statement).one()
+        # 3. 分页
+        count_stmt = select(func.count()).select_from(statement.subquery())
+        total = session.exec(count_stmt).one()
 
-        # 排序与分页
         statement = statement.order_by(Video.id.desc()).offset((page - 1) * size).limit(size)
         results = session.exec(statement).all()
 
         return {
-            "items": results,
-            "total": total,
-            "page": page,
-            "size": size,
-            "total_pages": math.ceil(total / size)
+            "items": results, "total": total, "page": page, "size": size, "total_pages": math.ceil(total / size)
         }
 
-# 4. 手动新增接口
-@main_app.post("/api/video/add")
-async def add_video(
-    product_id: str = Form(...),
-    title: str = Form(...),
-    host: str = Form(...),
-    status: str = Form(...),
-    category: str = Form(...),
-    platform: str = Form(""),
+# 新增/修改 统一接口
+@main_app.post("/api/video/save")
+async def save_video(
+    id: Optional[int] = Form(None),
+    product_id: str = Form(...), title: str = Form(...),
+    host: str = Form(...), status: str = Form(...),
+    category: str = Form(...), video_type: str = Form(""),
+    platform: str = Form(""), finish_time: str = Form(""),
+    publish_time: str = Form(""), remark: str = Form(""),
     image: UploadFile = None
 ):
     with Session(engine) as session:
-        img_url = "/assets/default.png"
-        if image:
-            # 保存上传的图片
-            ext = image.filename.split('.')[-1] if '.' in image.filename else "png"
-            filename = f"manual_{product_id}_{title[:5]}.{ext}"
-            img_path = os.path.join("assets", "previews", filename)
-            
-            with open(img_path, "wb") as buffer:
-                shutil.copyfileobj(image.file, buffer)
-            img_url = f"/assets/previews/{filename}"
-            
-        new_video = Video(
-            product_id=product_id,
-            title=title,
-            host=host,
-            status=status,
-            category=category,
-            platform=platform,
-            image_url=img_url
-        )
-        session.add(new_video)
-        session.commit()
-        return {"message": "新增成功", "id": new_video.id}
+        if id: # 修改模式
+            video = session.get(Video, id)
+            if not video: raise HTTPException(404, "视频不存在")
+        else: # 新增模式
+            video = Video(product_id=product_id, title=title, image_url="/assets/default.png") # 初始值
 
-# 5. 本地目录扫描接口 (400M 大文件处理)
+        # 更新字段
+        video.product_id = product_id
+        video.title = title
+        video.host = host
+        video.status = status
+        video.category = category
+        video.video_type = video_type
+        video.platform = platform
+        video.finish_time = finish_time
+        video.publish_time = publish_time
+        video.remark = remark
+
+        # 如果上传了新图
+        if image:
+            ext = image.filename.split('.')[-1]
+            filename = f"manual_{product_id}_{title[:2]}.{ext}"
+            filepath = os.path.join("assets", "previews", filename)
+            with open(filepath, "wb") as buffer:
+                shutil.copyfileobj(image.file, buffer)
+            video.image_url = f"/assets/previews/{filename}"
+
+        session.add(video)
+        session.commit()
+        return {"message": "保存成功"}
+
+# 删除接口
+@main_app.delete("/api/video/{video_id}")
+def delete_video(video_id: int):
+    with Session(engine) as session:
+        video = session.get(Video, video_id)
+        if not video: raise HTTPException(404, "未找到")
+        session.delete(video)
+        session.commit()
+    return {"message": "已删除"}
+
+# 导入接口
 @main_app.post("/api/import/local")
 async def import_local(bg_tasks: BackgroundTasks):
-    # 扫描 temp_uploads 下的所有 xlsx
-    if not os.path.exists("temp_uploads"):
-        raise HTTPException(status_code=404, detail="目录不存在")
-        
+    if not os.path.exists("temp_uploads"): raise HTTPException(404, "目录不存在")
     files = [f for f in os.listdir("temp_uploads") if f.endswith(".xlsx")]
-    if not files:
-        raise HTTPException(status_code=404, detail="temp_uploads 目录为空，请先上传文件")
-    
-    # 取第一个文件处理
-    target_file = os.path.join("temp_uploads", files[0])
-    
-    # 后台执行，立即返回
-    bg_tasks.add_task(process_excel_background, target_file, engine)
-    
-    return {"message": f"已发现文件 {files[0]}，后台处理任务已启动"}
+    if not files: raise HTTPException(404, "无文件")
+    bg_tasks.add_task(process_excel_background, os.path.join("temp_uploads", files[0]), engine)
+    return {"message": "后台处理中..."}
