@@ -3,173 +3,191 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VideoHub V13</title>
+    <title>VideoHub V14.0</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/echarts/5.4.3/echarts.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'Inter', 'Noto Sans SC', sans-serif; background: #f1f5f9; color: #334155; overflow: hidden; }
+        body { font-family: 'Inter', 'Noto Sans SC', sans-serif; background: #f8fafc; color: #1e293b; overflow: hidden; }
         
         /* 侧边栏 */
-        .sidebar { width: 240px; background: #1e293b; color: #94a3b8; flex-shrink: 0; display: flex; flex-direction: column; transition: width 0.2s; }
-        .sidebar-item { padding: 14px 24px; cursor: pointer; display: flex; align-items: center; gap: 12px; font-weight: 500; border-left: 3px solid transparent; }
-        .sidebar-item:hover { background: #334155; color: white; }
-        .sidebar-item.active { background: #0f172a; color: white; border-left-color: #3b82f6; }
+        .sidebar { width: 240px; background: #0f172a; color: #94a3b8; display: flex; flex-direction: column; flex-shrink: 0; }
+        .nav-item { padding: 16px 24px; cursor: pointer; display: flex; align-items: center; gap: 12px; font-weight: 500; border-left: 3px solid transparent; transition: all 0.2s; }
+        .nav-item:hover { background: #1e293b; color: white; }
+        .nav-item.active { background: #1e293b; color: white; border-left-color: #3b82f6; }
         
-        /* 表格容器 */
-        .table-container { flex: 1; overflow: auto; background: white; margin: 0 20px 20px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
-        table { width: 100%; border-collapse: collapse; min-width: 1600px; } /* 宽屏不挤 */
-        th { position: sticky; top: 0; background: #f8fafc; font-size: 13px; font-weight: 700; color: #475569; padding: 12px; border-bottom: 2px solid #e2e8f0; text-align: left; z-index: 10; }
-        td { padding: 10px 12px; border-bottom: 1px solid #f1f5f9; font-size: 13px; vertical-align: middle; }
+        /* 主内容区 */
+        .main-area { flex: 1; display: flex; flex-direction: column; min-width: 0; background: #f1f5f9; }
+        
+        /* 表格容器 (关键：允许横向滚动) */
+        .table-wrapper { flex: 1; overflow: auto; background: white; margin: 0 20px 20px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); position: relative; }
+        table { width: 100%; border-collapse: collapse; min-width: 1800px; /* 强制撑开宽度 */ }
+        
+        /* 表头固定 */
+        th { position: sticky; top: 0; background: #f8fafc; font-size: 14px; font-weight: 700; color: #475569; padding: 14px; border-bottom: 2px solid #e2e8f0; text-align: left; z-index: 20; }
+        td { padding: 12px 14px; border-bottom: 1px solid #f1f5f9; font-size: 14px; vertical-align: middle; color: #334155; }
         tr:hover td { background: #f8fafc; }
 
-        /* 行内编辑 */
-        .t-input { width: 100%; padding: 6px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 13px; outline: none; background: white; }
-        .t-input:focus { border-color: #3b82f6; box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1); }
+        /* 行内编辑输入框 */
+        .t-input { width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 14px; outline: none; background: white; height: 36px; }
+        .t-input:focus { border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1); }
         .editing { background: #eff6ff !important; }
         .new-row { background: #f0fdf4 !important; }
 
         /* 筛选面板 */
-        #filter-panel { transition: max-height 0.3s ease; overflow: hidden; max-height: 0; background: white; margin: 0 20px 10px; border-radius: 8px; padding: 0 20px; }
-        #filter-panel.open { max-height: 600px; padding-top: 16px; padding-bottom: 16px; }
+        #filter-panel { transition: max-height 0.3s ease; overflow: hidden; max-height: 0; background: white; margin: 0 20px 16px; border-radius: 8px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+        #filter-panel.open { max-height: 500px; }
 
-        /* 组件 */
-        .pill { padding: 3px 8px; border-radius: 6px; font-size: 12px; font-weight: 600; display: inline-block; margin-right: 4px; border: 1px solid transparent; }
-        .img-cell { width: 44px; height: 44px; border-radius: 6px; border: 1px solid #e2e8f0; background: white; overflow: hidden; cursor: pointer; display: flex; align-items: center; justify-content: center; }
-        .img-cell:hover { border-color: #3b82f6; }
+        /* 组件样式 */
+        .pill { padding: 4px 10px; border-radius: 6px; font-size: 12px; font-weight: 600; display: inline-block; margin-right: 4px; border: 1px solid transparent; white-space: nowrap; }
+        .img-cell { width: 48px; height: 48px; border-radius: 6px; border: 1px solid #e2e8f0; background: white; overflow: hidden; cursor: pointer; display: flex; align-items: center; justify-content: center; position: relative; }
+        .img-cell:hover::after { content:'+'; position:absolute; inset:0; background:rgba(0,0,0,0.3); color:white; display:flex; align-items:center; justify-content:center; font-weight:bold; font-size:18px; }
         
+        /* 弹窗 & 多选 */
         .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 50; opacity: 0; pointer-events: none; transition: opacity 0.2s; }
         .modal.active { opacity: 1; pointer-events: auto; }
-        .multi-pop { position: absolute; background: white; border: 1px solid #cbd5e1; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); border-radius: 6px; width: 200px; max-height: 240px; overflow-y: auto; z-index: 40; display: none; }
+        .multi-pop { position: absolute; background: white; border: 1px solid #cbd5e1; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); border-radius: 6px; width: 220px; max-height: 260px; overflow-y: auto; z-index: 40; display: none; }
         .multi-pop.show { display: block; }
-        .multi-opt { padding: 8px; cursor: pointer; display: flex; align-items: center; gap: 8px; font-size: 13px; }
-        .multi-opt:hover { background: #f1f5f9; }
+        .multi-opt { padding: 8px 12px; cursor: pointer; display: flex; align-items: center; gap: 8px; font-size: 13px; }
+        .multi-opt:hover { background: #f1f5f9; color: #2563eb; }
     </style>
 </head>
 <body class="flex h-screen">
 
     <aside class="sidebar">
-        <div class="h-16 flex items-center px-6 gap-3 mb-2">
+        <div class="h-16 flex items-center px-6 gap-3 mb-6">
             <div class="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white font-bold text-xl">V</div>
-            <h1 class="text-lg font-bold text-white">VideoHub</h1>
+            <h1 class="text-xl font-bold text-white tracking-tight">VideoHub</h1>
         </div>
-        <div class="sidebar-item active" onclick="switchView('assets', this)">
-            <span>📦</span> 资产管理
+        <div class="nav-item active" onclick="switchView('assets', this)">
+            <span>📦</span> 资产库
         </div>
-        <div class="sidebar-item" onclick="switchView('report', this)">
-            <span>📊</span> 数据报表
+        <div class="nav-item" onclick="switchView('report', this)">
+            <span>📊</span> 数据驾驶舱
         </div>
     </aside>
 
-    <main class="flex-1 flex flex-col min-w-0 bg-slate-50 relative">
+    <main class="main-area">
         
-        <header class="h-16 flex justify-between items-center px-6 shrink-0 bg-white border-b border-slate-200 mb-4 shadow-sm">
+        <header class="h-16 bg-white border-b border-slate-200 flex justify-between items-center px-6 shrink-0 z-30">
             <h2 class="text-lg font-bold text-slate-800" id="page-title">资产管理</h2>
             <div class="flex items-center gap-3">
-                <input id="g-search" onkeydown="if(event.key==='Enter') loadData(1)" placeholder="全局搜索..." class="pl-3 pr-3 py-1.5 w-64 bg-slate-100 border-none rounded text-sm focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none">
-                <button onclick="toggleFilters()" class="text-slate-600 hover:text-blue-600 p-2 text-sm font-bold bg-slate-50 rounded">筛选</button>
-                <button onclick="openSettings()" class="text-slate-600 hover:text-blue-600 p-2 text-sm font-bold bg-slate-50 rounded">配置</button>
-                <button onclick="addNewRow()" class="bg-blue-600 text-white text-sm font-bold px-4 py-2 rounded shadow hover:bg-blue-700">+ 新增一行</button>
+                <input id="g-search" onkeydown="if(event.key==='Enter') loadData(1)" placeholder="全局搜索..." class="pl-4 pr-4 py-2 w-64 bg-slate-100 border-none rounded-lg text-sm focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none transition-all">
+                <button onclick="toggleFilters()" class="px-3 py-2 text-slate-600 hover:text-blue-600 font-bold text-sm bg-slate-50 rounded-lg hover:bg-slate-100 border border-transparent hover:border-slate-200 transition-all">高级筛选</button>
+                <button onclick="openSettings()" class="p-2 text-slate-400 hover:text-slate-600">⚙️</button>
             </div>
         </header>
 
         <div id="view-assets" class="flex flex-col flex-1 overflow-hidden">
             
-            <div class="px-6 mb-4 grid grid-cols-3 gap-6 shrink-0">
-                <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex justify-between items-center">
-                    <div><div class="text-xs text-slate-400 font-bold uppercase">总资产</div><div class="text-2xl font-black text-slate-800 mt-1" id="st-total">-</div></div>
-                    <div class="text-3xl opacity-30">📦</div>
+            <div class="px-6 py-4 grid grid-cols-3 gap-6 shrink-0">
+                <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex justify-between items-center">
+                    <div><div class="text-xs text-slate-400 font-bold uppercase tracking-wider">总资产</div><div class="text-3xl font-black text-slate-800 mt-1" id="st-total">-</div></div>
+                    <div class="text-4xl opacity-20 grayscale">📦</div>
                 </div>
-                <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex justify-between items-center">
-                    <div><div class="text-xs text-orange-400 font-bold uppercase">待发布</div><div class="text-2xl font-black text-orange-500 mt-1" id="st-pending">-</div></div>
-                    <div class="text-3xl opacity-30">🔥</div>
+                <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex justify-between items-center">
+                    <div><div class="text-xs text-orange-400 font-bold uppercase tracking-wider">待发布</div><div class="text-3xl font-black text-orange-500 mt-1" id="st-pending">-</div></div>
+                    <div class="text-4xl opacity-20 grayscale">🔥</div>
                 </div>
-                <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex justify-between items-center cursor-pointer hover:bg-slate-50" onclick="openImport()">
-                    <div><div class="text-xs text-blue-400 font-bold uppercase">批量操作</div><div class="text-base font-bold text-blue-600 mt-1">导入数据</div></div>
-                    <div class="text-3xl opacity-30">📥</div>
+                <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex justify-between items-center hover:shadow-md transition-shadow cursor-pointer" onclick="openImport()">
+                    <div><div class="text-xs text-blue-500 font-bold uppercase tracking-wider">快捷入口</div><div class="text-lg font-bold text-blue-600 mt-1 hover:underline">批量导入数据 &rarr;</div></div>
+                    <div class="text-4xl opacity-20 grayscale">📥</div>
                 </div>
             </div>
 
             <div id="filter-panel">
-                <div class="grid grid-cols-6 gap-4">
+                <div class="grid grid-cols-6 gap-4 p-5">
                     <input id="s-pid" list="dl-pids" class="t-input" placeholder="编号...">
                     <input id="s-title" class="t-input" placeholder="标题...">
                     <select id="s-cat" class="t-input"></select>
                     <select id="s-type" class="t-input"></select>
-                    <select id="s-status" class="t-input"></select>
                     <select id="s-host" class="t-input"></select>
-                    <div class="col-span-6 flex justify-end gap-2 border-t pt-3">
-                        <button onclick="loadData(1)" class="bg-slate-800 text-white text-xs px-5 py-2 rounded font-bold">查询</button>
-                        <button onclick="resetFilters()" class="bg-white border text-xs px-5 py-2 rounded font-bold">重置</button>
+                    <select id="s-status" class="t-input"></select>
+                    <div class="col-span-6 flex justify-end gap-2 border-t pt-4">
+                        <button onclick="loadData(1)" class="bg-slate-800 text-white text-sm font-bold px-6 py-2 rounded-lg hover:bg-black transition-all">执行查询</button>
+                        <button onclick="resetFilters()" class="bg-white border text-slate-600 text-sm font-bold px-6 py-2 rounded-lg hover:bg-slate-50">重置</button>
                     </div>
                 </div>
             </div>
 
-            <div class="table-container">
+            <div class="px-6 pb-3 flex justify-between items-end shrink-0">
+                <span class="text-xs text-slate-500 font-medium" id="page-info">正在加载...</span>
+                <button onclick="addNewRow()" class="bg-emerald-600 text-white text-sm font-bold px-5 py-2.5 rounded-lg shadow-lg hover:bg-emerald-700 hover:-translate-y-0.5 transition-all flex items-center gap-2">
+                    <span class="text-lg leading-none">+</span> 新增一行
+                </button>
+            </div>
+
+            <div class="table-wrapper">
                 <table>
                     <thead>
                         <tr>
                             <th class="w-16 text-center">图</th>
-                            <th class="w-24" onclick="sortBy('product_id')">编号 ↕</th>
-                            <th style="min-width: 240px" onclick="sortBy('title')">标题 ↕</th>
-                            <th class="w-24">类型</th>
-                            <th class="w-28">完成时间</th>
-                            <th class="w-24">视类</th>
-                            <th class="w-32">主播(多)</th>
-                            <th class="w-24 text-center">状态</th>
-                            <th class="w-32">平台(多)</th>
-                            <th class="w-32">发布时间</th>
-                            <th class="w-40">备注</th>
-                            <th class="w-20 text-center sticky right-0 bg-slate-50 border-l">操作</th>
+                            <th class="w-32" onclick="sortBy('product_id')">产品编号 ↕</th>
+                            <th style="min-width: 300px" onclick="sortBy('title')">视频标题 ↕</th>
+                            <th class="w-32" onclick="sortBy('category')">类型 ↕</th>
+                            <th class="w-32" onclick="sortBy('finish_time')">完成时间 ↕</th>
+                            <th class="w-32" onclick="sortBy('video_type')">视类 ↕</th>
+                            <th class="w-40" onclick="sortBy('host')">主播(多选) ↕</th>
+                            <th class="w-32 text-center" onclick="sortBy('status')">状态 ↕</th>
+                            <th class="w-40" onclick="sortBy('platform')">平台(多选) ↕</th>
+                            <th class="w-40" onclick="sortBy('publish_time')">发布时间 ↕</th>
+                            <th class="w-48" onclick="sortBy('remark')">备注 ↕</th>
+                            <th class="w-24 text-center sticky right-0 bg-slate-50 border-l shadow-sm">操作</th>
                         </tr>
                     </thead>
                     <tbody id="table-body"></tbody>
                 </table>
             </div>
             
-            <div class="h-12 bg-white border-t border-slate-200 px-6 flex justify-end items-center shrink-0 gap-3">
-                <span id="page-info" class="text-xs text-slate-500 font-medium">0 条</span>
-                <button id="btn-prev" onclick="changePage(-1)" class="px-3 py-1 bg-slate-100 rounded text-xs font-bold disabled:opacity-50">◀</button>
-                <button id="btn-next" onclick="changePage(1)" class="px-3 py-1 bg-slate-100 rounded text-xs font-bold disabled:opacity-50">▶</button>
+            <div class="h-14 bg-white border-t border-slate-200 px-6 flex justify-end items-center shrink-0 gap-3">
+                <button id="btn-prev" onclick="changePage(-1)" class="px-4 py-1.5 bg-slate-100 rounded text-sm font-bold hover:bg-slate-200 disabled:opacity-50 transition-colors">◀ 上一页</button>
+                <button id="btn-next" onclick="changePage(1)" class="px-4 py-1.5 bg-slate-100 rounded text-sm font-bold hover:bg-slate-200 disabled:opacity-50 transition-colors">下一页 ▶</button>
             </div>
         </div>
 
-        <div id="view-report" class="hidden flex-1 overflow-y-auto p-6">
-            <div class="flex justify-end gap-2 mb-4">
-                <button onclick="loadReport('day')" class="px-4 py-1 bg-white border rounded text-xs font-bold hover:bg-slate-50">日</button>
-                <button onclick="loadReport('week')" class="px-4 py-1 bg-white border rounded text-xs font-bold hover:bg-slate-50">周</button>
-                <button onclick="loadReport('month')" class="px-4 py-1 bg-white border rounded text-xs font-bold hover:bg-slate-50">月</button>
+        <div id="view-report" class="hidden flex-1 overflow-y-auto p-8">
+            <div class="flex justify-end gap-2 mb-6">
+                <button onclick="loadReport('day')" class="px-4 py-1.5 bg-white border rounded-lg text-sm font-bold hover:bg-blue-50 hover:text-blue-600 transition-colors">按日</button>
+                <button onclick="loadReport('week')" class="px-4 py-1.5 bg-white border rounded-lg text-sm font-bold hover:bg-blue-50 hover:text-blue-600 transition-colors">按周</button>
+                <button onclick="loadReport('month')" class="px-4 py-1.5 bg-white border rounded-lg text-sm font-bold hover:bg-blue-50 hover:text-blue-600 transition-colors">按月</button>
             </div>
-            <div class="grid grid-cols-2 gap-6">
-                <div class="bg-white p-6 rounded-xl border shadow-sm col-span-2 lg:col-span-1" style="height: 400px;" id="chart-trend"></div>
-                <div class="bg-white p-6 rounded-xl border shadow-sm col-span-2 lg:col-span-1" style="height: 400px;" id="chart-plat"></div>
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm h-[450px]">
+                    <div id="chart-trend" class="w-full h-full"></div>
+                </div>
+                <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm h-[450px]">
+                    <div id="chart-plat" class="w-full h-full"></div>
+                </div>
             </div>
         </div>
 
     </main>
 
-    <div id="preview-modal" class="modal bg-black/95" onclick="this.classList.remove('active')"><img id="big-img" src="" class="max-h-[90vh]"></div>
+    <div id="preview-modal" class="modal bg-black/95" onclick="this.classList.remove('active')"><img id="big-img" src="" class="max-h-[90vh] max-w-[90vw] object-contain"></div>
     <div id="multi-pop" class="multi-pop"></div>
     <datalist id="dl-pids"></datalist>
 
     <div id="import-modal" class="modal">
-        <div class="bg-white rounded-xl w-[400px] p-8 text-center">
-            <h3 class="font-bold text-xl mb-4">导入数据</h3>
-            <p class="text-sm text-slate-500 mb-6">请确认文件已在 NAS <code class="bg-slate-100 px-1">temp_uploads</code> 目录</p>
-            <button onclick="startImport()" class="w-full bg-slate-800 text-white py-3 rounded font-bold">开始扫描</button>
-            <button onclick="document.getElementById('import-modal').classList.remove('active')" class="mt-4 text-slate-400 text-xs font-bold">关闭</button>
+        <div class="bg-white rounded-xl w-[400px] p-8 text-center shadow-2xl">
+            <div class="text-5xl mb-4">📂</div>
+            <h3 class="font-bold text-xl mb-4 text-slate-800">批量导入数据</h3>
+            <p class="text-sm text-slate-500 mb-6">请确认文件已上传至 NAS <code class="bg-slate-100 px-1 rounded text-slate-700">temp_uploads</code> 目录</p>
+            <button onclick="startImport()" class="w-full bg-slate-800 text-white py-3 rounded-lg font-bold hover:bg-black transition-transform active:scale-95">开始扫描并导入</button>
+            <button onclick="document.getElementById('import-modal').classList.remove('active')" class="mt-4 text-slate-400 text-xs hover:text-slate-600">取消关闭</button>
         </div>
     </div>
 
     <div id="settings-modal" class="modal">
-        <div class="bg-white rounded-xl w-[400px] p-6">
-            <h3 class="font-bold mb-4">配置</h3>
-            <textarea id="set-hosts" class="t-input h-20 mb-3" placeholder="主播..."></textarea>
-            <input id="set-cats" class="t-input mb-3" placeholder="类型...">
-            <input id="set-types" class="t-input mb-3" placeholder="视类...">
-            <input id="set-plats" class="t-input mb-4" placeholder="平台...">
-            <button onclick="saveSettings()" class="w-full bg-blue-600 text-white py-2 rounded font-bold">保存</button>
-            <button onclick="document.getElementById('settings-modal').classList.remove('active')" class="w-full mt-2 text-slate-400 text-xs font-bold">关闭</button>
+        <div class="bg-white rounded-xl w-[450px] p-6 shadow-2xl">
+            <h3 class="font-bold mb-6 text-lg text-slate-800">全局选项配置</h3>
+            <div class="space-y-4">
+                <div><label class="text-xs font-bold text-slate-400 mb-1 block">主播</label><textarea id="set-hosts" class="t-input h-20"></textarea></div>
+                <div><label class="text-xs font-bold text-slate-400 mb-1 block">产品类型</label><input id="set-cats" class="t-input"></div>
+                <div><label class="text-xs font-bold text-slate-400 mb-1 block">视频类型</label><input id="set-types" class="t-input"></div>
+                <div><label class="text-xs font-bold text-slate-400 mb-1 block">发布平台</label><input id="set-plats" class="t-input"></div>
+            </div>
+            <button onclick="saveSettings()" class="w-full bg-blue-600 text-white py-3 rounded-lg font-bold mt-6 hover:bg-blue-700">保存生效</button>
+            <button onclick="document.getElementById('settings-modal').classList.remove('active')" class="w-full mt-2 text-slate-400 text-xs">关闭</button>
         </div>
     </div>
 
@@ -178,67 +196,87 @@
         let globalOptions={}, editingId=null, globalData=[];
         let charts={};
 
-        // --- 核心修复：并发加载 ---
+        // --- 初始化 (并发加载，确保数据必显) ---
         (function init() {
-            loadOptions(); // 不await，异步跑
-            loadData(1);   // 不await，异步跑，确保数据立马显示
-            updateStats();
-            document.addEventListener('click',e=>{if(!e.target.closest('.multi-pop')&&!e.target.closest('.multi-trig')) document.getElementById('multi-pop').classList.remove('show')});
+            loadOptions(); // 异步
+            loadData(1);   // 异步
+            updateStats(); // 异步
+            
+            // 全局点击关闭多选
+            document.addEventListener('click', e => {
+                if(!e.target.closest('.multi-pop') && !e.target.closest('.multi-trig')) 
+                    document.getElementById('multi-pop').classList.remove('show');
+            });
         })();
 
-        function switchView(v, btn) {
-            document.querySelectorAll('.sidebar-item').forEach(e=>e.classList.remove('active'));
+        // --- 视图逻辑 ---
+        function switchView(view, btn) {
+            document.querySelectorAll('.nav-item').forEach(e=>e.classList.remove('active'));
             btn.classList.add('active');
             document.getElementById('view-assets').classList.add('hidden');
             document.getElementById('view-report').classList.add('hidden');
-            document.getElementById('view-'+v).classList.remove('hidden');
-            document.getElementById('page-title').innerText = v==='assets'?'资产管理':'数据统计';
-            if(v==='report') loadReport('day');
+            document.getElementById('view-'+view).classList.remove('hidden');
+            document.getElementById('page-title').innerText = view==='assets'?'资产管理':'数据驾驶舱';
+            if(view==='report') loadReport('day');
         }
 
+        // --- 数据核心 ---
         async function loadOptions() {
             try {
                 const res=await fetch('/api/options'); globalOptions=await res.json();
-                const fill=(id,l)=>document.getElementById(id).innerHTML=`<option value="">全部</option>`+l.map(i=>`<option>${i}</option>`).join('');
+                const fill=(id,l)=>document.getElementById(id).innerHTML=`<option value="">全部</option>`+l.map(i=>`<option value="${i}">${i}</option>`).join('');
                 fill('s-cat',globalOptions.categories); fill('s-type',globalOptions.video_types);
                 fill('s-host',globalOptions.hosts); fill('s-status',globalOptions.statuses);
-                document.getElementById('dl-pids').innerHTML=globalOptions.product_ids.map(i=>`<option>${i}</option>`).join('');
-            } catch(e) { console.error("Options error", e); }
+                document.getElementById('dl-pids').innerHTML=globalOptions.product_ids.map(i=>`<option value="${i}">`).join('');
+            } catch(e){ console.error(e); }
         }
 
         async function loadData(p) {
             currPage=p||currPage;
-            const params=new URLSearchParams({page:currPage,size:100,sort_by:currentSort.col,order:currentSort.order,
+            const params=new URLSearchParams({
+                page:currPage, size:100, sort_by:currentSort.col, order:currentSort.order,
                 keyword:document.getElementById('g-search').value,
                 product_id:document.getElementById('s-pid').value, title:document.getElementById('s-title').value,
                 category:document.getElementById('s-cat').value, video_type:document.getElementById('s-type').value,
                 host:document.getElementById('s-host').value, status:document.getElementById('s-status').value
             });
-            const res=await fetch(`/api/videos?${params}`); const data=await res.json();
-            globalData=data.items; totalPages=data.total_pages;
-            document.getElementById('total-count').innerText=data.total;
-            document.getElementById('page-info').innerText=`${data.page}/${data.total_pages}`;
-            renderTable(data.items);
+            
+            try {
+                const res=await fetch(`/api/videos?${params}`); const data=await res.json();
+                globalData=data.items; totalPages=data.total_pages;
+                document.getElementById('total-count').innerText=data.total;
+                document.getElementById('page-info').innerText=`共 ${data.total} 条 · 第 ${data.page}/${data.total_pages} 页`;
+                document.getElementById('btn-prev').disabled=(data.page<=1);
+                document.getElementById('btn-next').disabled=(data.page>=data.total_pages);
+                renderTable(data.items);
+            } catch(e) { alert("数据加载失败，请检查网络"); }
         }
 
+        // --- 表格渲染 (行内新增+多选) ---
         function addNewRow() {
-            globalData.unshift({id:'new',product_id:'',title:'',isNew:true});
-            editingId='new'; renderTable(globalData);
+            // 插入空行到头部
+            globalData.unshift({id:'new', product_id:'', title:'', isNew:true});
+            editingId='new';
+            renderTable(globalData);
+            // 滚动到顶部
+            document.querySelector('.table-wrapper').scrollTop = 0;
         }
 
         function renderTable(items) {
-            document.getElementById('table-body').innerHTML = items.map(v => {
+            const tbody = document.getElementById('table-body');
+            tbody.innerHTML = items.map(v => {
                 const isEdit = (v.id===editingId);
                 const cln = s => (s&&s!=='nan'?s:'');
                 const img = (v.image_url&&!v.image_url.includes('default'))?v.image_url:'';
 
-                if(isEdit) {
+                if (isEdit) {
                     const sel=(k,l)=>`<select id="ed-${k}" class="t-input">${l.map(o=>`<option ${o===v[k]?'selected':''}>${o}</option>`).join('')}</select>`;
-                    const mul=(k,t)=>`<input id="ed-${k}" class="t-input multi-trig" value="${cln(v[k])}" readonly onclick="openMulti(this,'${t}')" placeholder="选择">`;
+                    const mul=(k,t)=>`<input id="ed-${k}" class="t-input multi-trig cursor-pointer" value="${cln(v[k])}" readonly onclick="openMulti(this,'${t}')" placeholder="点击选择">`;
+                    
                     return `<tr class="editing ${v.isNew?'new-row':''}">
                         <td class="p-2"><div class="img-cell mx-auto" onclick="document.getElementById('up-${v.id}').click()">${img?`<img src="${img}" class="w-full h-full object-cover">`:'+'}</div><input type="file" id="up-${v.id}" class="hidden" onchange="upImg(this,'${v.id}')"><input type="hidden" id="ed-img" value="${cln(v.image_url)}"></td>
-                        <td><input id="ed-pid" class="t-input" value="${cln(v.product_id)}"></td>
-                        <td><input id="ed-title" class="t-input font-bold" value="${cln(v.title)}"></td>
+                        <td><input id="ed-pid" class="t-input" value="${cln(v.product_id)}" placeholder="编号"></td>
+                        <td><input id="ed-title" class="t-input font-bold" value="${cln(v.title)}" placeholder="标题"></td>
                         <td>${sel('cat',globalOptions.categories)}</td>
                         <td><input id="ed-fin" type="date" class="t-input" value="${cln(v.finish_time)}"></td>
                         <td>${sel('type',globalOptions.video_types)}</td>
@@ -247,59 +285,61 @@
                         <td>${mul('plat','platforms')}</td>
                         <td><input id="ed-pub" type="datetime-local" class="t-input" value="${cln(v.publish_time).replace(' ','T')}"></td>
                         <td><input id="ed-rem" class="t-input" value="${cln(v.remark)}"></td>
-                        <td class="text-center"><button onclick="saveRow('${v.id}')" class="text-blue-600 font-bold text-xs">保存</button> <button onclick="cancelEdit()" class="text-slate-400 text-xs">取消</button></td>
+                        <td class="text-center sticky right-0 bg-blue-50 border-l shadow-sm">
+                            <button onclick="saveRow('${v.id}')" class="text-white bg-blue-600 px-3 py-1 rounded text-xs font-bold shadow">保存</button>
+                            <button onclick="cancelEdit()" class="text-slate-400 text-xs ml-1 hover:text-slate-600">取消</button>
+                        </td>
                     </tr>`;
                 }
-                return `<tr class="hover:bg-slate-50 border-b border-slate-100">
-                    <td class="p-2 text-center"><div class="img-cell mx-auto" onclick="showBig('${img}')"><img src="${img||'/assets/default.png'}" class="w-full h-full object-cover"></div></td>
-                    <td class="text-slate-500 font-mono">${cln(v.product_id)}</td>
-                    <td class="font-bold text-slate-700 truncate" style="max-width:240px" title="${cln(v.title)}">${cln(v.title)}</td>
-                    <td><span class="pill bg-slate-100">${cln(v.category)}</span></td>
-                    <td class="text-slate-400 text-xs">${cln(v.finish_time)}</td>
-                    <td><span class="pill bg-slate-100">${cln(v.video_type)}</span></td>
+                
+                // 正常行
+                return `<tr class="hover:bg-slate-50 transition-colors border-b border-slate-100">
+                    <td class="p-2 text-center"><div class="img-cell mx-auto bg-slate-100" onclick="showBig('${img}')"><img src="${img||'/assets/default.png'}" class="w-full h-full object-cover"></div></td>
+                    <td class="font-mono text-slate-500">${cln(v.product_id)}</td>
+                    <td class="font-bold text-slate-700 truncate" style="max-width:300px" title="${cln(v.title)}">${cln(v.title)}</td>
+                    <td><span class="pill bg-slate-100 text-slate-600">${cln(v.category)}</span></td>
+                    <td class="text-slate-400 text-xs font-mono">${cln(v.finish_time)}</td>
+                    <td><span class="pill bg-slate-100 text-slate-600">${cln(v.video_type)}</span></td>
                     <td>${cln(v.host)}</td>
-                    <td class="text-center"><span class="pill ${v.status==='已发布'?'bg-emerald-100 text-emerald-700':'bg-orange-100 text-orange-600'}">${cln(v.status)}</span></td>
+                    <td class="text-center"><span class="pill ${v.status==='已发布'?'bg-emerald-100 text-emerald-700':'bg-orange-50 text-orange-600'}">${cln(v.status)}</span></td>
                     <td>${cln(v.platform)}</td>
-                    <td class="text-slate-400 text-xs">${cln(v.publish_time).replace('T',' ')}</td>
-                    <td class="text-slate-400 truncate max-w-[100px] text-xs">${cln(v.remark)}</td>
-                    <td class="text-center"><button onclick="startEdit(${v.id})" class="text-blue-600 font-bold text-xs">编辑</button> <button onclick="delVideo(${v.id})" class="text-red-400 text-xs">删</button></td>
+                    <td class="text-slate-400 text-xs font-mono">${cln(v.publish_time).replace('T',' ')}</td>
+                    <td class="text-slate-400 truncate max-w-[120px] text-xs" title="${cln(v.remark)}">${cln(v.remark)}</td>
+                    <td class="text-center sticky right-0 bg-white group-hover:bg-slate-50 border-l shadow-sm">
+                        <button onclick="startEdit(${v.id})" class="text-blue-600 font-bold text-xs hover:underline mr-2">编辑</button>
+                        <button onclick="delVideo(${v.id})" class="text-red-400 text-xs hover:text-red-600">删</button>
+                    </td>
                 </tr>`;
             }).join('');
         }
 
-        function startEdit(id){editingId=id;renderTable(globalData);}
-        function cancelEdit(){editingId=null;loadData();}
+        // --- 核心交互 ---
+        function startEdit(id){ editingId=id; renderTable(globalData); }
+        function cancelEdit(){ editingId=null; loadData(); } // 重新加载以清除未保存的新增行
+        
         async function saveRow(id){
             const fd=new FormData(); if(id!=='new') fd.append('id',id);
-            ['pid','title','cat','fin','type','host','status','plat','pub','rem'].forEach(k=>{
-                fd.append({'pid':'product_id','cat':'category','fin':'finish_time','type':'video_type','plat':'platform','pub':'publish_time','rem':'remark'}[k]||k, document.getElementById('ed-'+k).value.replace('T',' '));
-            });
+            const map={'pid':'product_id','title':'title','cat':'category','fin':'finish_time','type':'video_type','host':'host','status':'status','plat':'platform','pub':'publish_time','rem':'remark'};
+            for(let [eid,k] of Object.entries(map)) fd.append(k, document.getElementById('ed-'+eid).value.replace('T',' '));
             fd.append('image_url',document.getElementById('ed-img').value);
+            
             await fetch('/api/video/save',{method:'POST',body:fd});
             editingId=null; loadData(); updateStats();
         }
 
-        async function upImg(input, id) {
-            const fd = new FormData(); fd.append('file', input.files[0]);
-            const res = await fetch('/api/upload', {method:'POST', body:fd});
-            const d = await res.json();
-            document.getElementById('ed-img').value = d.url;
-            globalData.find(v => v.id == id || v.id === 'new').image_url = d.url;
-            renderTable(globalData);
+        async function upImg(input,id){
+            const fd=new FormData(); fd.append('file',input.files[0]);
+            const res=await fetch('/api/upload',{method:'POST',body:fd}); const d=await res.json();
+            document.getElementById('ed-img').value=d.url;
+            globalData.find(v=>v.id==id||v.id==='new').image_url=d.url;
+            renderTable(globalData); // 刷新显示
         }
 
-        async function loadReport(dim) {
-            const res = await fetch(`/api/report?dim=${dim}`); const d = await res.json();
-            if(!charts.t) charts.t = echarts.init(document.getElementById('chart-trend'));
-            charts.t.setOption({title:{text:'入库 vs 发布'},tooltip:{trigger:'axis'},legend:{data:['入库','发布']},xAxis:{type:'category',data:d.dates},yAxis:{type:'value'},series:[{name:'入库',type:'line',data:d.in,smooth:true},{name:'发布',type:'bar',data:d.out}]});
-            if(!charts.p) charts.p = echarts.init(document.getElementById('chart-plat'));
-            charts.p.setOption({title:{text:'平台分布'},tooltip:{trigger:'item'},series:[{type:'pie',radius:['40%','70%'],data:d.plats}]});
-        }
-
+        // --- 多选菜单 ---
         function openMulti(input,type){
             const pop=document.getElementById('multi-pop'); const r=input.getBoundingClientRect();
             const curr=input.value.split(/[,，]/).map(s=>s.trim());
-            pop.innerHTML=globalOptions[type].map(o=>`<div class="multi-opt" onclick="togOpt('${input.id}','${o}','${type}')"><span class="${curr.includes(o)?'text-blue-600 font-bold':''}">${curr.includes(o)?'✓':''}</span> ${o}</div>`).join('');
+            pop.innerHTML=globalOptions[type].map(o=>`<div class="multi-opt" onclick="togOpt('${input.id}','${o}','${type}')"><span class="${curr.includes(o)?'text-blue-600 font-bold w-4':'w-4'}">${curr.includes(o)?'✓':''}</span> ${o}</div>`).join('');
             pop.style.top=(r.bottom+window.scrollY)+'px'; pop.style.left=(r.left+window.scrollX)+'px'; pop.classList.add('show');
         }
         function togOpt(eid,v,type){
@@ -308,6 +348,24 @@
             inp.value=vals.join(','); openMulti(inp,type);
         }
 
+        // --- 统计图表 ---
+        async function loadReport(dim) {
+            const res=await fetch(`/api/report?dim=${dim}`); const d=await res.json();
+            if(!charts.t) charts.t = echarts.init(document.getElementById('chart-trend'));
+            charts.t.setOption({
+                title:{text:'入库 vs 发布',left:'center'}, tooltip:{trigger:'axis'}, legend:{data:['入库','发布'],bottom:0},
+                xAxis:{type:'category',data:d.dates}, yAxis:{type:'value'},
+                series:[{name:'入库',type:'line',data:d.in,smooth:true,areaStyle:{opacity:0.1}},{name:'发布',type:'bar',data:d.out,itemStyle:{color:'#10b981'}}]
+            });
+            if(!charts.p) charts.p = echarts.init(document.getElementById('chart-plat'));
+            charts.p.setOption({
+                title:{text:'平台分布',left:'center'}, tooltip:{trigger:'item'},
+                series:[{type:'pie',radius:['40%','70%'],data:d.plats,itemStyle:{borderRadius:5}}]
+            });
+            window.onresize=()=>{charts.t.resize();charts.p.resize();};
+        }
+
+        // --- 杂项 ---
         function toggleFilters(){document.getElementById('filter-panel').classList.toggle('open');}
         function showBig(s){if(s){document.getElementById('big-img').src=s;document.getElementById('preview-modal').classList.add('active');}}
         function resetFilters(){document.querySelectorAll('#filter-panel input,select').forEach(e=>e.value='');loadData(1);}
@@ -329,7 +387,7 @@
             document.getElementById('settings-modal').classList.remove('active'); loadOptions();
         }
         function openImport(){document.getElementById('import-modal').classList.add('active');}
-        async function startImport(){await fetch('/api/import/local',{method:'POST'});alert('已启动');document.getElementById('import-modal').classList.remove('active');}
+        async function startImport(){await fetch('/api/import/local',{method:'POST'});alert('后台任务已启动');document.getElementById('import-modal').classList.remove('active');}
         async function updateStats(){try{const r=await fetch('/api/stats');const d=await r.json();document.getElementById('st-total').innerText=d.total;document.getElementById('st-pending').innerText=d.pending;}catch{}}
     </script>
 </body>
