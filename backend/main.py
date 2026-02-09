@@ -12,7 +12,7 @@ from typing import Optional
 from .processor import process_excel_background
 from .models import Video, AppSettings
 
-main_app = FastAPI(title="VideoHub V6.0")
+main_app = FastAPI(title="VideoHub V8.0")
 engine = create_engine("sqlite:///data/inventory.db")
 
 @main_app.on_event("startup")
@@ -22,7 +22,7 @@ def on_startup():
     os.makedirs("temp_uploads", exist_ok=True)
     SQLModel.metadata.create_all(engine)
     
-    # 默认配置 (兜底用)
+    # 默认配置兜底
     with Session(engine) as session:
         if not session.get(AppSettings, "hosts"):
             session.add(AppSettings(key="hosts", value="小梨,VIVI,七七"))
@@ -58,65 +58,49 @@ def update_settings(key: str = Form(...), value: str = Form(...)):
         session.commit()
     return {"message": "配置已更新"}
 
-# === 核心选项接口 (修复：强力读取数据库) ===
+# === 选项接口 (强力去重+合并) ===
 @main_app.get("/api/options")
 def get_options():
     with Session(engine) as session:
-        # 获取配置
         settings = {item.key: item.value.split(',') for item in session.exec(select(AppSettings)).all()}
         
-        # 辅助函数：合并 数据库distinct值 + 全局配置值
-        def get_vals(field, key):
-            # 1. 查库
-            db_res = session.exec(select(field).distinct()).all()
-            # 2. 清洗
+        def get_merged(column, key):
+            # 1. 数据库现有值 (拆分逗号)
+            db_vals = session.exec(select(column).distinct()).all()
             clean_db = []
-            for item in db_res:
+            for item in db_vals:
                 if item and str(item) != 'nan':
-                    # 支持逗号分隔 (多选兼容)
                     clean_db.extend([x.strip() for x in str(item).split(',')])
-            
-            # 3. 合并配置
+            # 2. 配置值
             preset = [x.strip() for x in settings.get(key, []) if x.strip()]
-            
-            # 4. 去重排序
             return sorted(list(set(clean_db + preset)))
 
         return {
-            "hosts": get_vals(Video.host, "hosts"),
-            "categories": get_vals(Video.category, "categories"),
-            "statuses": get_vals(Video.status, "statuses"),
-            "platforms": get_vals(Video.platform, "platforms"),
-            "video_types": get_vals(Video.video_type, "video_types"),
-            # 新增：返回所有产品编号供前端联想
-            "product_ids": get_vals(Video.product_id, "ignore_config") 
+            "hosts": get_merged(Video.host, "hosts"),
+            "categories": get_merged(Video.category, "categories"),
+            "statuses": get_merged(Video.status, "statuses"),
+            "platforms": get_merged(Video.platform, "platforms"),
+            "video_types": get_merged(Video.video_type, "video_types"),
+            "product_ids": get_merged(Video.product_id, "ignore") # 用于联想
         }
 
-# === 列表查询 ===
+# === 列表查询 (全字段筛选) ===
 @main_app.get("/api/videos")
 def list_videos(
     page: int = 1, size: int = 100, 
     sort_by: Optional[str] = "id", order: Optional[str] = "desc",
-    keyword: Optional[str] = None, # 全局搜索
-    
-    # 精确筛选
-    product_id: Optional[str] = None,
+    keyword: Optional[str] = None, 
+    host: Optional[str] = None, status: Optional[str] = None,
+    category: Optional[str] = None, platform: Optional[str] = None,
+    video_type: Optional[str] = None, product_id: Optional[str] = None,
     title: Optional[str] = None,
-    host: Optional[str] = None,
-    status: Optional[str] = None,
-    category: Optional[str] = None,
-    platform: Optional[str] = None,
-    video_type: Optional[str] = None,
-    remark: Optional[str] = None,
-    
-    # 时间
     pub_start: Optional[str] = None, pub_end: Optional[str] = None,
     fin_start: Optional[str] = None, fin_end: Optional[str] = None
 ):
     with Session(engine) as session:
         statement = select(Video)
         
-        # 1. 全局搜索 (搜索框)
+        # 全局搜索
         if keyword:
             statement = statement.where(or_(
                 col(Video.title).contains(keyword),
@@ -124,40 +108,40 @@ def list_videos(
                 col(Video.remark).contains(keyword)
             ))
         
-        # 2. 侧边栏筛选
+        # 精确/模糊筛选
         if product_id: statement = statement.where(col(Video.product_id).contains(product_id))
         if title: statement = statement.where(col(Video.title).contains(title))
-        if remark: statement = statement.where(col(Video.remark).contains(remark))
         
-        # 下拉框 (支持多选模糊查)
+        # 下拉框 (多选模糊匹配)
         if host and host != "全部": statement = statement.where(col(Video.host).contains(host))
         if platform and platform != "全部": statement = statement.where(col(Video.platform).contains(platform))
         if category and category != "全部": statement = statement.where(Video.category == category)
         if status and status != "全部": statement = statement.where(Video.status == status)
         if video_type and video_type != "全部": statement = statement.where(Video.video_type == video_type)
         
-        # 时间
+        # 时间范围
         if pub_start: statement = statement.where(Video.publish_time >= pub_start)
         if pub_end: statement = statement.where(Video.publish_time <= pub_end)
         if fin_start: statement = statement.where(Video.finish_time >= fin_start)
         if fin_end: statement = statement.where(Video.finish_time <= fin_end)
 
-        # 统计 & 排序
-        total = session.exec(select(func.count()).select_from(statement.subquery())).one()
+        # 排序与分页
+        count_stmt = select(func.count()).select_from(statement.subquery())
+        total = session.exec(count_stmt).one()
         
         sort_col = getattr(Video, sort_by, Video.id)
         statement = statement.order_by(asc(sort_col) if order == "asc" else desc(sort_col))
+        statement = statement.offset((page - 1) * size).limit(size)
         
-        results = session.exec(statement.offset((page - 1) * size).limit(size)).all()
-
+        results = session.exec(statement).all()
         return {"items": results, "total": total, "page": page, "size": size, "total_pages": math.ceil(total / size)}
 
-# === 保存/上传/删除 (保持稳定) ===
+# === 保存/上传 ===
 @main_app.post("/api/upload")
 async def upload_image(file: UploadFile):
     os.makedirs("assets/previews", exist_ok=True)
     ext = file.filename.split('.')[-1] if '.' in file.filename else "png"
-    filename = f"drag_{uuid.uuid4().hex[:8]}.{ext}"
+    filename = f"upload_{uuid.uuid4().hex[:8]}.{ext}"
     with open(f"assets/previews/{filename}", "wb") as buffer: shutil.copyfileobj(file.file, buffer)
     return {"url": f"/assets/previews/{filename}"}
 
@@ -178,6 +162,7 @@ async def save_video(
         else:
             video = Video(product_id=product_id or "New", title=title or "未命名", image_url="/assets/default.png")
 
+        # 更新逻辑：None不更新，空字符串更新为空
         if product_id is not None: video.product_id = product_id
         if title is not None: video.title = title
         if host is not None: video.host = host
