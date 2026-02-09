@@ -7,9 +7,8 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from sqlmodel import Session, create_engine, SQLModel, select, col, or_
 from sqlalchemy import func
-from typing import Optional, List
+from typing import Optional
 
-# 确保导入了更新后的模型
 from .models import Video
 from .processor import process_excel_background
 
@@ -22,11 +21,6 @@ def on_startup():
     os.makedirs("assets/previews", exist_ok=True)
     os.makedirs("temp_uploads", exist_ok=True)
     SQLModel.metadata.create_all(engine)
-    
-    # 生成一张默认图，防止前端 404
-    if not os.path.exists("assets/default.png"):
-        # 这里你可以放一张真实的默认图，或者让它空着，前端会处理
-        pass
 
 main_app.mount("/assets", StaticFiles(directory="assets"), name="assets")
 
@@ -36,16 +30,12 @@ async def read_index():
 
 # --- 核心接口 ---
 
-# 1. 获取动态筛选选项 (新增)
 @main_app.get("/api/options")
 def get_options():
     with Session(engine) as session:
-        # 获取所有去重的主播、状态、分类
         hosts = session.exec(select(Video.host).distinct()).all()
         statuses = session.exec(select(Video.status).distinct()).all()
         categories = session.exec(select(Video.category).distinct()).all()
-        
-        # 清洗 None 或 空值
         return {
             "hosts": [h for h in hosts if h],
             "statuses": [s for s in statuses if s],
@@ -64,13 +54,17 @@ def get_stats():
             host_name = "暂无"
         return {"total": total, "pending": pending, "host": host_name}
 
+# 改动：size默认100，增加时间筛选
 @main_app.get("/api/videos")
 def list_videos(
-    page: int = 1, size: int = 20,
+    page: int = 1, 
+    size: int = 100, # 改动：默认100条
     keyword: Optional[str] = None,
     host: Optional[str] = None,
     status: Optional[str] = None,
-    category: Optional[str] = None
+    category: Optional[str] = None,
+    pub_start: Optional[str] = None, # 新增
+    pub_end: Optional[str] = None    # 新增
 ):
     with Session(engine) as session:
         statement = select(Video)
@@ -82,10 +76,13 @@ def list_videos(
                 col(Video.remark).contains(keyword)
             ))
         
-        # 动态筛选逻辑
         if host and host != "全部主播": statement = statement.where(Video.host == host)
         if status and status != "全部状态": statement = statement.where(Video.status == status)
         if category and category != "全部分类": statement = statement.where(Video.category == category)
+        
+        # 新增：发布时间范围筛选 (简单的字符串比较，格式 YYYY-MM-DD)
+        if pub_start: statement = statement.where(Video.publish_time >= pub_start)
+        if pub_end: statement = statement.where(Video.publish_time <= pub_end)
 
         count_stmt = select(func.count()).select_from(statement.subquery())
         total = session.exec(count_stmt).one()
@@ -112,9 +109,8 @@ async def save_video(
             video = session.get(Video, id)
             if not video: raise HTTPException(404, "视频不存在")
         else:
-            video = Video(product_id=product_id, title=title, image_url="") # 先给空
+            video = Video(product_id=product_id, title=title, image_url="/assets/default.png")
 
-        # 赋值
         video.product_id = product_id
         video.title = title
         video.host = host
@@ -126,25 +122,15 @@ async def save_video(
         video.publish_time = publish_time
         video.remark = remark
 
-        # 图片处理逻辑修复
         if image and image.filename:
-            # 确保目录存在
             os.makedirs("assets/previews", exist_ok=True)
-            
-            # 使用 UUID 防止文件名冲突
             ext = image.filename.split('.')[-1] if '.' in image.filename else "png"
             filename = f"upload_{uuid.uuid4().hex[:8]}.{ext}"
             filepath = os.path.join("assets", "previews", filename)
-            
             with open(filepath, "wb") as buffer:
                 shutil.copyfileobj(image.file, buffer)
-            
             video.image_url = f"/assets/previews/{filename}"
         
-        # 如果是新增且没有上传图片，给一个默认空值避免 NoneType 错误
-        if not video.image_url:
-             video.image_url = "/assets/default.png"
-
         session.add(video)
         session.commit()
         return {"message": "保存成功"}
