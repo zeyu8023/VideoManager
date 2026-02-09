@@ -1,38 +1,203 @@
 <!DOCTYPE html>
-<html>
+<html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>VideoHub</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VideoHub | 视频库存数字化管理</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; scroll-behavior: smooth; }
+        .glass-card { background: rgba(255, 255, 255, 0.7); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.3); }
+        .loading-shimmer { background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%); background-size: 200% 100%; animation: shimmer 1.5s infinite; }
+        @keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
+    </style>
 </head>
-<body class="bg-slate-50 p-8">
-    <div class="max-w-5xl mx-auto">
-        <div class="flex justify-between mb-8">
-            <h1 class="text-2xl font-bold">🎬 VideoHub | zeyu8023</h1>
-            <input type="file" id="up" class="hidden" onchange="upload()">
-            <button onclick="document.getElementById('up').click()" class="bg-blue-600 text-white px-4 py-2 rounded">导入 400M 表格</button>
+<body class="bg-slate-50 min-h-screen text-slate-900">
+
+    <div class="max-w-7xl mx-auto px-4 py-6">
+        <nav class="flex justify-between items-center mb-10">
+            <div class="flex items-center space-x-2">
+                <div class="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center text-white shadow-lg">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                </div>
+                <div>
+                    <h1 class="text-xl font-bold tracking-tight text-slate-800">VideoHub</h1>
+                    <p class="text-xs text-slate-500 uppercase tracking-widest">Digital Inventory</p>
+                </div>
+            </div>
+            
+            <div class="flex items-center space-x-4">
+                <div id="admin-actions" class="hidden flex items-center space-x-3">
+                    <input type="file" id="excel-input" class="hidden" accept=".xlsx" onchange="handleUpload(this)">
+                    <button onclick="document.getElementById('excel-input').click()" class="bg-slate-900 text-white px-5 py-2.5 rounded-xl text-sm font-semibold hover:bg-slate-800 transition-all flex items-center shadow-md">
+                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+                        导入 400M 库存
+                    </button>
+                </div>
+                <div class="flex items-center space-x-2 px-4 py-2 bg-white rounded-full shadow-sm border border-slate-200">
+                    <div class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                    <span class="text-sm font-medium text-slate-600" id="user-display">zeyu8023</span>
+                </div>
+            </div>
+        </nav>
+
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-10">
+            <div class="glass-card p-6 rounded-3xl shadow-sm col-span-1 md:col-span-2">
+                <p class="text-slate-500 text-sm font-medium mb-1">总生产进度</p>
+                <div class="flex items-end space-x-3">
+                    <h2 class="text-4xl font-bold text-slate-800" id="stat-total">--</h2>
+                    <span class="text-slate-400 mb-1 text-sm pb-1">条视频资产</span>
+                </div>
+                <div class="mt-4 h-2 w-full bg-slate-200 rounded-full overflow-hidden">
+                    <div class="h-full bg-blue-500 rounded-full" style="width: 65%"></div>
+                </div>
+            </div>
+            <div class="glass-card p-6 rounded-3xl shadow-sm">
+                <p class="text-slate-500 text-sm font-medium mb-1">待发布库存</p>
+                <h2 class="text-4xl font-bold text-orange-500" id="stat-pending">--</h2>
+            </div>
+            <div class="glass-card p-6 rounded-3xl shadow-sm">
+                <p class="text-slate-500 text-sm font-medium mb-1">本月劳模</p>
+                <h2 class="text-4xl font-bold text-emerald-600" id="stat-host">小梨</h2>
+            </div>
         </div>
-        <div id="grid" class="grid grid-cols-4 gap-4"></div>
+
+        <div class="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
+            <div class="relative w-full md:w-96">
+                <svg class="absolute left-3 top-3 w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                <input type="text" id="search-bar" onkeyup="filterVideos()" placeholder="搜索产品、主播、状态..." class="w-full pl-10 pr-4 py-3 rounded-2xl border-none ring-1 ring-slate-200 focus:ring-2 focus:ring-blue-500 outline-none shadow-sm transition-all">
+            </div>
+            <div class="flex space-x-2 overflow-x-auto w-full md:w-auto">
+                <button class="px-4 py-2 bg-blue-100 text-blue-600 rounded-full text-sm font-semibold">全部</button>
+                <button class="px-4 py-2 bg-white text-slate-600 rounded-full text-sm font-medium hover:bg-slate-100">球服</button>
+                <button class="px-4 py-2 bg-white text-slate-600 rounded-full text-sm font-medium hover:bg-slate-100">球鞋</button>
+                <button class="px-4 py-2 bg-white text-slate-600 rounded-full text-sm font-medium hover:bg-slate-100">待发布</button>
+            </div>
+        </div>
+
+        <div id="video-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
+            <div class="loading-shimmer h-64 rounded-2xl"></div>
+            <div class="loading-shimmer h-64 rounded-2xl"></div>
+            <div class="loading-shimmer h-64 rounded-2xl"></div>
+            <div class="loading-shimmer h-64 rounded-2xl"></div>
+            <div class="loading-shimmer h-64 rounded-2xl"></div>
+        </div>
+
+        <div id="upload-overlay" class="fixed bottom-8 right-8 hidden scale-in">
+            <div class="bg-white border border-slate-200 shadow-2xl p-4 rounded-2xl flex items-center space-x-4">
+                <div class="w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                <div>
+                    <p class="font-bold text-slate-800">后台解析中...</p>
+                    <p class="text-xs text-slate-500">正在处理 400MB 资源并提取图片</p>
+                </div>
+            </div>
+        </div>
     </div>
+
     <script>
-        async function load() {
-            const res = await fetch('/api/videos');
-            const data = await res.json();
-            document.getElementById('grid').innerHTML = data.map(v => `
-                <div class="bg-white p-2 rounded shadow">
-                    <img src="${v.image_url}" class="w-full h-32 object-cover mb-2">
-                    <div class="text-sm font-bold">${v.product_id}</div>
-                    <div class="text-xs text-slate-500">${v.status} | ${v.host}</div>
+        const API_URL = ""; // 同域名部署可为空
+        let allVideos = [];
+        const isAdmin = true; // 之后可以对接 JWT 解析判断
+
+        // 初始化
+        async function init() {
+            if(isAdmin) document.getElementById('admin-actions').classList.remove('hidden');
+            await updateStats();
+            await fetchVideos();
+        }
+
+        // 获取统计数据
+        async function updateStats() {
+            try {
+                const res = await fetch('/api/stats');
+                const data = await res.json();
+                document.getElementById('stat-total').innerText = data.total;
+                document.getElementById('stat-pending').innerText = data.pending;
+                document.getElementById('stat-host').innerText = data.host;
+            } catch (err) { console.error("Stats Error:", err); }
+        }
+
+        // 获取视频列表
+        async function fetchVideos() {
+            try {
+                const res = await fetch('/api/videos');
+                allVideos = await res.json();
+                renderVideos(allVideos);
+            } catch (err) {
+                document.getElementById('video-grid').innerHTML = '<p class="col-span-full text-center py-10 text-slate-400">无法连接服务器，请确认 10309 端口已开启</p>';
+            }
+        }
+
+        // 渲染卡片
+        function renderVideos(list) {
+            const grid = document.getElementById('video-grid');
+            if(list.length === 0) {
+                grid.innerHTML = '<p class="col-span-full text-center py-10 text-slate-400">暂无视频记录</p>';
+                return;
+            }
+            grid.innerHTML = list.map(v => `
+                <div class="group bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 border border-slate-100">
+                    <div class="relative h-48 bg-slate-200 overflow-hidden">
+                        <img src="${v.image_url}" alt="${v.product_id}" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" onerror="this.src='https://via.placeholder.com/300x400?text=No+Image'">
+                        <div class="absolute top-2 right-2">
+                            <span class="px-2 py-1 text-[10px] font-bold uppercase rounded-md ${v.status === '待发布' ? 'bg-orange-500 text-white' : 'bg-green-500 text-white shadow-sm'}">
+                                ${v.status}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="p-4">
+                        <h4 class="text-xs font-bold text-blue-600 mb-1 truncate">${v.product_id}</h4>
+                        <p class="text-sm font-semibold text-slate-800 line-clamp-2 h-10 mb-2">${v.title}</p>
+                        <div class="flex justify-between items-center mt-3 pt-3 border-t border-slate-50">
+                            <span class="text-[11px] font-medium text-slate-400 flex items-center">
+                                <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20"><path d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z"></path></svg>
+                                ${v.host}
+                            </span>
+                            <span class="text-[11px] font-bold text-slate-300">${v.category}</span>
+                        </div>
+                    </div>
                 </div>
             `).join('');
         }
-        async function upload() {
-            const file = document.getElementById('up').files[0];
-            const fd = new FormData(); fd.append('file', file);
-            await fetch('/api/import', {method:'POST', body:fd});
-            alert('上传成功，后台处理中...');
+
+        // 搜索过滤
+        function filterVideos() {
+            const q = document.getElementById('search-bar').value.toLowerCase();
+            const filtered = allVideos.filter(v => 
+                v.title.toLowerCase().includes(q) || 
+                v.product_id.toLowerCase().includes(q) || 
+                v.host.toLowerCase().includes(q)
+            );
+            renderVideos(filtered);
         }
-        load();
+
+        // 文件上传处理
+        async function handleUpload(input) {
+            const file = input.files[0];
+            if (!file) return;
+
+            const overlay = document.getElementById('upload-overlay');
+            overlay.classList.remove('hidden');
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            try {
+                const res = await fetch('/api/import', { method: 'POST', body: formData });
+                const data = await res.json();
+                alert(data.message);
+                // 轮询或定时刷新数据
+                setTimeout(() => { fetchVideos(); updateStats(); }, 5000);
+            } catch (err) {
+                alert("上传失败，请检查 NAS 空间或网络连接");
+            } finally {
+                overlay.classList.add('hidden');
+                input.value = "";
+            }
+        }
+
+        init();
     </script>
 </body>
 </html>
