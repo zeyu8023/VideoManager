@@ -1,16 +1,22 @@
 from sqlmodel import SQLModel, Field
 from typing import Optional
 
+# 这是唯一的 Video 表定义
 class Video(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
-    product_id: str = Field(index=True)      # 产品名称/编号
-    title: str                               # 视频标题
-    image_url: str                           # 预览图
-    category: str = Field(index=True)        # 产品类型 (球服/球鞋)
-    finish_time: Optional[str] = None        # 完成时间
-    video_type: Optional[str] = None         # 视频类型 (产品展示/促销) -- 新增
-    host: str = Field(index=True)            # 主播
-    status: str = Field(index=True)          # 当前状态
-    platform: Optional[str] = None           # 发布平台
-    publish_time: Optional[str] = None       # 发布时间 -- 新增
-    remark: Optional[str] = None             # 备注 -- 新增
+    product_id: str = Field(index=True)
+    title: str
+    image_url: str
+    category: Optional[str] = None
+    finish_time: Optional[str] = None
+    video_type: Optional[str] = None
+    host: Optional[str] = Field(default=None, index=True)
+    status: Optional[str] = Field(default=None, index=True)
+    platform: Optional[str] = None
+    publish_time: Optional[str] = None
+    remark: Optional[str] = None
+
+# 全局配置表
+class AppSettings(SQLModel, table=True):
+    key: str = Field(primary_key=True)
+    value: str

@@ -5,31 +5,13 @@ import uuid
 from fastapi import FastAPI, UploadFile, BackgroundTasks, Form, HTTPException
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
-from sqlmodel import Session, create_engine, SQLModel, select, col, or_, Field
+from sqlmodel import Session, create_engine, SQLModel, select, col, or_
 from sqlalchemy import func
 from typing import Optional
 
-# 导入 processor (确保 backend/processor.py 文件存在且逻辑正确)
+# 关键修改：从 models 导入 Video，而不是在这里定义
+from .models import Video, AppSettings
 from .processor import process_excel_background
-
-# === 模型定义 ===
-class Video(SQLModel, table=True):
-    id: Optional[int] = Field(default=None, primary_key=True)
-    product_id: str = Field(index=True)
-    title: str
-    image_url: str
-    category: Optional[str] = None
-    finish_time: Optional[str] = None
-    video_type: Optional[str] = None
-    host: Optional[str] = Field(default=None, index=True)
-    status: Optional[str] = Field(default=None, index=True)
-    platform: Optional[str] = None
-    publish_time: Optional[str] = None
-    remark: Optional[str] = None
-
-class AppSettings(SQLModel, table=True):
-    key: str = Field(primary_key=True)
-    value: str
 
 main_app = FastAPI(title="VideoHub Pro Final")
 engine = create_engine("sqlite:///data/inventory.db")
@@ -41,7 +23,7 @@ def on_startup():
     os.makedirs("temp_uploads", exist_ok=True)
     SQLModel.metadata.create_all(engine)
     
-    # 初始化默认配置
+    # 初始化配置
     with Session(engine) as session:
         if not session.get(AppSettings, "hosts"):
             session.add(AppSettings(key="hosts", value="小梨,VIVI,七七,杨总"))
@@ -77,20 +59,18 @@ def update_settings(key: str = Form(...), value: str = Form(...)):
         session.commit()
     return {"message": "配置已更新"}
 
-# === 图片上传接口 ===
+# === 上传接口 ===
 @main_app.post("/api/upload")
 async def upload_image(file: UploadFile):
     os.makedirs("assets/previews", exist_ok=True)
     ext = file.filename.split('.')[-1] if '.' in file.filename else "png"
     filename = f"drag_{uuid.uuid4().hex[:8]}.{ext}"
     filepath = os.path.join("assets", "previews", filename)
-    
     with open(filepath, "wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
-    
     return {"url": f"/assets/previews/{filename}"}
 
-# === 核心数据接口 ===
+# === 数据接口 ===
 @main_app.get("/api/stats")
 def get_stats():
     with Session(engine) as session:
@@ -160,14 +140,10 @@ async def save_video(
         video.publish_time = publish_time
         video.remark = remark
         
-        # 只有当 image_url 有值且不是 nan 时才更新
+        # 仅当 image_url 有效时更新
         if image_url and image_url != "nan": 
             video.image_url = image_url
-        
-        # 确保新增时如果有空图，给默认值
-        if not video.image_url:
-            video.image_url = "/assets/default.png"
-        
+            
         session.add(video)
         session.commit()
         return {"message": "保存成功"}
@@ -187,4 +163,4 @@ async def import_local(bg_tasks: BackgroundTasks):
     files = [f for f in os.listdir("temp_uploads") if f.endswith(".xlsx")]
     if not files: raise HTTPException(404, "无文件")
     bg_tasks.add_task(process_excel_background, os.path.join("temp_uploads", files[0]), engine)
-    return {"message": "已启动后台导入任务，请稍后刷新"}
+    return {"message": "后台处理中..."}
