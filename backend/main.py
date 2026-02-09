@@ -13,7 +13,7 @@ from typing import Optional
 from .processor import process_excel_background
 from .models import Video, AppSettings
 
-main_app = FastAPI(title="VideoHub V11.0")
+main_app = FastAPI(title="VideoHub V12.0")
 engine = create_engine("sqlite:///data/inventory.db")
 
 @main_app.on_event("startup")
@@ -23,19 +23,20 @@ def on_startup():
     os.makedirs("temp_uploads", exist_ok=True)
     SQLModel.metadata.create_all(engine)
     
-    # === 数据库自动升级 & 默认值填充 ===
+    # === DB Migration & Repair ===
     with Session(engine) as session:
-        # 1. 检查并添加 created_at 字段
         try:
             session.exec(text("SELECT created_at FROM video LIMIT 1"))
         except Exception:
+            # Add column if missing
             session.exec(text("ALTER TABLE video ADD COLUMN created_at DATETIME"))
             session.commit()
-            # 给旧数据补全时间(防止统计图报错)
-            session.exec(text(f"UPDATE video SET created_at = '{datetime.datetime.now()}' WHERE created_at IS NULL"))
-            session.commit()
+        
+        # Backfill created_at for old records (CRITICAL FIX)
+        session.exec(text(f"UPDATE video SET created_at = '{datetime.datetime.now()}' WHERE created_at IS NULL"))
+        session.commit()
 
-        # 2. 补全默认配置
+        # Default Settings
         defaults = {
             "hosts": "小梨,VIVI,七七,杨总",
             "statuses": "待发布,已发布,剪辑中,拍摄中,脚本中",
@@ -54,47 +55,39 @@ main_app.mount("/assets", StaticFiles(directory="assets"), name="assets")
 async def read_index():
     return FileResponse(os.path.join("frontend", "index.html"))
 
-# === 核心统计接口 (增强版) ===
+# === Report API ===
 @main_app.get("/api/report")
-def get_report(dim: str = "day"): # dim: day, week, month
+def get_report(dim: str = "day"):
     with Session(engine) as session:
-        # 1. 获取所有数据
         videos = session.exec(select(Video)).all()
+        stats = {}
         
-        # 2. 初始化聚合容器
-        stats = {} # key: date_str, val: {in: 0, out: 0}
-        
-        # 3. 辅助函数：根据维度格式化日期
         def fmt_date(dt):
             if not dt: return None
             if isinstance(dt, str):
                 try: dt = datetime.datetime.strptime(dt[:10], "%Y-%m-%d")
                 except: return None
-            
             if dim == 'day': return dt.strftime("%Y-%m-%d")
             if dim == 'week': return dt.strftime("%Y-W%W")
             if dim == 'month': return dt.strftime("%Y-%m")
             return None
 
-        # 4. 遍历聚合
         for v in videos:
-            # 统计入库 (created_at)
+            # Count Inbound
             d_in = fmt_date(v.created_at)
             if d_in:
                 if d_in not in stats: stats[d_in] = {"in": 0, "out": 0}
                 stats[d_in]["in"] += 1
             
-            # 统计发布 (publish_time) - 仅限已发布状态
+            # Count Outbound
             if v.status == "已发布" and v.publish_time:
                 d_out = fmt_date(v.publish_time)
                 if d_out:
                     if d_out not in stats: stats[d_out] = {"in": 0, "out": 0}
                     stats[d_out]["out"] += 1
 
-        # 5. 排序并截取最近 15 个周期
-        keys = sorted(stats.keys())[-15:] 
+        keys = sorted(stats.keys())[-15:]
         
-        # 6. 平台分布统计
         plat_map = {}
         for v in videos:
             if v.status == "已发布" and v.platform:
@@ -109,7 +102,7 @@ def get_report(dim: str = "day"): # dim: day, week, month
             "platforms": [{"name": k, "value": v} for k, v in plat_map.items()]
         }
 
-# === 选项接口 ===
+# === Options API ===
 @main_app.get("/api/options")
 def get_options():
     with Session(engine) as session:
@@ -118,7 +111,8 @@ def get_options():
             db_vals = session.exec(select(col).distinct()).all()
             clean = []
             for item in db_vals:
-                if item and str(item).lower() != 'nan': clean.extend([x.strip() for x in str(item).replace('，', ',').split(',')])
+                if item and str(item).lower() != 'nan': 
+                    clean.extend([x.strip() for x in str(item).replace('，', ',').split(',')])
             preset = [x.strip() for x in settings.get(key, []) if x.strip()]
             return sorted(list(set(clean + preset)))
         return {
@@ -130,7 +124,7 @@ def get_options():
             "product_ids": get_merged(Video.product_id, "ignore")
         }
 
-# === 列表查询 ===
+# === List API ===
 @main_app.get("/api/videos")
 def list_videos(
     page: int = 1, size: int = 100, sort_by: str = "id", order: str = "desc",
@@ -161,7 +155,7 @@ def list_videos(
         stmt = stmt.order_by(asc(sort_col) if order=="asc" else desc(sort_col)).offset((page-1)*size).limit(size)
         return {"items": session.exec(stmt).all(), "total": total, "page": page, "size": size, "total_pages": math.ceil(total/size)}
 
-# === 保存/上传 ===
+# === Actions ===
 @main_app.post("/api/upload")
 async def upload_image(file: UploadFile):
     os.makedirs("assets/previews", exist_ok=True)
@@ -181,20 +175,18 @@ async def save_video(
     image_url: Optional[str] = Form(None)
 ):
     with Session(engine) as session:
-        # 判断是新增还是编辑
-        if not id or id in ['new', 'temp', 'undefined']:
+        if not id or id in ['new', 'temp', 'undefined', 'null']:
             video = Video(
                 product_id=product_id or "未命名", 
-                title=title or "新建视频", 
+                title=title or "新建", 
                 image_url="/assets/default.png",
-                created_at=datetime.datetime.now() # 记录入库时间
+                created_at=datetime.datetime.now()
             )
             session.add(video)
         else:
             video = session.get(Video, int(id))
             if not video: raise HTTPException(404, "Not found")
         
-        # 更新字段
         if product_id is not None: video.product_id = product_id
         if title is not None: video.title = title
         if host is not None: video.host = host
@@ -218,7 +210,7 @@ def delete_video(video_id: int):
     return {"message": "Deleted"}
 
 @main_app.get("/api/stats")
-def get_stats_basic(): # 顶部仪表盘用
+def get_stats_basic():
     with Session(engine) as session:
         total = session.exec(select(func.count(Video.id))).one()
         pending = session.exec(select(func.count(Video.id)).where(Video.status == "待发布")).one()

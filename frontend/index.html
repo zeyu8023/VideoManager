@@ -2,51 +2,47 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>VideoHub V11.0</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VideoHub V12</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/echarts/5.4.3/echarts.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'Inter', 'Noto Sans SC', sans-serif; background: #f8fafc; color: #1e293b; }
+        body { font-family: 'Inter', 'Noto Sans SC', sans-serif; background: #f8fafc; color: #1e293b; overflow: hidden; }
         
-        /* 布局容器 */
-        .container-fluid { max-width: 100%; padding: 0 16px; }
+        /* Layout */
+        .sidebar { width: 240px; background: #1e293b; color: #94a3b8; flex-shrink: 0; display: flex; flex-direction: column; }
+        .sidebar-item { padding: 12px 20px; cursor: pointer; display: flex; align-items: center; gap: 12px; font-weight: 500; transition: all 0.2s; border-left: 3px solid transparent; }
+        .sidebar-item:hover { background: #334155; color: white; }
+        .sidebar-item.active { background: #0f172a; color: white; border-left-color: #3b82f6; }
         
-        /* 导航 Tab */
-        .nav-tab { padding: 8px 16px; font-weight: 600; color: #64748b; cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.2s; }
-        .nav-tab.active { color: #2563eb; border-bottom-color: #2563eb; }
+        .main-content { flex: 1; display: flex; flex-direction: column; overflow: hidden; background: #f1f5f9; }
         
-        /* 表格优化 */
-        .table-wrap { overflow-x: auto; min-height: 500px; padding-bottom: 80px; }
-        table { width: 100%; min-width: 1400px; border-collapse: collapse; }
-        th { font-size: 14px; font-weight: 700; color: #475569; padding: 12px; background: #f1f5f9; border-bottom: 2px solid #e2e8f0; text-align: left; white-space: nowrap; }
-        td { padding: 8px 12px; border-bottom: 1px solid #f1f5f9; font-size: 14px; vertical-align: middle; }
+        /* Table */
+        .table-container { flex: 1; overflow: auto; background: white; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); margin: 0 16px 16px 16px; }
+        table { width: 100%; border-collapse: collapse; min-width: 1400px; }
+        th { position: sticky; top: 0; background: #f8fafc; font-size: 13px; font-weight: 700; color: #475569; padding: 12px; border-bottom: 2px solid #e2e8f0; text-align: left; z-index: 10; }
+        td { padding: 10px 12px; border-bottom: 1px solid #f1f5f9; font-size: 13px; vertical-align: middle; }
         tr:hover td { background: #f8fafc; }
 
-        /* 行内编辑 */
-        .t-input { width: 100%; padding: 6px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 14px; outline: none; background: white; transition: border 0.2s; }
+        /* Inline Edit */
+        .t-input { width: 100%; padding: 6px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 13px; outline: none; background: white; }
         .t-input:focus { border-color: #3b82f6; box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1); }
         .editing { background: #eff6ff !important; }
         .new-row { background: #f0fdf4 !important; animation: fadeIn 0.3s; }
 
-        /* 筛选面板 */
-        #filter-panel { transition: max-height 0.3s ease; overflow: hidden; max-height: 0; background: white; border-bottom: 1px solid #e2e8f0; }
-        #filter-panel.open { max-height: 600px; }
+        /* Filter Panel */
+        #filter-panel { transition: max-height 0.3s ease; overflow: hidden; max-height: 0; background: white; margin: 0 16px 16px; border-radius: 8px; padding: 0 16px; }
+        #filter-panel.open { max-height: 500px; padding: 16px; }
 
-        /* 统计图表 */
-        .chart-box { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); border: 1px solid #e2e8f0; height: 360px; }
-
-        /* 标签 & 图片 */
+        /* Pills & Images */
         .pill { padding: 2px 8px; border-radius: 6px; font-size: 12px; font-weight: 600; display: inline-block; margin-right: 4px; border: 1px solid transparent; }
         .img-cell { width: 44px; height: 44px; border-radius: 6px; border: 1px solid #e2e8f0; background: white; overflow: hidden; cursor: pointer; display: flex; align-items: center; justify-content: center; }
-        .img-cell:hover::after { content:'+'; position:absolute; color:white; font-weight:bold; background:rgba(0,0,0,0.4); width:44px; height:44px; display:flex; align-items:center; justify-content:center; }
+        .img-cell:hover { border-color: #3b82f6; }
 
-        /* 弹窗 */
+        /* Modals & Popups */
         .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 50; opacity: 0; pointer-events: none; transition: opacity 0.2s; }
         .modal.active { opacity: 1; pointer-events: auto; }
-        
-        /* 多选菜单 */
         .multi-pop { position: absolute; background: white; border: 1px solid #cbd5e1; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); border-radius: 6px; width: 200px; max-height: 200px; overflow-y: auto; z-index: 40; display: none; }
         .multi-pop.show { display: block; }
         .multi-opt { padding: 8px; cursor: pointer; display: flex; align-items: center; gap: 8px; font-size: 13px; }
@@ -55,286 +51,230 @@
         @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
     </style>
 </head>
-<body class="flex flex-col h-screen overflow-hidden">
+<body class="flex h-screen">
 
-    <header class="h-16 bg-white border-b border-slate-200 flex justify-between items-center px-6 shrink-0 z-40">
-        <div class="flex items-center gap-8">
-            <div class="flex items-center gap-2">
-                <div class="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white font-bold text-xl">V</div>
-                <h1 class="text-xl font-bold text-slate-800">VideoHub <span class="text-xs text-slate-400 font-normal">V11.0</span></h1>
-            </div>
-            <div class="flex gap-4 ml-4">
-                <div class="nav-tab active" onclick="switchTab('assets', this)">资产管理</div>
-                <div class="nav-tab" onclick="switchTab('report', this)">数据报表</div>
-            </div>
+    <aside class="sidebar">
+        <div class="h-16 flex items-center px-6 gap-3 mb-4">
+            <div class="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white font-bold">V</div>
+            <h1 class="text-lg font-bold text-white">VideoHub</h1>
         </div>
+        <div class="sidebar-item active" onclick="switchView('assets', this)">
+            <span>📦</span> 资产管理
+        </div>
+        <div class="sidebar-item" onclick="switchView('report', this)">
+            <span>📊</span> 数据统计
+        </div>
+    </aside>
+
+    <main class="main-content">
         
-        <div class="flex items-center gap-3">
-            <div class="relative hidden md:block">
+        <header class="h-16 flex justify-between items-center px-6 shrink-0 bg-white border-b border-slate-200 mb-4">
+            <h2 class="text-lg font-bold text-slate-800" id="page-title">资产管理</h2>
+            <div class="flex items-center gap-3">
                 <input id="g-search" onkeydown="if(event.key==='Enter') loadData(1)" placeholder="全局搜索..." class="pl-3 pr-3 py-1.5 w-64 bg-slate-100 border-none rounded text-sm focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none">
+                <button onclick="toggleFilters()" class="text-slate-500 hover:text-blue-600 p-2 border rounded hover:bg-slate-50 text-sm">筛选</button>
+                <button onclick="openSettings()" class="text-slate-500 hover:text-blue-600 p-2 border rounded hover:bg-slate-50 text-sm">配置</button>
+                <button onclick="addNewRow()" class="bg-emerald-600 text-white text-sm font-bold px-4 py-2 rounded hover:bg-emerald-700 shadow">+ 新增一行</button>
             </div>
-            <button onclick="toggleFilters()" class="text-slate-500 hover:text-blue-600 p-2" title="高级筛选"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"></path></svg></button>
-            <button onclick="openSettings()" class="text-slate-500 hover:text-blue-600 p-2" title="配置"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg></button>
-        </div>
-    </header>
+        </header>
 
-    <div id="view-assets" class="flex-1 flex flex-col overflow-hidden">
-        
-        <div class="bg-white border-b border-slate-200 px-6 py-3 flex gap-6 shrink-0 overflow-x-auto">
-            <div class="bg-blue-50 px-4 py-2 rounded-lg border border-blue-100 flex items-center gap-3 min-w-[160px]">
-                <div class="text-2xl">📦</div>
-                <div><div class="text-xs text-blue-400 font-bold uppercase">总资产</div><div class="text-xl font-black text-slate-800" id="st-total">-</div></div>
-            </div>
-            <div class="bg-orange-50 px-4 py-2 rounded-lg border border-orange-100 flex items-center gap-3 min-w-[160px]">
-                <div class="text-2xl">🔥</div>
-                <div><div class="text-xs text-orange-400 font-bold uppercase">待发布</div><div class="text-xl font-black text-slate-800" id="st-pending">-</div></div>
-            </div>
-        </div>
-
-        <div id="filter-panel" class="shrink-0 px-6">
-            <div class="py-4 grid grid-cols-2 md:grid-cols-6 gap-4">
-                <div><label class="text-xs font-bold text-slate-400 block mb-1">产品编号</label><input id="s-pid" list="dl-pids" class="t-input" placeholder="输入..."></div>
-                <div><label class="text-xs font-bold text-slate-400 block mb-1">视频标题</label><input id="s-title" class="t-input" placeholder="输入..."></div>
-                <div><label class="text-xs font-bold text-slate-400 block mb-1">类型</label><select id="s-cat" class="t-input"></select></div>
-                <div><label class="text-xs font-bold text-slate-400 block mb-1">视频类型</label><select id="s-type" class="t-input"></select></div>
-                <div><label class="text-xs font-bold text-slate-400 block mb-1">主播</label><select id="s-host" class="t-input"></select></div>
-                <div><label class="text-xs font-bold text-slate-400 block mb-1">状态</label><select id="s-status" class="t-input"></select></div>
-                <div class="col-span-2"><label class="text-xs font-bold text-slate-400 block mb-1">发布时间</label><div class="flex gap-2"><input type="date" id="s-pub-start" class="t-input"><input type="date" id="s-pub-end" class="t-input"></div></div>
-                <div class="col-span-2 flex items-end gap-2">
-                    <button onclick="loadData(1)" class="bg-slate-800 text-white text-sm font-bold py-1.5 px-4 rounded w-full">筛选</button>
-                    <button onclick="resetFilters()" class="bg-white border text-slate-600 text-sm font-bold py-1.5 px-4 rounded">重置</button>
+        <div id="view-assets" class="flex flex-col flex-1 overflow-hidden">
+            
+            <div class="px-6 mb-4 grid grid-cols-3 gap-4 shrink-0">
+                <div class="bg-white p-3 rounded-lg border border-slate-200 flex justify-between items-center">
+                    <div><div class="text-xs text-slate-400 font-bold">总资产</div><div class="text-xl font-black" id="st-total">-</div></div>
+                </div>
+                <div class="bg-white p-3 rounded-lg border border-slate-200 flex justify-between items-center">
+                    <div><div class="text-xs text-orange-400 font-bold">待发布</div><div class="text-xl font-black text-orange-500" id="st-pending">-</div></div>
+                </div>
+                <div class="bg-white p-3 rounded-lg border border-slate-200 flex justify-between items-center">
+                    <div><div class="text-xs text-emerald-400 font-bold">批量操作</div>
+                    <button onclick="openImport()" class="text-blue-600 text-xs font-bold hover:underline">导入数据</button></div>
                 </div>
             </div>
-        </div>
 
-        <div class="px-6 py-2 bg-slate-50 flex justify-between items-center shrink-0 border-b border-slate-200">
-            <span class="text-xs text-slate-500" id="page-info">共 0 条</span>
-            <div class="flex gap-2">
-                <button onclick="openImport()" class="text-blue-600 text-sm font-bold hover:underline px-2">批量导入</button>
-                <button onclick="addNewRow()" class="bg-emerald-600 text-white text-sm font-bold px-3 py-1.5 rounded shadow hover:bg-emerald-700 flex items-center gap-1"><span>+</span> 新增一行</button>
+            <div id="filter-panel">
+                <div class="grid grid-cols-6 gap-4 py-2">
+                    <input id="s-pid" list="dl-pids" class="t-input" placeholder="编号...">
+                    <input id="s-title" class="t-input" placeholder="标题...">
+                    <select id="s-cat" class="t-input"></select>
+                    <select id="s-type" class="t-input"></select>
+                    <select id="s-status" class="t-input"></select>
+                    <select id="s-host" class="t-input"></select>
+                    <div class="col-span-6 flex justify-end gap-2 border-t pt-2">
+                        <button onclick="loadData(1)" class="bg-slate-800 text-white text-xs px-4 py-2 rounded">查询</button>
+                        <button onclick="resetFilters()" class="bg-white border text-xs px-4 py-2 rounded">重置</button>
+                    </div>
+                </div>
             </div>
-        </div>
 
-        <div class="flex-1 overflow-hidden relative w-full bg-white">
-            <div class="absolute inset-0 table-wrap">
-                <table class="w-full text-left">
-                    <thead class="sticky top-0 z-20 shadow-sm">
+            <div class="table-container">
+                <table>
+                    <thead>
                         <tr>
-                            <th class="w-16 text-center">图</th>
-                            <th class="w-24">编号</th>
-                            <th style="width: 260px">视频标题</th>
+                            <th class="w-16">图</th>
+                            <th class="w-24" onclick="sortBy('product_id')">编号 ↕</th>
+                            <th style="min-width: 240px" onclick="sortBy('title')">标题 ↕</th>
                             <th class="w-24">类型</th>
-                            <th class="w-28">完成时间</th>
                             <th class="w-24">视类</th>
-                            <th style="width: 140px">主播(多选)</th>
-                            <th class="w-24 text-center">状态</th>
-                            <th style="width: 140px">平台(多选)</th>
+                            <th class="w-28">主播(多)</th>
+                            <th class="w-24">状态</th>
+                            <th class="w-28">平台(多)</th>
                             <th class="w-32">发布时间</th>
-                            <th class="w-32">备注</th>
-                            <th class="w-20 text-center sticky right-0 bg-slate-50 border-l">操作</th>
+                            <th class="w-40">备注</th>
+                            <th class="w-20 text-center">操作</th>
                         </tr>
                     </thead>
                     <tbody id="table-body"></tbody>
                 </table>
             </div>
-        </div>
-        
-        <div class="h-10 bg-white border-t border-slate-200 px-6 flex justify-end items-center shrink-0 gap-2">
-            <button id="btn-prev" onclick="changePage(-1)" class="px-2 py-1 bg-slate-100 rounded text-xs disabled:opacity-50">◀</button>
-            <button id="btn-next" onclick="changePage(1)" class="px-2 py-1 bg-slate-100 rounded text-xs disabled:opacity-50">▶</button>
-        </div>
-    </div>
-
-    <div id="view-report" class="flex-1 overflow-y-auto p-6 hidden bg-slate-50">
-        <div class="flex justify-between items-center mb-6">
-            <h2 class="text-xl font-bold text-slate-800">运营数据统计</h2>
-            <div class="flex bg-white rounded border border-slate-200 p-1">
-                <button onclick="loadReport('day')" class="px-4 py-1 text-sm rounded hover:bg-slate-100 r-btn">按日</button>
-                <button onclick="loadReport('week')" class="px-4 py-1 text-sm rounded hover:bg-slate-100 r-btn">按周</button>
-                <button onclick="loadReport('month')" class="px-4 py-1 text-sm rounded bg-blue-50 text-blue-600 font-bold r-btn">按月</button>
-            </div>
-        </div>
-        
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div class="chart-box col-span-1 lg:col-span-2">
-                <h3 class="font-bold text-slate-600 mb-4">入库 vs 发布 趋势对比</h3>
-                <div id="chart-trend" style="height: 300px;"></div>
-            </div>
-            <div class="chart-box">
-                <h3 class="font-bold text-slate-600 mb-4">各平台发布占比</h3>
-                <div id="chart-plat" style="height: 300px;"></div>
-            </div>
-            <div class="chart-box flex flex-col justify-center gap-4">
-                <div class="bg-blue-50 p-6 rounded-xl border border-blue-100 text-center">
-                    <div class="text-sm text-blue-500 font-bold">本期入库总数</div>
-                    <div class="text-4xl font-black text-blue-700 mt-2" id="cnt-in">-</div>
-                </div>
-                <div class="bg-emerald-50 p-6 rounded-xl border border-emerald-100 text-center">
-                    <div class="text-sm text-emerald-500 font-bold">本期发布总数</div>
-                    <div class="text-4xl font-black text-emerald-700 mt-2" id="cnt-out">-</div>
+            
+            <div class="h-12 bg-white border-t px-6 flex justify-between items-center shrink-0">
+                <span id="page-info" class="text-xs text-slate-500">0 条</span>
+                <div class="flex gap-2">
+                    <button id="btn-prev" onclick="changePage(-1)" class="px-2 py-1 bg-slate-100 rounded text-xs">◀</button>
+                    <button id="btn-next" onclick="changePage(1)" class="px-2 py-1 bg-slate-100 rounded text-xs">▶</button>
                 </div>
             </div>
         </div>
-    </div>
 
-    <div id="preview-modal" class="modal bg-black/95" onclick="this.classList.remove('active')"><img id="big-img" src="" class="max-h-[90vh] max-w-[95vw] object-contain"></div>
+        <div id="view-report" class="hidden flex-1 overflow-y-auto p-6">
+            <div class="flex justify-end gap-2 mb-4">
+                <button onclick="loadReport('day')" class="px-3 py-1 bg-white border rounded text-xs">日</button>
+                <button onclick="loadReport('week')" class="px-3 py-1 bg-white border rounded text-xs">周</button>
+                <button onclick="loadReport('month')" class="px-3 py-1 bg-white border rounded text-xs">月</button>
+            </div>
+            <div class="grid grid-cols-2 gap-6">
+                <div class="bg-white p-4 rounded-xl border shadow-sm col-span-2 lg:col-span-1" style="height: 400px;" id="chart-trend"></div>
+                <div class="bg-white p-4 rounded-xl border shadow-sm col-span-2 lg:col-span-1" style="height: 400px;" id="chart-plat"></div>
+            </div>
+        </div>
+
+    </main>
+
+    <div id="preview-modal" class="modal bg-black/95" onclick="this.classList.remove('active')"><img id="big-img" src="" class="max-h-[90vh]"></div>
     <div id="multi-pop" class="multi-pop"></div>
-    
+    <datalist id="dl-pids"></datalist>
+
     <div id="import-modal" class="modal">
         <div class="bg-white rounded-xl w-[400px] p-8 text-center">
-            <h3 class="font-bold text-xl mb-4">批量导入</h3>
-            <p class="text-sm text-slate-500 mb-6">请确认文件已在 NAS <code class="bg-slate-100 px-1">temp_uploads</code> 目录</p>
-            <button onclick="startImport()" class="w-full bg-slate-800 text-white py-2 rounded font-bold">开始扫描</button>
-            <button onclick="document.getElementById('import-modal').classList.remove('active')" class="mt-4 text-slate-400 text-xs">取消</button>
+            <h3 class="font-bold text-xl mb-4">导入</h3>
+            <p class="text-sm text-slate-500 mb-6">确保 Excel 在 temp_uploads 目录</p>
+            <button onclick="startImport()" class="w-full bg-slate-800 text-white py-2 rounded font-bold">扫描</button>
+            <button onclick="document.getElementById('import-modal').classList.remove('active')" class="mt-4 text-slate-400 text-xs">关闭</button>
         </div>
     </div>
 
     <div id="settings-modal" class="modal">
         <div class="bg-white rounded-xl w-[400px] p-6">
-            <h3 class="font-bold mb-4">全局配置</h3>
-            <textarea id="set-hosts" class="t-input h-20 mb-3" placeholder="主播..."></textarea>
-            <input id="set-cats" class="t-input mb-3" placeholder="类型...">
-            <input id="set-types" class="t-input mb-3" placeholder="视频类型...">
+            <h3 class="font-bold mb-4">配置</h3>
+            <textarea id="set-hosts" class="t-input h-20 mb-2" placeholder="主播..."></textarea>
+            <input id="set-cats" class="t-input mb-2" placeholder="类型...">
+            <input id="set-types" class="t-input mb-2" placeholder="视类...">
             <input id="set-plats" class="t-input mb-4" placeholder="平台...">
-            <button onclick="saveSettings()" class="w-full bg-blue-600 text-white py-2 rounded font-bold">保存</button>
-            <button onclick="document.getElementById('settings-modal').classList.remove('active')" class="w-full mt-2 text-slate-400 text-sm">关闭</button>
+            <button onclick="saveSettings()" class="w-full bg-blue-600 text-white py-2 rounded">保存</button>
+            <button onclick="document.getElementById('settings-modal').classList.remove('active')" class="w-full mt-2 text-slate-400 text-xs">关闭</button>
         </div>
     </div>
 
-    <datalist id="dl-pids"></datalist><datalist id="dl-host"></datalist><datalist id="dl-plat"></datalist>
-
     <script>
-        let currPage = 1, totalPages = 1, globalData = [], globalOptions = {}, editingId = null;
-        let charts = {};
+        let currPage=1, totalPages=1, currentSort={col:'id',order:'desc'};
+        let globalOptions={}, editingId=null, globalData=[];
+        let charts={};
 
-        (async () => {
-            await loadOptions();
-            await loadData(1);
-            updateStats();
-            document.addEventListener('click', e => {
-                if(!e.target.closest('.multi-pop') && !e.target.closest('.multi-trig')) 
-                    document.getElementById('multi-pop').classList.remove('show');
-            });
+        (async()=>{ await loadOptions(); await loadData(1); updateStats(); 
+            document.addEventListener('click',e=>{if(!e.target.closest('.multi-pop')&&!e.target.closest('.multi-trig')) document.getElementById('multi-pop').classList.remove('show')});
         })();
 
-        // --- 视图切换 ---
-        function switchTab(view, btn) {
-            document.querySelectorAll('.nav-tab').forEach(e => e.classList.remove('active'));
+        function switchView(v, btn) {
+            document.querySelectorAll('.sidebar-item').forEach(e=>e.classList.remove('active'));
             btn.classList.add('active');
-            document.getElementById('view-assets').style.display = view==='assets'?'flex':'none';
-            document.getElementById('view-report').style.display = view==='report'?'block':'none';
-            if(view==='report') loadReport('day');
+            document.getElementById('view-assets').classList.add('hidden');
+            document.getElementById('view-report').classList.add('hidden');
+            document.getElementById('view-'+v).classList.remove('hidden');
+            document.getElementById('page-title').innerText = v==='assets'?'资产管理':'数据统计';
+            if(v==='report') loadReport('day');
         }
 
-        // --- 核心数据 ---
         async function loadOptions() {
-            const res = await fetch('/api/options'); globalOptions = await res.json();
-            const fill = (id, list) => document.getElementById(id).innerHTML = `<option value="">全部</option>` + list.map(i=>`<option value="${i}">${i}</option>`).join('');
-            fill('s-cat', globalOptions.categories); fill('s-host', globalOptions.hosts);
-            fill('s-status', globalOptions.statuses); fill('s-plat', globalOptions.platforms);
-            fill('s-type', globalOptions.video_types); // 修复视频类型
-            
-            const dl = (id, list) => document.getElementById(id).innerHTML = list.map(i=>`<option value="${i}">`).join('');
-            dl('dl-pids', globalOptions.product_ids); dl('dl-host', globalOptions.hosts); dl('dl-plat', globalOptions.platforms);
+            const res=await fetch('/api/options'); globalOptions=await res.json();
+            const fill=(id,l)=>document.getElementById(id).innerHTML=`<option value="">全部</option>`+l.map(i=>`<option>${i}</option>`).join('');
+            fill('s-cat',globalOptions.categories); fill('s-type',globalOptions.video_types);
+            fill('s-host',globalOptions.hosts); fill('s-status',globalOptions.statuses);
+            document.getElementById('dl-pids').innerHTML=globalOptions.product_ids.map(i=>`<option>${i}</option>`).join('');
         }
 
         async function loadData(p) {
-            currPage = p || currPage;
-            const params = new URLSearchParams({
-                page: currPage, size: 100,
-                keyword: document.getElementById('g-search').value,
-                product_id: document.getElementById('s-pid').value,
-                title: document.getElementById('s-title').value,
-                category: document.getElementById('s-cat').value,
-                video_type: document.getElementById('s-type').value,
-                host: document.getElementById('s-host').value,
-                status: document.getElementById('s-status').value,
-                pub_start: document.getElementById('s-pub-start').value,
-                pub_end: document.getElementById('s-pub-end').value
+            currPage=p||currPage;
+            const params=new URLSearchParams({page:currPage,size:100,sort_by:currentSort.col,order:currentSort.order,
+                keyword:document.getElementById('g-search').value,
+                product_id:document.getElementById('s-pid').value, title:document.getElementById('s-title').value,
+                category:document.getElementById('s-cat').value, video_type:document.getElementById('s-type').value,
+                host:document.getElementById('s-host').value, status:document.getElementById('s-status').value
             });
-            const res = await fetch(`/api/videos?${params}`);
-            const data = await res.json();
-            globalData = data.items;
-            totalPages = data.total_pages;
-            
-            document.getElementById('total-count').innerText = data.total;
-            document.getElementById('page-info').innerText = `${data.page}/${data.total_pages}`;
-            document.getElementById('btn-prev').disabled = (data.page <= 1);
-            document.getElementById('btn-next').disabled = (data.page >= data.total_pages);
-            
+            const res=await fetch(`/api/videos?${params}`); const data=await res.json();
+            globalData=data.items; totalPages=data.total_pages;
+            document.getElementById('total-count').innerText=data.total;
+            document.getElementById('page-info').innerText=`${data.page}/${data.total_pages}`;
             renderTable(data.items);
         }
 
-        // --- 行内编辑逻辑 ---
         function addNewRow() {
-            globalData.unshift({ id: 'new', product_id: '', title: '', isNew: true });
-            editingId = 'new';
-            renderTable(globalData);
+            globalData.unshift({id:'new',product_id:'',title:'',isNew:true});
+            editingId='new'; renderTable(globalData);
         }
 
         function renderTable(items) {
             document.getElementById('table-body').innerHTML = items.map(v => {
-                const isEdit = (v.id === editingId);
-                const cln = s => (s && s!=='nan' && s!=='None') ? s : '';
-                const img = (v.image_url && !v.image_url.includes('default')) ? v.image_url : '';
+                const isEdit = (v.id===editingId);
+                const cln = s => (s&&s!=='nan'?s:'');
+                const img = (v.image_url&&!v.image_url.includes('default'))?v.image_url:'';
 
-                if (isEdit) {
-                    const sel = (k, list) => `<select id="ed-${k}" class="t-input">${list.map(o => `<option ${o===v[k]?'selected':''}>${o}</option>`).join('')}</select>`;
-                    const multi = (k, type) => `<input id="ed-${k}" class="t-input multi-trig cursor-pointer" value="${cln(v[k])}" readonly onclick="openMulti(this, '${type}')" placeholder="点击选择">`;
-                    
-                    return `
-                    <tr class="editing ${v.isNew?'new-row':''}">
+                if(isEdit) {
+                    const sel=(k,l)=>`<select id="ed-${k}" class="t-input">${l.map(o=>`<option ${o===v[k]?'selected':''}>${o}</option>`).join('')}</select>`;
+                    const mul=(k,t)=>`<input id="ed-${k}" class="t-input multi-trig" value="${cln(v[k])}" readonly onclick="openMulti(this,'${t}')" placeholder="选择">`;
+                    return `<tr class="editing ${v.isNew?'new-row':''}">
                         <td class="p-2"><div class="img-cell mx-auto" onclick="document.getElementById('up-${v.id}').click()">${img?`<img src="${img}" class="w-full h-full object-cover">`:'+'}</div><input type="file" id="up-${v.id}" class="hidden" onchange="upImg(this,'${v.id}')"><input type="hidden" id="ed-img" value="${cln(v.image_url)}"></td>
                         <td><input id="ed-pid" class="t-input" value="${cln(v.product_id)}"></td>
                         <td><input id="ed-title" class="t-input font-bold" value="${cln(v.title)}"></td>
-                        <td>${sel('cat', globalOptions.categories)}</td>
+                        <td>${sel('cat',globalOptions.categories)}</td>
                         <td><input id="ed-fin" type="date" class="t-input" value="${cln(v.finish_time)}"></td>
-                        <td>${sel('type', globalOptions.video_types)}</td>
-                        <td>${multi('host', 'hosts')}</td>
-                        <td>${sel('status', globalOptions.statuses)}</td>
-                        <td>${multi('plat', 'platforms')}</td>
+                        <td>${sel('type',globalOptions.video_types)}</td>
+                        <td>${mul('host','hosts')}</td>
+                        <td>${sel('status',globalOptions.statuses)}</td>
+                        <td>${mul('plat','platforms')}</td>
                         <td><input id="ed-pub" type="datetime-local" class="t-input" value="${cln(v.publish_time).replace(' ','T')}"></td>
                         <td><input id="ed-rem" class="t-input" value="${cln(v.remark)}"></td>
-                        <td class="text-center sticky right-0 bg-blue-50 border-l">
-                            <button onclick="saveRow('${v.id}')" class="text-white bg-blue-600 px-3 py-1 rounded text-xs font-bold shadow">保存</button>
-                            <button onclick="cancelEdit()" class="text-slate-400 text-xs ml-1">取消</button>
-                        </td>
+                        <td class="text-center"><button onclick="saveRow('${v.id}')" class="text-blue-600 font-bold text-xs">保存</button> <button onclick="cancelEdit()" class="text-slate-400 text-xs">取消</button></td>
                     </tr>`;
                 }
-                
-                // 正常行
-                return `<tr class="hover:bg-slate-50 border-b border-slate-100 last:border-0">
-                    <td class="p-2 text-center"><div class="w-10 h-10 rounded mx-auto bg-slate-100 overflow-hidden cursor-pointer" onclick="showBig('${img}')"><img src="${img||'/assets/default.png'}" class="w-full h-full object-cover"></div></td>
-                    <td class="font-mono text-slate-500">${cln(v.product_id)}</td>
-                    <td class="font-bold text-slate-700 truncate" style="max-width: 260px" title="${cln(v.title)}">${cln(v.title)}</td>
-                    <td><span class="pill bg-slate-100 text-slate-600">${cln(v.category)}</span></td>
-                    <td class="text-slate-400 text-xs font-mono">${cln(v.finish_time)}</td>
-                    <td><span class="pill bg-slate-100 text-slate-600">${cln(v.video_type)}</span></td>
+                return `<tr class="hover:bg-slate-50 border-b border-slate-100">
+                    <td class="p-2 text-center"><div class="img-cell mx-auto" onclick="showBig('${img}')"><img src="${img||'/assets/default.png'}" class="w-full h-full object-cover"></div></td>
+                    <td class="text-slate-500 font-mono">${cln(v.product_id)}</td>
+                    <td class="font-bold text-slate-700 truncate" style="max-width:240px" title="${cln(v.title)}">${cln(v.title)}</td>
+                    <td><span class="pill bg-slate-100">${cln(v.category)}</span></td>
+                    <td class="text-slate-400 text-xs">${cln(v.finish_time)}</td>
+                    <td><span class="pill bg-slate-100">${cln(v.video_type)}</span></td>
                     <td>${cln(v.host)}</td>
-                    <td class="text-center"><span class="pill ${v.status==='已发布'?'bg-emerald-100 text-emerald-700':'bg-orange-50 text-orange-600'}">${cln(v.status)}</span></td>
+                    <td class="text-center"><span class="pill ${v.status==='已发布'?'bg-emerald-100 text-emerald-700':'bg-orange-100 text-orange-600'}">${cln(v.status)}</span></td>
                     <td>${cln(v.platform)}</td>
-                    <td class="text-xs text-slate-400 font-mono">${cln(v.publish_time).replace('T',' ')}</td>
-                    <td class="text-xs text-slate-400 truncate max-w-[100px]">${cln(v.remark)}</td>
-                    <td class="text-center sticky right-0 bg-white group-hover:bg-slate-50 border-l">
-                        <button onclick="startEdit(${v.id})" class="text-blue-600 font-bold text-xs mr-2">编辑</button>
-                        <button onclick="delVideo(${v.id})" class="text-red-400 text-xs">删</button>
-                    </td>
+                    <td class="text-slate-400 text-xs">${cln(v.publish_time).replace('T',' ')}</td>
+                    <td class="text-slate-400 truncate max-w-[100px] text-xs">${cln(v.remark)}</td>
+                    <td class="text-center"><button onclick="startEdit(${v.id})" class="text-blue-600 font-bold text-xs">编辑</button> <button onclick="delVideo(${v.id})" class="text-red-400 text-xs">删</button></td>
                 </tr>`;
             }).join('');
         }
 
-        // --- 逻辑函数 ---
-        function startEdit(id) { editingId = id; renderTable(globalData); }
-        function cancelEdit() { editingId = null; loadData(); }
-        
-        async function saveRow(id) {
-            const fd = new FormData();
-            if (id !== 'new') fd.append('id', id);
-            const map = {'pid':'product_id','title':'title','cat':'category','fin':'finish_time','type':'video_type','host':'host','status':'status','plat':'platform','pub':'publish_time','rem':'remark'};
-            for(let [eid, key] of Object.entries(map)) fd.append(key, document.getElementById('ed-'+eid).value.replace('T',' '));
-            fd.append('image_url', document.getElementById('ed-img').value);
-            await fetch('/api/video/save', {method:'POST', body:fd});
-            editingId = null; loadData(); updateStats();
+        function startEdit(id){editingId=id;renderTable(globalData);}
+        function cancelEdit(){editingId=null;loadData();}
+        async function saveRow(id){
+            const fd=new FormData(); if(id!=='new') fd.append('id',id);
+            ['pid','title','cat','fin','type','host','status','plat','pub','rem'].forEach(k=>{
+                fd.append({'pid':'product_id','cat':'category','fin':'finish_time','type':'video_type','plat':'platform','pub':'publish_time','rem':'remark'}[k]||k, document.getElementById('ed-'+k).value.replace('T',' '));
+            });
+            fd.append('image_url',document.getElementById('ed-img').value);
+            await fetch('/api/video/save',{method:'POST',body:fd});
+            editingId=null; loadData(); updateStats();
         }
 
         async function upImg(input, id) {
@@ -342,90 +282,53 @@
             const res = await fetch('/api/upload', {method:'POST', body:fd});
             const d = await res.json();
             document.getElementById('ed-img').value = d.url;
-            // 重新渲染该行保持图片显示
-            const row = globalData.find(v => v.id == id || v.id === 'new');
-            row.image_url = d.url;
+            globalData.find(v => v.id == id || v.id === 'new').image_url = d.url;
             renderTable(globalData);
         }
 
-        // --- 多选菜单 ---
-        function openMulti(input, type) {
-            const pop = document.getElementById('multi-pop');
-            const rect = input.getBoundingClientRect();
-            const opts = globalOptions[type] || [];
-            const curr = input.value.split(/[,，]/).map(s=>s.trim());
-            pop.innerHTML = opts.map(o => `<div class="multi-opt" onclick="togMulti('${input.id}', '${o}', '${type}')">
-                <span class="${curr.includes(o)?'text-blue-600 font-bold':'text-slate-300'}">✓</span> ${o}</div>`).join('');
-            pop.style.top = (rect.bottom + window.scrollY) + 'px';
-            pop.style.left = (rect.left + window.scrollX) + 'px';
-            pop.classList.add('show');
-        }
-        function togMulti(eid, val, type) {
-            const input = document.getElementById(eid);
-            let vals = input.value.split(/[,，]/).map(s=>s.trim()).filter(s=>s);
-            if(vals.includes(val)) vals = vals.filter(v=>v!==val); else vals.push(val);
-            input.value = vals.join(',');
-            openMulti(input, type); // 刷新
-        }
-
-        // --- 统计报表 ---
         async function loadReport(dim) {
-            const res = await fetch(`/api/report?dim=${dim}`);
-            const d = await res.json();
-            
-            document.getElementById('cnt-in').innerText = d.series_in.reduce((a,b)=>a+b, 0);
-            document.getElementById('cnt-out').innerText = d.series_out.reduce((a,b)=>a+b, 0);
-
-            // 趋势图
-            if(!charts.trend) charts.trend = echarts.init(document.getElementById('chart-trend'));
-            charts.trend.setOption({
-                tooltip: { trigger: 'axis' },
-                legend: { data: ['入库', '发布'], bottom: 0 },
-                xAxis: { type: 'category', data: d.dates },
-                yAxis: { type: 'value' },
-                series: [
-                    { name: '入库', type: 'line', data: d.series_in, smooth: true, itemStyle: {color:'#3b82f6'}, areaStyle: {opacity:0.1} },
-                    { name: '发布', type: 'line', data: d.series_out, smooth: true, itemStyle: {color:'#10b981'} }
-                ]
-            });
-
-            // 饼图
-            if(!charts.plat) charts.plat = echarts.init(document.getElementById('chart-plat'));
-            charts.plat.setOption({
-                tooltip: { trigger: 'item' },
-                series: [{ type: 'bar', data: d.platforms.map(p=>p.value), label: {show:true} }],
-                xAxis: { type: 'category', data: d.platforms.map(p=>p.name) },
-                yAxis: { type: 'value' }
-            });
+            const res = await fetch(`/api/report?dim=${dim}`); const d = await res.json();
+            if(!charts.t) charts.t = echarts.init(document.getElementById('chart-trend'));
+            charts.t.setOption({tooltip:{trigger:'axis'},legend:{data:['入库','发布']},xAxis:{type:'category',data:d.dates},yAxis:{type:'value'},series:[{name:'入库',type:'line',data:d.series_in,smooth:true},{name:'发布',type:'bar',data:d.series_out}]});
+            if(!charts.p) charts.p = echarts.init(document.getElementById('chart-plat'));
+            charts.p.setOption({tooltip:{trigger:'item'},series:[{type:'pie',radius:['40%','70%'],data:d.platforms}]});
         }
 
-        // --- 杂项 ---
-        function toggleFilters() { document.getElementById('filter-panel').classList.toggle('open'); }
-        function showBig(src) { if(src) {document.getElementById('big-img').src=src; document.getElementById('preview-modal').classList.add('active');} }
-        function resetFilters() { document.querySelectorAll('#filter-panel input, #filter-panel select').forEach(e=>e.value=''); loadData(1); }
-        function changePage(d) { if(currPage+d>0 && currPage+d<=totalPages) loadData(currPage+d); }
-        async function delVideo(id) { if(confirm('删?')) { await fetch(`/api/video/${id}`, {method:'DELETE'}); loadData(); updateStats(); }}
-        async function updateStats() { try{const r=await fetch('/api/stats');const d=await r.json();document.getElementById('st-total').innerText=d.total;document.getElementById('st-pending').innerText=d.pending;}catch{} }
-        
-        // 导入
-        function openImport() { document.getElementById('import-modal').classList.add('active'); }
-        async function startImport() { await fetch('/api/import/local', {method:'POST'}); alert('后台任务已启动'); document.getElementById('import-modal').classList.remove('active'); }
-        
-        // 配置
-        function openSettings() { document.getElementById('settings-modal').classList.add('active'); 
-            document.getElementById('set-hosts').value = globalOptions.hosts.join(',');
-            document.getElementById('set-cats').value = globalOptions.categories.join(',');
-            document.getElementById('set-types').value = globalOptions.video_types.join(',');
-            document.getElementById('set-plats').value = globalOptions.platforms.join(',');
+        function openMulti(input,type){
+            const pop=document.getElementById('multi-pop'); const r=input.getBoundingClientRect();
+            const curr=input.value.split(/[,，]/).map(s=>s.trim());
+            pop.innerHTML=globalOptions[type].map(o=>`<div class="multi-opt" onclick="togOpt('${input.id}','${o}','${type}')"><span class="${curr.includes(o)?'text-blue-600 font-bold':''}">${curr.includes(o)?'✓':''}</span> ${o}</div>`).join('');
+            pop.style.top=(r.bottom+window.scrollY)+'px'; pop.style.left=(r.left+window.scrollX)+'px'; pop.classList.add('show');
         }
-        async function saveSettings() {
-            const save = (k,v) => fetch('/api/settings', {method:'POST', body:new URLSearchParams({key:k, value:v})});
-            await save('hosts', document.getElementById('set-hosts').value);
-            await save('categories', document.getElementById('set-cats').value);
-            await save('video_types', document.getElementById('set-types').value);
-            await save('platforms', document.getElementById('set-plats').value);
+        function togOpt(eid,v,type){
+            const inp=document.getElementById(eid); let vals=inp.value.split(/[,，]/).map(s=>s.trim()).filter(s=>s);
+            if(vals.includes(v)) vals=vals.filter(i=>i!==v); else vals.push(v);
+            inp.value=vals.join(','); openMulti(inp,type);
+        }
+
+        function toggleFilters(){document.getElementById('filter-panel').classList.toggle('open');}
+        function showBig(s){if(s){document.getElementById('big-img').src=s;document.getElementById('preview-modal').classList.add('active');}}
+        function resetFilters(){document.querySelectorAll('#filter-panel input,select').forEach(e=>e.value='');loadData(1);}
+        function changePage(d){if(currPage+d>0&&currPage+d<=totalPages)loadData(currPage+d);}
+        function sortBy(c){currentSort.col=c;currentSort.order=currentSort.order==='asc'?'desc':'asc';loadData(1);}
+        async function delVideo(id){if(confirm('删?')){await fetch(`/api/video/${id}`,{method:'DELETE'});loadData();updateStats();}}
+        function openSettings(){document.getElementById('settings-modal').classList.add('active');
+            document.getElementById('set-hosts').value=globalOptions.hosts.join(',');
+            document.getElementById('set-cats').value=globalOptions.categories.join(',');
+            document.getElementById('set-types').value=globalOptions.video_types.join(',');
+            document.getElementById('set-plats').value=globalOptions.platforms.join(',');
+        }
+        async function saveSettings(){
+            const s=(k,v)=>fetch('/api/settings',{method:'POST',body:new URLSearchParams({key:k,value:v})});
+            await s('hosts',document.getElementById('set-hosts').value);
+            await s('categories',document.getElementById('set-cats').value);
+            await s('video_types',document.getElementById('set-types').value);
+            await s('platforms',document.getElementById('set-plats').value);
             document.getElementById('settings-modal').classList.remove('active'); loadOptions();
         }
+        function openImport(){document.getElementById('import-modal').classList.add('active');}
+        async function startImport(){await fetch('/api/import/local',{method:'POST'});alert('已启动');document.getElementById('import-modal').classList.remove('active');}
+        async function updateStats(){try{const r=await fetch('/api/stats');const d=await r.json();document.getElementById('st-total').innerText=d.total;document.getElementById('st-pending').innerText=d.pending;}catch{}}
     </script>
 </body>
 </html>
