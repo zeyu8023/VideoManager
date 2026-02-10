@@ -10,7 +10,7 @@ from typing import Optional
 from fastapi import FastAPI, UploadFile, BackgroundTasks, Form, HTTPException
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
-from sqlmodel import Session, create_engine, SQLModel, select, col, or_, desc, asc, text
+from sqlmodel import Session, create_engine, SQLModel, select, col, or_, desc, asc, text, Field
 from sqlalchemy import func
 
 # 日志配置
@@ -20,7 +20,12 @@ logger = logging.getLogger("VideoHub")
 main_app = FastAPI(title="VideoHub V31.0 Final Fix")
 engine = create_engine("sqlite:///data/inventory.db")
 
-# 引入模型 (确保 models.py 存在)
+# === 模型定义 (保留 Product 表以免报错，但核心逻辑回滚到 Video) ===
+class Product(SQLModel, table=True):
+    name: str = Field(primary_key=True)
+    image_url: Optional[str] = None
+    updated_at: datetime.datetime = Field(default_factory=datetime.datetime.now)
+
 from .models import Video, AppSettings
 
 # === 核心工具：安全转字符串 (这就是修复空白的关键！) ===
@@ -30,7 +35,7 @@ def safe_str(val):
     return str(val).strip()
 
 def parse_safe_date(date_str):
-    """解析各种日期的强力函数"""
+    """解析各种日期的强力函数，修复入库数据为0的问题"""
     s = safe_str(date_str).lower()
     if not s or s in ['nan', 'none', '', 'nat', 'null']: return None
     try:
@@ -39,7 +44,7 @@ def parse_safe_date(date_str):
         for fmt in ("%Y-%m-%d", "%Y/%m/%d", "%Y%m%d", "%Y.%m.%d"):
             try: return datetime.datetime.strptime(clean_s, fmt)
             except: continue
-        # 2. 尝试正则提取
+        # 2. 尝试正则提取 (针对 "2024-01-01 12:00:00" 这种)
         match = re.search(r'(\d{4})[-/年.](\d{1,2})[-/月.](\d{1,2})', s)
         if match:
             return datetime.datetime(int(match.group(1)), int(match.group(2)), int(match.group(3)))
@@ -221,8 +226,9 @@ def list_videos(page: int=1, size: int=100, sort_by: str="id", order: str="desc"
 
         total = session.exec(select(func.count()).select_from(stmt.subquery())).one()
         stmt = stmt.order_by(asc(getattr(Video, sort_by)) if order=="asc" else desc(getattr(Video, sort_by))).offset((page-1)*size).limit(size)
-        return {"items": session.exec(stmt).all(), "total": total, "page": page, "size": size, "total_pages": math.ceil(total/size)}
+        return {"items": session.exec(stmt).all(), "total": total, "page": page, "size": size, "total_pages": math.ceil(total / size)}
 
+# === 增删改查操作 ===
 @main_app.post("/api/video/save")
 async def save_video(id: Optional[str]=Form(None), product_id: Optional[str]=Form(None), title: Optional[str]=Form(None), host: Optional[str]=Form(None), status: Optional[str]=Form(None), category: Optional[str]=Form(None), video_type: Optional[str]=Form(None), platform: Optional[str]=Form(None), finish_time: Optional[str]=Form(None), publish_time: Optional[str]=Form(None), remark: Optional[str]=Form(None), image_url: Optional[str]=Form(None)):
     with Session(engine) as session:

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>VideoHub V30.0 Pure</title>
+    <title>VideoHub V31.0 Stable</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/echarts/5.4.3/echarts.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
@@ -150,47 +150,45 @@
             </div>
         </div>
 
-        <div id="view-inventory" class="view-container hidden">
-            <div class="inventory-layout">
-                <div class="inv-header">
-                    <div class="toolbar flex justify-between items-center p-4 bg-white border-b border-slate-200">
-                        <h2 class="text-lg font-bold text-slate-800 hidden md:block">库存明细</h2>
-                        <div class="flex gap-2 items-center flex-1 justify-end">
-                            <input id="g-search" onkeydown="if(event.key==='Enter') loadData(1)" placeholder="全局搜索..." class="t-input w-48 md:w-64 bg-slate-50 border-transparent focus:bg-white">
-                            <button onclick="toggleFilter()" class="px-3 py-1.5 text-sm font-bold text-slate-600 bg-slate-100 rounded hover:bg-slate-200">筛选</button>
-                            <button onclick="openSettings()" class="px-3 py-1.5 text-sm font-bold text-slate-600 bg-slate-100 rounded hover:bg-slate-200">配置</button>
-                            <button onclick="openImport()" class="px-3 py-1.5 text-sm font-bold text-blue-600 bg-blue-50 rounded hover:bg-blue-100">导入</button>
-                            <button onclick="addNewRow()" class="px-4 py-1.5 text-sm font-bold text-white bg-blue-600 rounded hover:bg-blue-700 shadow flex items-center gap-1"><span>+</span> 新增</button>
-                        </div>
-                    </div>
-                    <div id="filter-panel" class="filter-panel">
-                        <div class="grid grid-cols-2 md:grid-cols-6 gap-x-4 gap-y-4 py-4 px-6">
-                            <div><label class="filter-label">产品</label><input id="s-pid" list="dl-pids" class="t-input" placeholder="输入编号..."></div>
-                            <div><label class="filter-label">标题</label><input id="s-title" class="t-input" placeholder="包含标题..."></div>
-                            <div><label class="filter-label">类型</label><select id="s-cat" class="t-input"></select></div>
-                            <div><label class="filter-label">视类</label><select id="s-type" class="t-input"></select></div>
-                            <div><label class="filter-label">主播</label><select id="s-host" class="t-input"></select></div>
-                            <div><label class="filter-label">状态</label><select id="s-status" class="t-input"></select></div>
-                            <div><label class="filter-label">平台</label><select id="s-plat" class="t-input"></select></div>
-                            <div class="col-span-2"><label class="filter-label">完成时间</label><div class="flex gap-2"><input type="date" id="s-fin-start" class="t-input"><input type="date" id="s-fin-end" class="t-input"></div></div>
-                            <div class="col-span-2"><label class="filter-label">发布时间</label><div class="flex gap-2"><input type="date" id="s-pub-start" class="t-input"><input type="date" id="s-pub-end" class="t-input"></div></div>
-                            <div><label class="filter-label">备注</label><input id="s-remark" class="t-input" placeholder="包含备注..."></div>
-                            <div class="col-span-2 md:col-span-6 flex justify-end gap-2 border-t pt-3 mt-2">
-                                <button onclick="loadData(1)" class="px-5 py-1.5 bg-slate-800 text-white rounded text-sm font-bold">查询</button>
-                                <button onclick="resetFilters()" class="px-5 py-1.5 bg-white border rounded text-sm font-bold">重置</button>
-                            </div>
-                        </div>
+        <div id="view-inventory" class="inventory-layout hidden">
+            <div class="inv-header">
+                <div class="toolbar flex justify-between items-center p-4 bg-white border-b border-slate-200">
+                    <h2 class="text-lg font-bold text-slate-800 hidden md:block">库存明细</h2>
+                    <div class="flex gap-2 items-center flex-1 justify-end">
+                        <input id="g-search" onkeydown="if(event.key==='Enter') loadData(1)" placeholder="全局搜索..." class="t-input w-48 md:w-64 bg-slate-50 border-transparent focus:bg-white">
+                        <button onclick="toggleFilter()" class="px-3 py-1.5 text-sm font-bold text-slate-600 bg-slate-100 rounded hover:bg-slate-200">筛选</button>
+                        <button onclick="openSettings()" class="px-3 py-1.5 text-sm font-bold text-slate-600 bg-slate-100 rounded hover:bg-slate-200">配置</button>
+                        <button onclick="openImport()" class="px-3 py-1.5 text-sm font-bold text-blue-600 bg-blue-50 rounded hover:bg-blue-100">导入</button>
+                        <button onclick="addNewRow()" class="px-4 py-1.5 text-sm font-bold text-white bg-blue-600 rounded hover:bg-blue-700 shadow flex items-center gap-1"><span>+</span> 新增</button>
                     </div>
                 </div>
-                
-                <div class="inv-body">
-                    <table class="main-table"><thead><tr><th class="w-16 text-center">图</th><th class="w-32">产品/编号</th><th style="min-width: 260px;">视频标题</th><th class="w-24">类型</th><th class="w-28">完成时间</th><th class="w-24">视类</th><th class="w-32">主播(多)</th><th class="w-24 text-center">状态</th><th class="w-32">平台(多)</th><th class="w-32">发布时间</th><th class="w-40">备注</th><th class="w-20 text-center sticky right-0 bg-slate-50 border-l">操作</th></tr></thead><tbody id="table-body"></tbody></table>
+                <div id="filter-panel" class="filter-panel">
+                    <div class="grid grid-cols-2 md:grid-cols-6 gap-x-4 gap-y-4 py-4 px-6">
+                        <div><label class="filter-label">产品</label><input id="s-pid" list="dl-pids" class="t-input" placeholder="输入编号..."></div>
+                        <div><label class="filter-label">标题</label><input id="s-title" class="t-input" placeholder="包含标题..."></div>
+                        <div><label class="filter-label">类型</label><select id="s-cat" class="t-input"></select></div>
+                        <div><label class="filter-label">视类</label><select id="s-type" class="t-input"></select></div>
+                        <div><label class="filter-label">主播</label><select id="s-host" class="t-input"></select></div>
+                        <div><label class="filter-label">状态</label><select id="s-status" class="t-input"></select></div>
+                        <div><label class="filter-label">平台</label><select id="s-plat" class="t-input"></select></div>
+                        <div class="col-span-2"><label class="filter-label">完成时间</label><div class="flex gap-2"><input type="date" id="s-fin-start" class="t-input"><input type="date" id="s-fin-end" class="t-input"></div></div>
+                        <div class="col-span-2"><label class="filter-label">发布时间</label><div class="flex gap-2"><input type="date" id="s-pub-start" class="t-input"><input type="date" id="s-pub-end" class="t-input"></div></div>
+                        <div><label class="filter-label">备注</label><input id="s-remark" class="t-input" placeholder="包含备注..."></div>
+                        <div class="col-span-2 md:col-span-6 flex justify-end gap-2 border-t pt-3 mt-2">
+                            <button onclick="loadData(1)" class="px-5 py-1.5 bg-slate-800 text-white rounded text-sm font-bold">查询</button>
+                            <button onclick="resetFilters()" class="px-5 py-1.5 bg-white border rounded text-sm font-bold">重置</button>
+                        </div>
+                    </div>
                 </div>
-                
-                <div class="inv-header h-12 bg-white border-t border-slate-200 px-6 flex justify-between items-center shrink-0">
-                    <span class="text-xs text-slate-500 font-medium" id="page-info">0 条</span>
-                    <div class="flex gap-2"><button onclick="changePage(-1)" class="px-3 py-1 bg-slate-100 rounded text-xs font-bold disabled:opacity-50">◀</button><button onclick="changePage(1)" class="px-3 py-1 bg-slate-100 rounded text-xs font-bold disabled:opacity-50">▶</button></div>
-                </div>
+            </div>
+            
+            <div class="inv-body">
+                <table class="main-table"><thead><tr><th class="w-16 text-center">图</th><th class="w-32">产品/编号</th><th style="min-width: 260px;">视频标题</th><th class="w-24">类型</th><th class="w-28">完成时间</th><th class="w-24">视类</th><th class="w-32">主播(多)</th><th class="w-24 text-center">状态</th><th class="w-32">平台(多)</th><th class="w-32">发布时间</th><th class="w-40">备注</th><th class="w-20 text-center sticky right-0 bg-slate-50 border-l">操作</th></tr></thead><tbody id="table-body"></tbody></table>
+            </div>
+            
+            <div class="inv-header h-12 bg-white border-t border-slate-200 px-6 flex justify-between items-center shrink-0">
+                <span class="text-xs text-slate-500 font-medium" id="page-info">0 条</span>
+                <div class="flex gap-2"><button onclick="changePage(-1)" class="px-3 py-1 bg-slate-100 rounded text-xs font-bold disabled:opacity-50">◀</button><button onclick="changePage(1)" class="px-3 py-1 bg-slate-100 rounded text-xs font-bold disabled:opacity-50">▶</button></div>
             </div>
         </div>
 
@@ -229,10 +227,9 @@
         document.getElementById('view-dashboard').classList.add('hidden');
         document.getElementById('view-inventory').classList.add('hidden');
         document.getElementById('view-product').classList.add('hidden');
-        
-        if(view === 'dashboard') { document.getElementById('view-dashboard').classList.remove('hidden'); loadDashboard('day'); }
-        if(view === 'inventory') { document.getElementById('view-inventory').classList.remove('hidden'); }
-        if(view === 'product') { document.getElementById('view-product').classList.remove('hidden'); loadProductStats(); }
+        document.getElementById('view-'+view).classList.remove('hidden');
+        if(view === 'dashboard') loadDashboard('day');
+        if(view === 'product') loadProductStats();
     }
 
     // Dashboard Logic
