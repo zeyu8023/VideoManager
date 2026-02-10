@@ -13,16 +13,14 @@ from fastapi.responses import FileResponse
 from sqlmodel import Session, create_engine, SQLModel, select, col, or_, desc, asc, text
 from sqlalchemy import func
 
-# 日志配置
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("VideoHub")
 
-main_app = FastAPI(title="VideoHub V46.0 Excel Mode")
+main_app = FastAPI(title="VideoHub V49.0 Final")
 engine = create_engine("sqlite:///data/inventory.db")
 
 from .models import Video, AppSettings
 
-# === 核心工具 ===
 def safe_str(val):
     if val is None: return ""
     return str(val).strip()
@@ -36,8 +34,7 @@ def parse_safe_date(date_str):
     except:
         try:
             match = re.search(r'(\d{4})[-/年.](\d{1,2})[-/月.](\d{1,2})', s)
-            if match:
-                return datetime.datetime(int(match.group(1)), int(match.group(2)), int(match.group(3)))
+            if match: return datetime.datetime(int(match.group(1)), int(match.group(2)), int(match.group(3)))
         except: pass
     return None
 
