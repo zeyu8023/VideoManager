@@ -13,23 +13,25 @@ from fastapi.responses import FileResponse
 from sqlmodel import Session, create_engine, SQLModel, select, col, or_, desc, asc, text
 from sqlalchemy import func
 
-# 日志配置
+# 日志
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("VideoHub")
 
-main_app = FastAPI(title="VideoHub V32.0 Final Fix")
+main_app = FastAPI(title="VideoHub V33.0 Final")
 engine = create_engine("sqlite:///data/inventory.db")
 
 # 引入模型
 from .models import Video, AppSettings
 
-# === 核心工具：安全转字符串 (修复空白问题的关键) ===
+# === 核心修复工具 ===
 def safe_str(val):
-    """不管传入什么（None, int, float），都转为干净的字符串"""
+    """
+    不管 val 是 123 (int), 123.0 (float), 还是 None
+    统统转成安全的字符串，防止 .strip() 报错
+    """
     if val is None: return ""
     return str(val).strip()
 
-# === 核心工具：日期解析 ===
 def parse_safe_date(date_str):
     s = safe_str(date_str).lower()
     if not s or s in ['nan', 'none', '', 'nat', 'null']: return None
@@ -59,6 +61,7 @@ def on_startup():
             except: pass
             session.commit()
         
+        # 简单的数据清洗
         session.exec(text("UPDATE video SET created_at = finish_time WHERE created_at IS NULL AND finish_time IS NOT NULL"))
         session.exec(text(f"UPDATE video SET created_at = '{datetime.datetime.now()}' WHERE created_at IS NULL"))
         
@@ -73,13 +76,14 @@ def on_startup():
             if not session.get(AppSettings, k): session.add(AppSettings(key=k, value=v))
         session.commit()
 
+# 静态文件挂载
 main_app.mount("/assets", StaticFiles(directory="assets"), name="assets")
 
 @main_app.get("/")
 async def read_index():
     return FileResponse(os.path.join("frontend", "index.html"))
 
-# === 接口 1: 仪表盘 ===
+# === 接口: 仪表盘 ===
 @main_app.get("/api/dashboard")
 def get_dashboard_data(dim: str = "day"):
     with Session(engine) as session:
@@ -103,15 +107,15 @@ def get_dashboard_data(dim: str = "day"):
             if safe_str(v.status) == "待发布":
                 pending += 1
 
-            fin = parse_safe_date(v.finish_time)
-            pub = parse_safe_date(v.publish_time)
+            t_in = parse_safe_date(v.finish_time)
+            t_pub = parse_safe_date(v.publish_time)
             
-            if fin:
-                if fin >= today: flow["t_in"] += 1
-                if fin >= month: flow["m_in"] += 1
-                k = fin.strftime("%Y-%m-%d")
-                if dim == 'month': k = fin.strftime("%Y-%m")
-                elif dim == 'week': k = fin.strftime("%Y-W%W")
+            if t_in:
+                if t_in >= today: flow["t_in"] += 1
+                if t_in >= month: flow["m_in"] += 1
+                k = t_in.strftime("%Y-%m-%d")
+                if dim=='month': k=t_in.strftime("%Y-%m")
+                elif dim=='week': k=t_in.strftime("%Y-W%W")
                 if k not in trend: trend[k] = {"in":0, "out":0}
                 trend[k]["in"] += 1
                 if v.host:
@@ -119,12 +123,12 @@ def get_dashboard_data(dim: str = "day"):
                         h = h.strip()
                         if h: hosts[h] = hosts.get(h, 0) + 1
 
-            if pub:
-                if pub >= today: flow["t_out"] += 1
-                if pub >= month: flow["m_out"] += 1
-                k = pub.strftime("%Y-%m-%d")
-                if dim == 'month': k = pub.strftime("%Y-%m")
-                elif dim == 'week': k = pub.strftime("%Y-W%W")
+            if t_pub:
+                if t_pub >= today: flow["t_out"] += 1
+                if t_pub >= month: flow["m_out"] += 1
+                k = t_pub.strftime("%Y-%m-%d")
+                if dim=='month': k=t_pub.strftime("%Y-%m")
+                elif dim=='week': k=t_pub.strftime("%Y-W%W")
                 if k not in trend: trend[k] = {"in":0, "out":0}
                 trend[k]["out"] += 1
                 if safe_str(v.status) == "已发布" and v.platform:
@@ -132,8 +136,8 @@ def get_dashboard_data(dim: str = "day"):
                     for acc in accs:
                         dist += 1
                         if acc not in matrix: matrix[acc] = {"day":0, "week":0, "month":0, "year":0}
-                        if pub >= today: matrix[acc]["day"] += 1
-                        if pub >= month: matrix[acc]["month"] += 1
+                        if t_pub >= today: matrix[acc]["day"] += 1
+                        if t_pub >= month: matrix[acc]["month"] += 1
                         matrix[acc]["year"] += 1
                         plats[acc] = plats.get(acc, 0) + 1
             
@@ -153,18 +157,19 @@ def get_dashboard_data(dim: str = "day"):
             "plats": [{"name":k, "value":v} for k,v in plats.items()]
         }
 
-# === 接口 2: 产品统计 (核心修复：强制转字符串，移除图片关联) ===
+# === 接口 2: 产品统计 (修复空白的核心！) ===
 @main_app.get("/api/product_stats")
 def get_product_stats():
     with Session(engine) as session:
+        # 只查询 Video 表，不关联任何其他可能出错的表
         videos = session.exec(select(Video)).all()
         
         stats = {}
         for v in videos:
             try:
-                # [核心修复]：强制将 product_id 转为字符串，防止 .strip() 报错
-                pid_raw = v.product_id
-                pid = safe_str(pid_raw)
+                # [关键改动] 强制转字符串！
+                # 即使数据库里是 int 3043, safe_str 会把它变成 "3043"，然后 strip 就不报错了
+                pid = safe_str(v.product_id)
                 
                 if not pid or pid.lower() in ['nan', 'none']:
                     pid = "未分类"
@@ -177,16 +182,15 @@ def get_product_stats():
                 if safe_str(v.status) == "待发布":
                     stats[pid]["pending"] += 1
             except Exception as e:
-                # 遇到坏数据跳过，不崩整个接口
-                print(f"Skipping bad row: {e}")
+                # 万一还有错，跳过这一条，不崩整个接口
+                logger.error(f"Skipping bad row: {e}")
                 continue
         
         res = list(stats.values())
-        # 排序：积压多的在前，其次是总数多的
         res.sort(key=lambda x: (x["pending"], x["total"]), reverse=True)
         return res
 
-# === 接口 3: 列表查询 ===
+# === 接口 3: 列表查询 (List) ===
 @main_app.get("/api/videos")
 def list_videos(page: int=1, size: int=100, sort_by: str="id", order: str="desc", keyword: Optional[str]=None, host: Optional[str]=None, status: Optional[str]=None, category: Optional[str]=None, platform: Optional[str]=None, video_type: Optional[str]=None, product_id: Optional[str]=None, title: Optional[str]=None, remark: Optional[str]=None, finish_start: Optional[str]=None, finish_end: Optional[str]=None, publish_start: Optional[str]=None, publish_end: Optional[str]=None):
     with Session(engine) as session:
