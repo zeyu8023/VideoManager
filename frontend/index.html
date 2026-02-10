@@ -3,52 +3,54 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>VideoHub V27.0 Stable</title>
+    <title>VideoHub V28.0 Stable Fix</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/echarts/5.4.3/echarts.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
     <style>
-        /* === 布局修复：确保滚动条可用 === */
-        body { font-family: 'Inter', 'Noto Sans SC', sans-serif; background: #f8fafc; color: #1e293b; margin: 0; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+        /* === 布局核心修复 === */
+        body { font-family: 'Inter', 'Noto Sans SC', sans-serif; background: #f8fafc; color: #1e293b; margin: 0; height: 100vh; overflow: hidden; }
+        .app-container { display: flex; height: 100%; width: 100%; overflow: hidden; }
         
-        .app-container { display: flex; flex: 1; height: 100%; overflow: hidden; }
-        
+        /* 侧边栏 */
         .sidebar { width: 240px; background: #0f172a; color: #94a3b8; display: flex; flex-direction: column; flex-shrink: 0; z-index: 50; box-shadow: 4px 0 24px rgba(0,0,0,0.1); }
         .sidebar-content { flex: 1; overflow-y: auto; }
         
+        /* 主内容区 */
         .main-content { 
             flex: 1; 
             display: flex; 
             flex-direction: column; 
             height: 100%; 
-            overflow: hidden; /* 关键：防止主容器双滚动条 */
+            min-height: 0; /* 关键：防止Flex子元素溢出 */
+            overflow: hidden; 
             background: #f1f5f9; 
             position: relative; 
         }
 
-        /* 视图容器：必须有 min-height: 0 才能让 flex 子项滚动生效 */
-        .dash-container { flex: 1; overflow-y: auto; padding: 24px; min-height: 0; }
+        /* 视图容器通用 */
+        .dash-container { flex: 1; overflow-y: auto; padding: 24px; min-height: 0; scrollbar-width: thin; }
         .inventory-view { display: flex; flex-direction: column; height: 100%; min-height: 0; }
         
-        /* 表格包裹层：核心滚动区域 */
+        /* 表格滚动修复 */
         .table-wrap { 
             flex: 1; 
-            overflow: auto; /* 开启滚动 */
+            overflow: auto; 
             background: white; 
             margin: 16px 24px; 
             border-radius: 8px; 
             border: 1px solid #e2e8f0; 
             box-shadow: 0 1px 2px rgba(0,0,0,0.05); 
-            min-height: 0; /* 关键 */
+            min-height: 0; 
         }
         
-        /* === 其他样式保持 === */
+        /* === 其他样式 === */
         .sidebar-header { height: 64px; display: flex; align-items: center; padding: 0 24px; color: white; font-weight: 700; border-bottom: 1px solid rgba(255,255,255,0.1); flex-shrink: 0; }
         .nav-item { padding: 14px 24px; cursor: pointer; display: flex; align-items: center; gap: 12px; font-size: 14px; font-weight: 500; transition: all 0.2s; border-left: 3px solid transparent; }
         .nav-item:hover { background: rgba(255,255,255,0.05); color: white; }
         .nav-item.active { background: rgba(255,255,255,0.1); color: white; border-left-color: #3b82f6; }
         
-        /* Dashboard Elements */
+        /* Dashboard */
         .kpi-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 16px; margin-bottom: 24px; flex-shrink: 0; }
         .stat-card { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); border: 1px solid #e2e8f0; display:flex; flex-direction:column; justify-content:space-between; }
         .stat-label { font-size: 12px; font-weight: 700; color: #64748b; text-transform: uppercase; margin-bottom: 8px; }
@@ -63,17 +65,16 @@
         .matrix-table td { padding: 12px 20px; font-size: 13px; border-bottom: 1px solid #f1f5f9; }
         .val-today { color: #ef4444; font-weight: 700; }
 
-        /* Inventory Elements */
+        /* Inventory */
         .toolbar { padding: 16px 24px; background: white; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; shrink-0; }
         .filter-panel { background: white; border-bottom: 1px solid #e2e8f0; overflow: hidden; transition: max-height 0.3s; max-height: 0; padding: 0 24px; shrink-0; }
         .filter-panel.open { max-height: 600px; padding-top: 20px; padding-bottom: 20px; }
-        
         .main-table { width: 100%; border-collapse: collapse; min-width: 1800px; }
         .main-table th { position: sticky; top: 0; background: #f8fafc; color: #475569; font-weight: 700; font-size: 13px; padding: 12px; border-bottom: 2px solid #e2e8f0; z-index: 10; text-align: left; }
         .main-table td { padding: 10px 12px; border-bottom: 1px solid #f1f5f9; font-size: 14px; vertical-align: middle; color: #334155; }
 
         /* Product Cards */
-        .card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 20px; padding-bottom: 40px; }
+        .card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; padding-bottom: 40px; }
         .prod-card { background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px; transition: all 0.2s; position: relative; overflow: hidden; display: flex; gap: 16px; cursor: pointer; }
         .prod-card:hover { transform: translateY(-4px); box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); border-color: #3b82f6; }
         .pc-img-box { width: 80px; height: 80px; flex-shrink: 0; border-radius: 8px; background: #f1f5f9; border: 1px solid #e2e8f0; overflow: hidden; display: flex; align-items: center; justify-content: center; cursor: pointer; position: relative; }
@@ -228,10 +229,10 @@
         document.getElementById('d-total').innerText = data.kpi.total;
         document.getElementById('d-dist').innerText = data.kpi.dist;
         document.getElementById('d-pending').innerText = data.kpi.pending;
-        document.getElementById('d-today-in').innerText = data.kpi.t_in; // 修复字段名 t_in
-        document.getElementById('d-today-out').innerText = data.kpi.t_out; // 修复字段名 t_out
-        document.getElementById('d-month-in').innerText = data.kpi.m_in;   // 修复字段名 m_in
-        document.getElementById('d-month-out').innerText = data.kpi.m_out; // 修复字段名 m_out
+        document.getElementById('d-today-in').innerText = data.kpi.t_in; 
+        document.getElementById('d-today-out').innerText = data.kpi.t_out;
+        document.getElementById('d-month-in').innerText = data.kpi.m_in;   
+        document.getElementById('d-month-out').innerText = data.kpi.m_out; 
         document.getElementById('matrix-body').innerHTML = data.matrix.map((r, i) => `<tr><td class="font-bold flex items-center gap-2"><span class="w-5 h-5 rounded bg-slate-100 text-slate-500 text-xs flex items-center justify-center">${i+1}</span>${r.name}</td><td class="${r.day>0?'val-today':''}">${r.day}</td><td>${r.week}</td><td>${r.month}</td><td class="font-mono font-bold">${r.year}</td></tr>`).join('');
         if(!chartTrend) chartTrend = echarts.init(document.getElementById('chart-trend'));
         chartTrend.setOption({tooltip:{trigger:'axis'}, legend:{data:['入库','发布'],bottom:0}, grid:{top:20,left:40,right:20,bottom:30}, xAxis:{type:'category',data:data.trend.dates}, yAxis:{type:'value'}, series:[{name:'入库',type:'line',data:data.trend.in,smooth:true,itemStyle:{color:'#3b82f6'},areaStyle:{opacity:0.1}}, {name:'发布',type:'bar',data:data.trend.out,itemStyle:{color:'#10b981'}}]});
@@ -335,3 +336,4 @@
 </script>
 </body>
 </html>
+}

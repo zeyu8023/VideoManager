@@ -17,7 +17,7 @@ from sqlalchemy import func
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("VideoHub")
 
-main_app = FastAPI(title="VideoHub V27.0 Stable Fix")
+main_app = FastAPI(title="VideoHub V28.0 Stable")
 engine = create_engine("sqlite:///data/inventory.db")
 
 # === 模型定义 ===
@@ -28,26 +28,26 @@ class Product(SQLModel, table=True):
 
 from .models import Video, AppSettings
 
-# === 工具函数：暴力日期解析 ===
+# === 工具函数：暴力日期解析 (修复数据丢失) ===
 def parse_safe_date(date_str):
     if not date_str: return None
     s = str(date_str).strip().lower()
     if s in ['nan', 'none', '', 'nat', 'null']: return None
     
     try:
-        # 1. 尝试标准格式
+        # 1. 尝试截取标准格式 YYYY-MM-DD
         clean_s = s[:10]
         for fmt in ("%Y-%m-%d", "%Y/%m/%d", "%Y%m%d", "%Y.%m.%d"):
             try: return datetime.datetime.strptime(clean_s, fmt)
             except: continue
             
-        # 2. 尝试提取 YYYY-MM-DD (针对 "2024-01-01 12:00:00" 这种)
-        match = re.search(r'(\d{4})[-/](\d{1,2})[-/](\d{1,2})', s)
+        # 2. 正则提取 (针对 "2024-01-01 12:00:00" 或 "2024年1月1日")
+        match = re.search(r'(\d{4})[-/年.](\d{1,2})[-/月.](\d{1,2})', s)
         if match:
             return datetime.datetime(int(match.group(1)), int(match.group(2)), int(match.group(3)))
             
     except:
-        return None
+        pass
     return None
 
 # === 初始化 ===
@@ -87,7 +87,7 @@ main_app.mount("/assets", StaticFiles(directory="assets"), name="assets")
 async def read_index():
     return FileResponse(os.path.join("frontend", "index.html"))
 
-# === 接口 1: 仪表盘 (修复入库统计) ===
+# === 接口 1: 仪表盘 (修复统计逻辑) ===
 @main_app.get("/api/dashboard")
 def get_dashboard_data(dim: str = "day"):
     with Session(engine) as session:
@@ -108,29 +108,21 @@ def get_dashboard_data(dim: str = "day"):
         dist = 0
 
         for v in videos:
-            # 优先使用 finish_time 作为入库时间，如果没有则尝试 created_at
             t_in = parse_safe_date(v.finish_time)
-            # 如果 finish_time 解析失败，但这明显是一条已有数据，尝试用 created_at 兜底（仅用于显示，不影响业务）
-            # if not t_in and v.created_at: t_in = v.created_at 
-            
             t_pub = parse_safe_date(v.publish_time)
             
             # 入库统计
             if t_in:
-                # 统计 KPI
                 if t_in >= today_start: flow["t_in"] += 1
                 if t_in >= month_start: flow["m_in"] += 1
                 
-                # 统计趋势图
-                d_str = t_in.strftime("%Y-%m-%d")
-                k = d_str
+                k = t_in.strftime("%Y-%m-%d")
                 if dim == 'month': k = t_in.strftime("%Y-%m")
                 elif dim == 'week': k = t_in.strftime("%Y-W%W")
                 
                 if k not in trend: trend[k] = {"in":0, "out":0}
                 trend[k]["in"] += 1
                 
-                # 统计主播 (仅统计有入库时间的，视为已完成产出)
                 if v.host:
                     for h in v.host.replace('，', ',').split(','):
                         h = h.strip()
@@ -141,8 +133,7 @@ def get_dashboard_data(dim: str = "day"):
                 if t_pub >= today_start: flow["t_out"] += 1
                 if t_pub >= month_start: flow["m_out"] += 1
                 
-                d_str = t_pub.strftime("%Y-%m-%d")
-                k = d_str
+                k = t_pub.strftime("%Y-%m-%d")
                 if dim == 'month': k = t_pub.strftime("%Y-%m")
                 elif dim == 'week': k = t_pub.strftime("%Y-W%W")
                 
@@ -156,7 +147,6 @@ def get_dashboard_data(dim: str = "day"):
                         if acc not in matrix: matrix[acc] = {"day":0, "week":0, "month":0, "year":0}
                         if t_pub >= today_start: matrix[acc]["day"] += 1
                         if t_pub >= month_start: matrix[acc]["month"] += 1
-                        # 年统计
                         matrix[acc]["year"] += 1
                         plats[acc] = plats.get(acc, 0) + 1
             
@@ -175,7 +165,7 @@ def get_dashboard_data(dim: str = "day"):
             "plats": [{"name":k, "value":v} for k,v in plats.items()]
         }
 
-# === 接口 2: 产品统计 (修复空数据问题) ===
+# === 接口 2: 产品统计 (防爆修复) ===
 @main_app.get("/api/product_stats")
 def get_product_stats():
     with Session(engine) as session:
@@ -184,19 +174,23 @@ def get_product_stats():
         
         stats = {}
         for v in videos:
-            pid = v.product_id
-            if not pid: pid = "未分类"
-            pid = pid.strip()
+            # === 核心修复：强制转字符串，防止 int.strip() 报错 ===
+            raw_pid = v.product_id
+            if not raw_pid: 
+                pid = "未分类"
+            else:
+                pid = str(raw_pid).strip() # 强制转 str
+                if pid.lower() in ['nan', 'none', '']: 
+                    pid = "未分类"
             
             if pid not in stats: 
-                # 初始化，image_url 默认为 None
                 stats[pid] = {"name": pid, "total": 0, "pending": 0, "image_url": None}
             
             stats[pid]["total"] += 1
             if v.status == "待发布": 
                 stats[pid]["pending"] += 1
         
-        # 2. 尝试去 Product 表找图片，找不到就算了，不要报错
+        # 2. 尝试去 Product 表找图片
         try:
             products = session.exec(select(Product)).all()
             img_map = {p.name: p.image_url for p in products}
@@ -204,7 +198,7 @@ def get_product_stats():
                 if pid in img_map and img_map[pid]:
                     stats[pid]["image_url"] = img_map[pid]
         except Exception as e:
-            logger.error(f"Error fetching product images: {e}")
+            logger.error(f"Image fetch error: {e}")
 
         res = list(stats.values())
         res.sort(key=lambda x: (x["pending"], x["total"]), reverse=True)
