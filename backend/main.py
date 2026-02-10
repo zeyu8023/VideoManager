@@ -11,16 +11,18 @@ from fastapi import FastAPI, UploadFile, BackgroundTasks, Form, HTTPException
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from sqlmodel import Session, create_engine, SQLModel, select, col, or_, desc, asc, text
-from sqlalchemy import func
+from sqlalchemy import func, cast, String
 
+# 日志配置
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("VideoHub")
 
-main_app = FastAPI(title="VideoHub V49.0 Final")
+main_app = FastAPI(title="VideoHub V50.0 Final Stable")
 engine = create_engine("sqlite:///data/inventory.db")
 
 from .models import Video, AppSettings
 
+# === 核心工具 ===
 def safe_str(val):
     if val is None: return ""
     return str(val).strip()
@@ -34,7 +36,8 @@ def parse_safe_date(date_str):
     except:
         try:
             match = re.search(r'(\d{4})[-/年.](\d{1,2})[-/月.](\d{1,2})', s)
-            if match: return datetime.datetime(int(match.group(1)), int(match.group(2)), int(match.group(3)))
+            if match:
+                return datetime.datetime(int(match.group(1)), int(match.group(2)), int(match.group(3)))
         except: pass
     return None
 
@@ -145,8 +148,17 @@ def get_product_stats():
 def list_videos(page: int=1, size: int=100, sort_by: str="id", order: str="desc", keyword: Optional[str]=None, host: Optional[str]=None, status: Optional[str]=None, category: Optional[str]=None, platform: Optional[str]=None, video_type: Optional[str]=None, product_id: Optional[str]=None, title: Optional[str]=None, remark: Optional[str]=None, finish_start: Optional[str]=None, finish_end: Optional[str]=None, publish_start: Optional[str]=None, publish_end: Optional[str]=None):
     with Session(engine) as session:
         stmt = select(Video)
-        if keyword: stmt = stmt.where(or_(col(Video.title).contains(keyword), col(Video.product_id).contains(keyword), col(Video.remark).contains(keyword)))
-        if product_id: stmt = stmt.where(col(Video.product_id).contains(product_id))
+        if keyword: 
+            # 关键修复：强制转换类型，防止 int 导致的 crash
+            kw = f"%{keyword}%"
+            stmt = stmt.where(or_(
+                col(Video.title).contains(keyword), 
+                cast(Video.product_id, String).like(kw), 
+                col(Video.remark).contains(keyword)
+            ))
+        
+        # 兼容数字类型的精确查询
+        if product_id: stmt = stmt.where(cast(Video.product_id, String).contains(product_id))
         if title: stmt = stmt.where(col(Video.title).contains(title))
         if remark: stmt = stmt.where(col(Video.remark).contains(remark))
         if host and "全部" not in host: stmt = stmt.where(col(Video.host).contains(host))
@@ -158,6 +170,7 @@ def list_videos(page: int=1, size: int=100, sort_by: str="id", order: str="desc"
         if finish_end: stmt = stmt.where(Video.finish_time <= finish_end)
         if publish_start: stmt = stmt.where(Video.publish_time >= publish_start)
         if publish_end: stmt = stmt.where(Video.publish_time <= publish_end)
+
         total = session.exec(select(func.count()).select_from(stmt.subquery())).one()
         stmt = stmt.order_by(asc(getattr(Video, sort_by)) if order=="asc" else desc(getattr(Video, sort_by))).offset((page-1)*size).limit(size)
         return {"items": session.exec(stmt).all(), "total": total, "page": page, "size": size, "total_pages": math.ceil(total/size)}
