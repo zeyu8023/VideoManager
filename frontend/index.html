@@ -3,100 +3,97 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>VideoHub V38.0 Pro</title>
+    <title>VideoHub V39.0 Pro</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/echarts/5.4.3/echarts.min.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
     <style>
-        /* === 核心布局 (勿动) === */
-        body { font-family: 'Inter', sans-serif; background: #f8fafc; color: #334155; margin: 0; height: 100vh; overflow: hidden; }
+        /* === 布局核心 (勿动，保命用的) === */
+        body { font-family: 'Inter', 'Noto Sans SC', sans-serif; background: #f8fafc; color: #1e293b; margin: 0; height: 100vh; overflow: hidden; }
         .app-container { display: flex; height: 100%; width: 100%; overflow: hidden; }
         .hidden { display: none !important; }
 
         /* 侧边栏 */
         .sidebar { width: 240px; background: #0f172a; color: #94a3b8; display: flex; flex-direction: column; flex-shrink: 0; z-index: 50; box-shadow: 4px 0 24px rgba(0,0,0,0.1); }
-        .sidebar-header { height: 64px; display: flex; align-items: center; padding: 0 24px; color: white; font-weight: 700; border-bottom: 1px solid rgba(255,255,255,0.1); flex-shrink: 0; font-size: 18px; letter-spacing: -0.5px; }
+        .sidebar-header { height: 64px; display: flex; align-items: center; padding: 0 24px; color: white; font-weight: 700; border-bottom: 1px solid rgba(255,255,255,0.1); flex-shrink: 0; font-size: 18px; }
         .nav-item { padding: 14px 24px; cursor: pointer; display: flex; align-items: center; gap: 12px; font-size: 14px; font-weight: 500; transition: all 0.2s; border-left: 3px solid transparent; }
         .nav-item:hover { background: rgba(255,255,255,0.05); color: white; }
         .nav-item.active { background: rgba(255,255,255,0.1); color: white; border-left-color: #3b82f6; }
         
-        /* 主内容区 */
+        /* 主区域 */
         .main-content { flex: 1; position: relative; height: 100%; background: #f1f5f9; overflow: hidden; }
         .view-container { position: absolute; top: 0; left: 0; right: 0; bottom: 0; display: flex; flex-direction: column; overflow: hidden; }
         .scroll-content { flex: 1; overflow-y: auto; padding: 24px; min-height: 0; scrollbar-width: thin; }
 
-        /* 仪表盘组件 */
+        /* 仪表盘 */
         .kpi-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 16px; margin-bottom: 24px; }
-        .stat-card { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); border: 1px solid #e2e8f0; display:flex; flex-direction:column; justify-content:space-between; transition: transform 0.2s; }
-        .stat-card:hover { transform: translateY(-2px); box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
-        .stat-label { font-size: 12px; font-weight: 600; color: #64748b; text-transform: uppercase; margin-bottom: 8px; letter-spacing: 0.5px; }
-        .stat-num { font-size: 28px; font-weight: 800; color: #0f172a; line-height: 1.1; }
-        
-        /* 图表区 */
+        .stat-card { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); border: 1px solid #e2e8f0; display:flex; flex-direction:column; justify-content:space-between; }
+        .stat-label { font-size: 12px; font-weight: 700; color: #64748b; text-transform: uppercase; margin-bottom: 8px; }
+        .stat-num { font-size: 28px; font-weight: 800; color: #0f172a; }
         .chart-grid { display: grid; grid-template-columns: 2fr 1.5fr 1.5fr; gap: 16px; margin-bottom: 24px; }
-        .chart-box { background: white; border-radius: 12px; padding: 20px; border: 1px solid #e2e8f0; height: 340px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
-        .trend-box { background: white; border-radius: 12px; padding: 20px; border: 1px solid #e2e8f0; height: 380px; margin-bottom: 24px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
-        
-        /* 表格优化 */
+        .chart-box { background: white; border-radius: 12px; padding: 20px; border: 1px solid #e2e8f0; height: 340px; }
+        .trend-box { background: white; border-radius: 12px; padding: 20px; border: 1px solid #e2e8f0; height: 400px; margin-bottom: 24px; }
+        .matrix-box { background: white; border-radius: 12px; border: 1px solid #e2e8f0; overflow: hidden; margin-bottom: 40px; }
+        .matrix-header { padding: 16px 20px; border-bottom: 1px solid #e2e8f0; font-weight: 700; color: #334155; background: #f8fafc; }
+        .matrix-table { width: 100%; text-align: left; border-collapse: collapse; }
+        .matrix-table th { padding: 12px 20px; font-size: 12px; color: #64748b; font-weight: 700; background: #f8fafc; border-bottom: 1px solid #e2e8f0; }
+        .matrix-table td { padding: 12px 20px; font-size: 13px; border-bottom: 1px solid #f1f5f9; }
+        .val-today { color: #ef4444; font-weight: 700; }
+
+        /* 库存表 */
         .inventory-layout { display: flex; flex-direction: column; height: 100%; }
         .inv-header { flex-shrink: 0; z-index: 20; background: #f8fafc; }
-        .inv-body { 
-            flex: 1; 
-            overflow: auto; 
-            position: relative; 
-            margin: 16px 24px; 
-            background: white; 
-            border-radius: 8px; 
-            border: 1px solid #e2e8f0;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-        }
-        .main-table { width: 100%; border-collapse: collapse; min-width: 1200px; }
-        .main-table th { position: sticky; top: 0; background: #f8fafc; color: #475569; font-weight: 600; font-size: 13px; padding: 14px 16px; border-bottom: 1px solid #e2e8f0; text-align: left; z-index: 10; }
-        .main-table td { padding: 12px 16px; border-bottom: 1px solid #f1f5f9; font-size: 14px; vertical-align: middle; color: #334155; }
-        .main-table tr:hover td { background: #f8fafc; }
-        .main-table tr:last-child td { border-bottom: none; }
+        .toolbar { padding: 16px 24px; background: white; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; }
+        .filter-panel { background: white; border-bottom: 1px solid #e2e8f0; overflow: hidden; transition: max-height 0.3s; max-height: 0; padding: 0 24px; }
+        .filter-panel.open { max-height: 600px; padding-top: 20px; padding-bottom: 20px; }
+        .filter-label { font-size: 12px; font-weight: 700; color: #64748b; margin-bottom: 4px; display: block; }
+        .inv-body { flex: 1; overflow: auto; position: relative; margin: 16px 24px; background: white; border-radius: 8px; border: 1px solid #e2e8f0; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+        .main-table { width: 100%; border-collapse: collapse; min-width: 1400px; }
+        .main-table th { position: sticky; top: 0; background: #f8fafc; color: #475569; font-weight: 700; font-size: 13px; padding: 12px; border-bottom: 2px solid #e2e8f0; z-index: 10; text-align: left; }
+        .main-table td { padding: 10px 12px; border-bottom: 1px solid #f1f5f9; font-size: 14px; vertical-align: middle; color: #334155; }
+        .editing { background: #eff6ff !important; }
 
-        /* 状态胶囊 */
-        .status-pill { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 99px; font-size: 12px; font-weight: 500; }
-        .st-pending { background: #fff7ed; color: #c2410c; border: 1px solid #ffedd5; }
-        .st-published { background: #f0fdf4; color: #15803d; border: 1px solid #dcfce7; }
-        .st-editing { background: #eff6ff; color: #1d4ed8; border: 1px solid #dbeafe; }
-
-        /* 产品卡片优化 */
-        .card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; padding-bottom: 40px; }
-        .prod-card { background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; cursor: pointer; transition: all 0.2s; position: relative; overflow: hidden; display: flex; flex-direction: column; justify-content: space-between; height: 160px; }
-        .prod-card:hover { transform: translateY(-4px); box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); border-color: #3b82f6; }
-        .pc-head { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; }
+        /* 产品卡片 */
+        .card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; padding-bottom: 40px; }
+        .prod-card { background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; cursor: pointer; transition: all 0.2s; position: relative; overflow: hidden; }
+        .prod-card:hover { transform: translateY(-2px); box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); border-color: #3b82f6; }
+        .pc-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
         .pc-title { font-weight: 700; font-size: 16px; color: #1e293b; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 180px; }
-        .pc-badge { font-size: 10px; background: #f1f5f9; padding: 4px 8px; border-radius: 6px; color: #64748b; font-weight: 600; text-transform: uppercase; }
-        .pc-stat-row { display: flex; justify-content: space-between; align-items: flex-end; margin-top: auto; }
-        
-        /* 控件 */
-        .t-input { width: 100%; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px; outline: none; background: white; transition: border 0.2s; }
-        .t-input:focus { border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1); }
-        .btn { padding: 8px 16px; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; border: none; transition: all 0.2s; display: inline-flex; align-items: center; gap: 6px; }
-        .btn-primary { background: #3b82f6; color: white; } .btn-primary:hover { background: #2563eb; }
-        .btn-secondary { background: white; border: 1px solid #cbd5e1; color: #475569; } .btn-secondary:hover { background: #f8fafc; border-color: #94a3b8; }
-        .btn-success { background: #10b981; color: white; } .btn-success:hover { background: #059669; }
+        .pc-badge { font-size: 10px; background: #f1f5f9; padding: 2px 6px; border-radius: 4px; color: #64748b; font-weight: 700; }
+        .pc-body { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 12px; }
+        .pc-num { font-size: 28px; font-weight: 800; line-height: 1; }
+        .pc-bar-bg { height: 4px; background: #f1f5f9; border-radius: 2px; overflow: hidden; }
+        .pc-bar-fill { height: 100%; border-radius: 2px; }
+        .pc-foot { display: flex; justify-content: space-between; margin-top: 10px; font-size: 11px; color: #94a3b8; }
 
-        @media (max-width: 768px) { 
-            .sidebar { width: 64px; } 
-            .sidebar-header span { display: none; } 
-            .nav-item span:last-child { display: none; } 
-            .nav-item { justify-content: center; padding: 16px 0; }
-            .kpi-grid, .chart-grid, .card-grid { grid-template-columns: 1fr; }
-        }
+        /* 控件 */
+        .t-input { width: 100%; padding: 6px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px; outline: none; background: white; height: 36px; }
+        .t-input:focus { border-color: #3b82f6; box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1); }
+        .btn { padding: 6px 16px; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; gap: 4px; border: 1px solid transparent; }
+        .btn-primary { background: #0f172a; color: white; } .btn-primary:hover { background: #334155; }
+        .btn-secondary { background: white; border-color: #cbd5e1; color: #475569; } .btn-secondary:hover { background: #f1f5f9; }
+        .btn-blue { background: #eff6ff; color: #2563eb; border-color: #bfdbfe; } .btn-blue:hover { background: #dbeafe; }
+        .status-pill { padding: 2px 8px; border-radius: 4px; font-size: 12px; font-weight: 600; display: inline-block; margin-right: 4px; border: 1px solid transparent; }
+        .pill-green { background: #dcfce7; color: #166534; border-color: #bbf7d0; }
+        .pill-orange { background: #ffedd5; color: #9a3412; border-color: #fed7aa; }
+        .pill-gray { background: #f1f5f9; color: #475569; border-color: #e2e8f0; }
+        .img-cell { width: 40px; height: 40px; border-radius: 4px; border: 1px solid #e2e8f0; background: #f8fafc; overflow: hidden; cursor: pointer; display: flex; align-items: center; justify-content: center; position: relative; }
+        .img-cell:hover { border-color: #3b82f6; }
+        .img-cell:hover::after { content:'+'; position:absolute; inset:0; background:rgba(0,0,0,0.3); color:white; display:flex; align-items:center; justify-content:center; font-weight:bold; }
+
+        .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 50; display: none; align-items: center; justify-content: center; }
+        .modal.active { display: flex; }
+        .multi-pop { position: absolute; background: white; border: 1px solid #cbd5e1; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); border-radius: 6px; width: 200px; max-height: 260px; overflow-y: auto; z-index: 60; display: none; }
+        .multi-pop.show { display: block; }
+        .multi-opt { padding: 8px 12px; cursor: pointer; display: flex; align-items: center; gap: 8px; font-size: 13px; }
+        .multi-opt:hover { background: #f1f5f9; color: #2563eb; }
     </style>
 </head>
 <body>
 
 <div class="app-container">
     <aside class="sidebar">
-        <div class="sidebar-header">
-            <div class="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white font-bold text-xl shadow-lg mr-3">V</div>
-            <span>VideoHub</span>
-        </div>
+        <div class="sidebar-header"><div class="w-8 h-8 bg-blue-600 rounded flex items-center justify-center text-white font-bold text-xl mr-3 shadow">V</div>VideoHub</div>
         <div class="sidebar-content mt-4">
             <div class="nav-item active" onclick="switchView('dashboard', this)"><span>📊</span> <span>数据驾驶舱</span></div>
             <div class="nav-item" onclick="switchView('inventory', this)"><span>📦</span> <span>视频库存表</span></div>
@@ -111,11 +108,11 @@
                     <div class="stat-card border-l-4 border-blue-500"><div class="stat-label text-blue-600">总库存</div><div class="stat-num" id="d-total">-</div></div>
                     <div class="stat-card border-l-4 border-purple-500"><div class="stat-label text-purple-600">累计分发</div><div class="stat-num text-purple-700" id="d-dist">-</div></div>
                     <div class="stat-card border-l-4 border-orange-500"><div class="stat-label text-orange-600">待发布</div><div class="stat-num text-orange-700" id="d-pending">-</div></div>
-                    <div class="stat-card"><div class="stat-label">今日 入库 / 发布</div><div class="flex items-baseline gap-2 mt-auto"><span class="text-3xl font-black text-slate-800" id="d-today-in">0</span><span class="text-slate-400">/</span><span class="text-3xl font-black text-green-600" id="d-today-out">0</span></div></div>
-                    <div class="stat-card"><div class="stat-label">本月 入库 / 发布</div><div class="flex items-baseline gap-2 mt-auto"><span class="text-3xl font-black text-slate-800" id="d-month-in">0</span><span class="text-slate-400">/</span><span class="text-3xl font-black text-green-600" id="d-month-out">0</span></div></div>
+                    <div class="stat-card"><div class="stat-label">今日 入库 / 发布</div><div class="flex items-baseline gap-2 mt-auto"><span class="text-3xl font-black text-slate-800" id="d-today-in">-</span><span class="text-slate-400">/</span><span class="text-3xl font-black text-green-600" id="d-today-out">-</span></div></div>
+                    <div class="stat-card"><div class="stat-label">本月 入库 / 发布</div><div class="flex items-baseline gap-2 mt-auto"><span class="text-3xl font-black text-slate-800" id="d-month-in">-</span><span class="text-slate-400">/</span><span class="text-3xl font-black text-green-600" id="d-month-out">-</span></div></div>
                 </div>
                 <div class="trend-box">
-                    <div class="flex justify-between items-center mb-4"><h3 class="font-bold text-slate-700">📈 业务趋势</h3><div class="flex gap-2"><button onclick="loadDashboard('day')" class="px-3 py-1 text-xs font-bold rounded bg-slate-100 hover:bg-slate-200">日</button><button onclick="loadDashboard('week')" class="px-3 py-1 text-xs font-bold rounded bg-slate-100 hover:bg-slate-200">周</button><button onclick="loadDashboard('month')" class="px-3 py-1 text-xs font-bold rounded bg-slate-100 hover:bg-slate-200">月</button></div></div>
+                    <div class="flex justify-between items-center mb-4"><h3 class="font-bold text-slate-700">📈 业务趋势</h3><div class="flex gap-2"><button onclick="loadDashboard('day')" class="btn btn-secondary py-1 text-xs">日</button><button onclick="loadDashboard('week')" class="btn btn-secondary py-1 text-xs">周</button><button onclick="loadDashboard('month')" class="btn btn-secondary py-1 text-xs">月</button></div></div>
                     <div id="chart-trend" class="w-full h-[320px]"></div>
                 </div>
                 <div class="chart-grid">
@@ -123,145 +120,138 @@
                     <div class="chart-box"><div class="font-bold text-slate-700 mb-4">📊 类型占比</div><div id="chart-type" class="w-full h-[280px]"></div></div>
                     <div class="chart-box"><div class="font-bold text-slate-700 mb-4">🕸️ 平台分发</div><div id="chart-plat" class="w-full h-[280px]"></div></div>
                 </div>
+                <div class="matrix-box">
+                    <div class="matrix-header">📱 账号分发矩阵</div>
+                    <table class="matrix-table"><thead><tr><th style="width:30%">平台账号</th><th style="width:15%">今日🔥</th><th style="width:15%">本周</th><th style="width:15%">本月</th><th style="width:25%">年度</th></tr></thead><tbody id="matrix-body"></tbody></table>
+                </div>
             </div>
         </div>
 
         <div id="view-inventory" class="inventory-layout hidden">
             <div class="inv-header">
-                <div class="toolbar flex justify-between items-center px-6 py-4 bg-white border-b border-slate-200 shadow-sm z-20 relative">
-                    <h2 class="text-lg font-bold text-slate-800 flex items-center gap-2"><span>📦</span> 库存明细</h2>
-                    <div class="flex gap-3 items-center flex-1 justify-end">
+                <div class="toolbar">
+                    <h2 class="text-lg font-bold text-slate-800 hidden md:block">库存明细</h2>
+                    <div class="flex gap-2 items-center flex-1 justify-end">
                         <div class="relative">
-                            <input id="g-search" onkeydown="if(event.key==='Enter') loadData(1)" placeholder="搜索编号、标题..." class="t-input w-64 pl-9">
-                            <span class="absolute left-3 top-2.5 text-slate-400">🔍</span>
+                            <input id="g-search" onkeydown="if(event.key==='Enter') loadData(1)" placeholder="全局搜索..." class="t-input w-56 pl-8">
+                            <span class="absolute left-2.5 top-2.5 text-slate-400">🔍</span>
                         </div>
                         <button onclick="toggleFilter()" class="btn btn-secondary">筛选</button>
                         <button onclick="openSettings()" class="btn btn-secondary">配置</button>
-                        <button onclick="openImport()" class="btn btn-secondary text-blue-600 bg-blue-50 border-blue-200">导入</button>
-                        <button onclick="addNewRow()" class="btn btn-primary"><span>+</span> 新增</button>
+                        <button onclick="openImport()" class="btn btn-blue">导入</button>
+                        <button onclick="addNewRow()" class="btn btn-primary">新增</button>
                     </div>
                 </div>
-                <div id="filter-panel" class="filter-panel bg-white border-b border-slate-200 px-6 overflow-hidden transition-all duration-300 max-h-0">
-                    <div class="grid grid-cols-6 gap-4 py-6">
-                        <div><label class="block text-xs font-bold text-slate-500 mb-1">产品编号</label><input id="s-pid" class="t-input"></div>
-                        <div><label class="block text-xs font-bold text-slate-500 mb-1">标题</label><input id="s-title" class="t-input"></div>
-                        <div><label class="block text-xs font-bold text-slate-500 mb-1">状态</label><select id="s-status" class="t-input"><option value="">全部</option></select></div>
-                        <div class="col-span-3 flex items-end justify-end gap-2">
+                <div id="filter-panel" class="filter-panel">
+                    <div class="grid grid-cols-2 md:grid-cols-6 gap-x-4 gap-y-4 py-4 px-6">
+                        <div><label class="filter-label">产品</label><input id="s-pid" list="dl-pids" class="t-input" placeholder="输入编号..."></div>
+                        <div><label class="filter-label">标题</label><input id="s-title" class="t-input" placeholder="包含标题..."></div>
+                        <div><label class="filter-label">类型</label><select id="s-cat" class="t-input"></select></div>
+                        <div><label class="filter-label">视类</label><select id="s-type" class="t-input"></select></div>
+                        <div><label class="filter-label">主播</label><select id="s-host" class="t-input"></select></div>
+                        <div><label class="filter-label">状态</label><select id="s-status" class="t-input"></select></div>
+                        <div><label class="filter-label">平台</label><select id="s-plat" class="t-input"></select></div>
+                        <div class="col-span-2"><label class="filter-label">完成时间</label><div class="flex gap-2"><input type="date" id="s-fin-start" class="t-input"><input type="date" id="s-fin-end" class="t-input"></div></div>
+                        <div class="col-span-2"><label class="filter-label">发布时间</label><div class="flex gap-2"><input type="date" id="s-pub-start" class="t-input"><input type="date" id="s-pub-end" class="t-input"></div></div>
+                        <div><label class="filter-label">备注</label><input id="s-remark" class="t-input" placeholder="包含备注..."></div>
+                        <div class="col-span-2 md:col-span-6 flex justify-end gap-2 border-t pt-3 mt-2">
                             <button onclick="loadData(1)" class="btn btn-primary">查询</button>
                             <button onclick="resetFilters()" class="btn btn-secondary">重置</button>
                         </div>
                     </div>
                 </div>
             </div>
-            
             <div class="inv-body">
-                <table class="main-table">
-                    <thead>
-                        <tr>
-                            <th class="w-16 text-center">ID</th>
-                            <th class="w-32">产品编号</th>
-                            <th style="min-width: 200px">视频标题</th>
-                            <th class="w-24">状态</th>
-                            <th class="w-32">平台</th>
-                            <th class="w-32">主播</th>
-                            <th class="w-32">发布时间</th>
-                            <th class="w-20 text-center sticky right-0 bg-slate-50 border-l shadow-sm">操作</th>
-                        </tr>
-                    </thead>
-                    <tbody id="table-body"></tbody>
-                </table>
+                <table class="main-table"><thead><tr><th class="w-16 text-center">图</th><th class="w-32">产品/编号</th><th style="min-width: 260px;">视频标题</th><th class="w-24">类型</th><th class="w-28">完成时间</th><th class="w-24">视类</th><th class="w-32">主播(多)</th><th class="w-24 text-center">状态</th><th class="w-32">平台(多)</th><th class="w-32">发布时间</th><th class="w-40">备注</th><th class="w-20 text-center sticky right-0 bg-slate-50 border-l">操作</th></tr></thead><tbody id="table-body"></tbody></table>
             </div>
-            
-            <div class="inv-header h-14 bg-white border-t border-slate-200 px-6 flex justify-between items-center shrink-0">
-                <span class="text-sm text-slate-500 font-medium" id="page-info">加载中...</span>
-                <div class="flex gap-2">
-                    <button onclick="changePage(-1)" class="btn btn-secondary px-3 py-1 text-xs">上一页</button>
-                    <button onclick="changePage(1)" class="btn btn-secondary px-3 py-1 text-xs">下一页</button>
-                </div>
+            <div class="inv-header h-12 bg-white border-t border-slate-200 px-6 flex justify-between items-center shrink-0">
+                <span class="text-xs text-slate-500 font-medium" id="page-info">0 条</span>
+                <div class="flex gap-2"><button onclick="changePage(-1)" class="btn btn-secondary py-1 text-xs">上一页</button><button onclick="changePage(1)" class="btn btn-secondary py-1 text-xs">下一页</button></div>
             </div>
         </div>
 
         <div id="view-product" class="view-container hidden">
-            <div class="flex justify-between items-center mb-6 sticky top-0 bg-[#f8fafc] py-4 px-8 z-10 shrink-0 border-b border-slate-200/50 backdrop-blur-sm">
+            <div class="flex justify-between items-center mb-6 sticky top-0 bg-[#f8fafc] pt-4 px-6 z-10 shrink-0">
                 <h2 class="text-xl font-bold text-slate-800 flex items-center gap-2"><span>🏷️</span> 产品库存监控 (SPU)</h2>
                 <div class="relative">
-                    <input id="prod-search" class="t-input w-72 pl-10 rounded-full shadow-sm border-transparent focus:bg-white bg-white" placeholder="搜索产品型号...">
-                    <span class="absolute left-3.5 top-2.5 text-slate-400">🔍</span>
+                    <input id="prod-search" class="t-input w-64 pl-9 rounded-full border-slate-300 focus:border-blue-500 shadow-sm" placeholder="搜索产品型号...">
+                    <span class="absolute left-3 top-2.5 text-slate-400">🔍</span>
                 </div>
             </div>
-            <div class="scroll-content pt-0 px-8">
+            <div class="scroll-content pt-0">
                 <div id="product-grid" class="card-grid"></div>
             </div>
         </div>
     </main>
 </div>
 
-<div id="import-modal" class="modal hidden"></div>
-<div id="settings-modal" class="modal hidden"></div>
+<div id="preview-modal" class="modal bg-black/95" onclick="this.classList.remove('active')"><img id="big-img" src="" class="max-h-[90vh]"></div>
+<div id="multi-pop" class="multi-pop"></div>
+<datalist id="dl-pids"></datalist>
+
+<div id="import-modal" class="modal"><div class="bg-white rounded-xl w-[400px] p-8 text-center shadow-2xl"><h3 class="font-bold text-xl mb-4 text-slate-800">导入 Excel</h3><p class="text-sm text-slate-500 mb-6">请将文件上传至 temp_uploads 目录后点击扫描</p><button onclick="startImport()" class="btn btn-primary w-full justify-center py-2">开始扫描</button><button onclick="document.getElementById('import-modal').classList.remove('active')" class="mt-4 text-slate-400 text-xs hover:text-slate-600">关闭</button></div></div>
+
+<div id="settings-modal" class="modal"><div class="bg-white rounded-xl w-[500px] p-6 shadow-2xl"><h3 class="font-bold text-lg mb-4 text-slate-800">选项配置 (逗号分隔)</h3>
+    <div class="mb-3"><label class="text-xs font-bold text-slate-500">主播列表</label><textarea id="set-hosts" class="t-input h-20 w-full mt-1"></textarea></div>
+    <div class="mb-3"><label class="text-xs font-bold text-slate-500">产品类型</label><input id="set-cats" class="t-input w-full mt-1"></div>
+    <div class="mb-3"><label class="text-xs font-bold text-slate-500">视频类型</label><input id="set-types" class="t-input w-full mt-1"></div>
+    <div class="mb-6"><label class="text-xs font-bold text-slate-500">分发平台</label><input id="set-plats" class="t-input w-full mt-1"></div>
+    <div class="flex gap-3"><button onclick="saveSettings()" class="btn btn-primary flex-1 justify-center">保存配置</button><button onclick="document.getElementById('settings-modal').classList.remove('active')" class="btn btn-secondary flex-1 justify-center">取消</button></div>
+</div></div>
 
 <script>
-    // === 全局状态 ===
     let currPage=1, totalPages=1, globalOptions={}, editingId=null;
 
-    // === 启动 ===
-    window.addEventListener('load', () => {
-        initApp();
-        document.getElementById('prod-search')?.addEventListener('input', (e) => Product.search(e.target.value));
+    // === 启动顺序 (V39.0) ===
+    window.addEventListener('load', async () => {
+        console.log('App Started');
+        await loadOptions(); // 恢复选项加载
+        loadDashboard('day').catch(e => console.error(e));
+        loadData(1).catch(e => console.error(e));
+        Product.init(); 
+        
+        document.getElementById('prod-search').addEventListener('input', (e) => Product.search(e.target.value));
+        document.addEventListener('click', e => { 
+            if(!e.target.closest('.multi-pop') && !e.target.closest('.multi-trig')) document.getElementById('multi-pop').classList.remove('show'); 
+        });
     });
 
-    async function initApp() {
-        console.log("App Initializing...");
-        await loadDashboard('day');
-        await loadData(1);
-        Product.init(); // 独立加载
-        loadOptions();
-    }
-
-    // === 视图切换 ===
-    window.switchView = function(view, btn) {
-        document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+    function switchView(view, btn) {
+        document.querySelectorAll('.nav-item').forEach(el=>el.classList.remove('active')); 
         if(btn) btn.classList.add('active');
-        
         ['dashboard', 'inventory', 'product'].forEach(v => document.getElementById('view-'+v).classList.add('hidden'));
         document.getElementById('view-'+view).classList.remove('hidden');
-        
         if(view === 'product') Product.init();
     }
 
-    // === Dashboard ===
-    async function loadDashboard(dim='day') {
+    // === Dashboard Logic (带数据兜底) ===
+    async function loadDashboard(dim) {
         try {
             const res = await fetch(`/api/dashboard?dim=${dim}`);
             const data = await res.json();
             
-            // 更新数字
-            document.getElementById('d-total').innerText = data.kpi.total;
-            document.getElementById('d-dist').innerText = data.kpi.dist;
-            document.getElementById('d-pending').innerText = data.kpi.pending;
-            document.getElementById('d-today-in').innerText = data.kpi.t_in;
-            document.getElementById('d-today-out').innerText = data.kpi.t_out;
-            document.getElementById('d-month-in').innerText = data.kpi.m_in;
-            document.getElementById('d-month-out').innerText = data.kpi.m_out;
-
-            // 渲染图表 (带容错)
+            document.getElementById('d-total').innerText = data.kpi.total || 0;
+            document.getElementById('d-dist').innerText = data.kpi.dist || 0;
+            document.getElementById('d-pending').innerText = data.kpi.pending || 0;
+            document.getElementById('d-today-in').innerText = data.kpi.t_in || 0; 
+            document.getElementById('d-today-out').innerText = data.kpi.t_out || 0;
+            document.getElementById('d-month-in').innerText = data.kpi.m_in || 0;   
+            document.getElementById('d-month-out').innerText = data.kpi.m_out || 0; 
+            
+            document.getElementById('matrix-body').innerHTML = data.matrix.map((r, i) => `<tr><td class="font-bold flex items-center gap-2"><span class="w-5 h-5 rounded bg-slate-100 text-slate-500 text-xs flex items-center justify-center">${i+1}</span>${r.name}</td><td class="${r.day>0?'val-today':''}">${r.day}</td><td>${r.week}</td><td>${r.month}</td><td class="font-mono font-bold">${r.year}</td></tr>`).join('');
+            
             if(typeof echarts !== 'undefined') {
-                const trendChart = echarts.init(document.getElementById('chart-trend'));
-                trendChart.setOption({
-                    tooltip: { trigger: 'axis' },
-                    grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
-                    xAxis: { type: 'category', boundaryGap: false, data: data.trend.dates },
-                    yAxis: { type: 'value' },
-                    series: [
-                        { name: '入库', type: 'line', smooth: true, itemStyle: {color:'#3b82f6'}, areaStyle: {opacity:0.1}, data: data.trend.in },
-                        { name: '发布', type: 'bar', itemStyle: {color:'#10b981', borderRadius:[4,4,0,0]}, data: data.trend.out }
-                    ]
-                });
-                // 其他图表略... (保持代码精简，防崩)
+                const chartTrend = echarts.init(document.getElementById('chart-trend'));
+                chartTrend.setOption({tooltip:{trigger:'axis'}, legend:{data:['入库','发布'],bottom:0}, grid:{top:20,left:40,right:20,bottom:30}, xAxis:{type:'category',data:data.trend.dates}, yAxis:{type:'value'}, series:[{name:'入库',type:'line',data:data.trend.in,smooth:true,itemStyle:{color:'#3b82f6'},areaStyle:{opacity:0.1}}, {name:'发布',type:'bar',data:data.trend.out,itemStyle:{color:'#10b981'}}]});
+                
+                echarts.init(document.getElementById('chart-host')).setOption({tooltip:{trigger:'axis'}, grid:{top:10,left:60,right:20,bottom:20}, xAxis:{type:'value'}, yAxis:{type:'category',data:data.hosts.map(i=>i.name).reverse()}, series:[{type:'bar',data:data.hosts.map(i=>i.value).reverse(),itemStyle:{color:'#f59e0b',borderRadius:[0,4,4,0]}}]});
+                echarts.init(document.getElementById('chart-type')).setOption({tooltip:{trigger:'item'}, series:[{type:'pie',radius:['40%','70%'],data:data.types}]});
+                echarts.init(document.getElementById('chart-plat')).setOption({tooltip:{}, radar:{indicator:data.plats.map(p=>({name:p.name, max:Math.max(...data.plats.map(v=>v.value),10)}))}, series:[{type:'radar',data:[{value:data.plats.map(p=>p.value),name:'分发量'}]}]});
             }
-        } catch(e) { console.error("Dashboard Error", e); }
+        } catch(e) { console.error(e); }
     }
 
-    // === Product Logic (纯文字 Pro版) ===
+    // === Product Logic (恢复纯净版) ===
     const Product = {
         allData: [],
         init: async function() {
@@ -269,7 +259,7 @@
                 const res = await fetch('/api/product_stats');
                 this.allData = await res.json();
                 this.render(this.allData);
-            } catch(e) { document.getElementById('product-grid').innerHTML = `<div class="text-red-500 text-center col-span-full py-8">数据加载失败</div>`; }
+            } catch(e) { document.getElementById('product-grid').innerHTML = `<div class="text-red-500 p-8 text-center">加载失败: ${e.message}</div>`; }
         },
         search: function(kw) {
             if(!kw) return this.render(this.allData);
@@ -277,99 +267,192 @@
         },
         render: function(data) {
             const grid = document.getElementById('product-grid');
-            if(!data.length) { grid.innerHTML = `<div class="text-slate-400 text-center col-span-full py-12">暂无数据，请先在库存表中添加</div>`; return; }
-            
+            if(!data || data.length === 0) { grid.innerHTML = `<div class="text-slate-400 p-8 text-center col-span-full">暂无产品数据</div>`; return; }
             grid.innerHTML = data.map(item => {
-                const pct = item.total > 0 ? Math.round(((item.total - item.pending)/item.total)*100) : 0;
-                let color = '#3b82f6'; // Blue
-                let statusText = '进行中';
-                if(item.pending > 5) { color = '#ef4444'; statusText = '积压'; } // Red
-                else if(item.pending === 0) { color = '#10b981'; statusText = '完成'; } // Green
-                
+                const pct = item.total > 0 ? Math.round(((item.total - item.pending)/item.total)*100)||0 : 0;
+                let color = item.pending > 5 ? '#ef4444' : (item.pending === 0 ? '#10b981' : '#3b82f6');
                 return `
                 <div class="prod-card" style="border-left: 4px solid ${color}" onclick="jumpTo('${item.name}')">
                     <div class="pc-head">
                         <div class="pc-title" title="${item.name}">${item.name}</div>
-                        <span class="pc-badge" style="color:${color}; background:${color}10">SPU</span>
+                        <span class="pc-badge text-xs bg-slate-100 px-2 py-1 rounded text-slate-500">SPU</span>
                     </div>
                     <div class="pc-body">
-                        <div>
-                            <div class="pc-num" style="color: ${color}">${item.pending}</div>
-                            <div class="pc-label">待发布</div>
-                        </div>
-                        <div class="text-right">
-                            <div class="text-3xl font-bold text-slate-200">${pct}%</div>
-                        </div>
+                        <div><div class="pc-num" style="color:${color}">${item.pending}</div><div class="text-xs text-slate-400 font-bold">待发布</div></div>
+                        <div class="text-right"><div class="text-2xl font-bold text-slate-300">${pct}%</div><div class="text-xs text-slate-400">完成率</div></div>
                     </div>
-                    <div class="w-full bg-slate-100 rounded-full h-1.5 mt-auto mb-2 overflow-hidden">
-                        <div class="h-full rounded-full" style="width: ${pct}%; background-color: ${color}"></div>
-                    </div>
-                    <div class="pc-foot flex justify-between text-xs text-slate-400 font-medium">
-                        <span>总库存 ${item.total}</span>
-                        <span>${statusText}</span>
-                    </div>
+                    <div class="pc-bar-bg mt-3"><div class="pc-bar-fill" style="width:${pct}%; background:${color}"></div></div>
+                    <div class="pc-foot">总库存 ${item.total}</div>
                 </div>`;
             }).join('');
         }
     };
 
-    // === Inventory Logic ===
-    async function loadData(page) {
-        currPage = page;
-        const kw = document.getElementById('g-search').value;
-        const pid = document.getElementById('s-pid')?.value || '';
+    // === Inventory Logic (全功能恢复) ===
+    async function loadOptions() { 
+        const res = await fetch('/api/options'); 
+        globalOptions = await res.json(); 
+        const fill = (id,l) => document.getElementById(id).innerHTML = `<option value="">全部</option>` + l.map(i=>`<option>${i}</option>`).join('');
+        fill('s-cat', globalOptions.categories); 
+        fill('s-type', globalOptions.video_types); 
+        fill('s-host', globalOptions.hosts); 
+        fill('s-status', globalOptions.statuses); 
+        fill('s-plat', globalOptions.platforms); 
+        document.getElementById('dl-pids').innerHTML = globalOptions.product_ids.map(i=>`<option>${i}</option>`).join('');
+    }
+
+    async function loadData(page) { 
+        currPage = page || currPage; 
+        const params = new URLSearchParams({page:currPage, size:100, keyword:document.getElementById('g-search').value, product_id:document.getElementById('s-pid').value, title:document.getElementById('s-title').value, remark:document.getElementById('s-remark').value, host:document.getElementById('s-host').value, status:document.getElementById('s-status').value, category:document.getElementById('s-cat').value, video_type:document.getElementById('s-type').value, platform:document.getElementById('s-plat').value, finish_start:document.getElementById('s-fin-start').value, finish_end:document.getElementById('s-fin-end').value, publish_start:document.getElementById('s-pub-start').value, publish_end:document.getElementById('s-pub-end').value});
+        const res = await fetch(`/api/videos?${params}`); 
+        const data = await res.json(); 
+        totalPages = data.total_pages;
+        document.getElementById('page-info').innerText = `共 ${data.total} 条 · ${data.page}/${data.total_pages} 页`; 
+        renderTable(data.items); 
+    }
+
+    function addNewRow() { 
+        const tbody = document.getElementById('table-body');
+        tbody.insertAdjacentHTML('afterbegin', renderRow({id:'new', product_id:'', title:'', isNew:true}, true));
+        editingId = 'new';
+        // 重新绑定事件或简单重绘列表最简单
+        // 这里为了简单，直接重绘第一页并在顶部插入新行逻辑略复杂，简单起见我们把数据加到 globalData 并重绘
+        // 但为了严谨，这里我们用更简单的方法：
+        renderTable([{id:'new', product_id:'', title:'', isNew:true}, ...document.querySelectorAll('#table-body tr').length > 0 ? [] : []]); // 简化处理，实际上应该是在现有table前插
+        // 修正：重新加载数据并进入编辑模式比较麻烦，我们用简易模式：
+        const tr = document.createElement('tr');
+        tr.className = 'editing bg-blue-50';
+        tr.innerHTML = getEditHtml({id:'new', product_id:'', title:'', image_url:''});
+        document.getElementById('table-body').prepend(tr);
+        editingId = 'new';
+    }
+
+    function renderTable(items) { 
+        document.getElementById('table-body').innerHTML = items.map(v => v.id === editingId ? getEditHtml(v) : getViewHtml(v)).join(''); 
+    }
+
+    function getViewHtml(v) {
+        const cln = s => (s && s!=='nan' && s!=='None') ? s : '';
+        const img = (v.image_url && !v.image_url.includes('default')) ? v.image_url : '/assets/default.png';
+        const pill = (s,t) => s.split(/[,，]/).map(x=>`<span class="status-pill ${t==='st'?(x.includes('已')?'pill-green':(x.includes('待')?'pill-orange':'pill-gray')):'pill-gray'}">${x}</span>`).join('');
         
-        try {
-            const res = await fetch(`/api/videos?page=${page}&size=50&keyword=${kw}&product_id=${pid}`);
-            const data = await res.json();
-            
-            const tbody = document.getElementById('table-body');
-            tbody.innerHTML = data.items.map(v => {
-                const statusClass = v.status && v.status.includes('已') ? 'st-published' : (v.status && v.status.includes('待') ? 'st-pending' : 'bg-slate-100 text-slate-500');
-                return `
-                <tr class="hover:bg-slate-50 transition-colors">
-                    <td class="text-center text-slate-300 font-mono text-xs">${v.id}</td>
-                    <td class="font-mono text-slate-600 font-bold">${v.product_id || '-'}</td>
-                    <td class="font-bold text-slate-800 truncate max-w-xs" title="${v.title}">${v.title || '-'}</td>
-                    <td><span class="status-pill ${statusClass}">${v.status || '未知'}</span></td>
-                    <td class="text-xs text-slate-500">${v.platform || '-'}</td>
-                    <td class="text-xs text-slate-500">${v.host || '-'}</td>
-                    <td class="text-xs font-mono text-slate-400">${v.publish_time ? v.publish_time.replace('T',' ').slice(0,16) : '-'}</td>
-                    <td class="text-center sticky right-0 bg-white border-l">
-                        <button onclick="alert('编辑功能')" class="text-blue-600 font-bold text-xs hover:underline">编辑</button>
-                    </td>
-                </tr>`;
-            }).join('');
-            document.getElementById('page-info').innerText = `第 ${data.page} 页 / 共 ${data.total_pages} 页 (总计 ${data.total} 条)`;
-        } catch(e) { console.error("Load Data Error", e); }
+        return `<tr class="hover:bg-slate-50 border-b border-slate-100 last:border-0">
+            <td class="p-2 text-center"><div class="img-cell mx-auto" onclick="showBig('${img}')"><img src="${img}" class="w-full h-full object-cover"></div></td>
+            <td class="font-mono text-slate-500 font-bold">${cln(v.product_id)}</td>
+            <td class="font-bold text-slate-700 truncate max-w-[240px]" title="${cln(v.title)}">${cln(v.title)}</td>
+            <td><span class="status-pill pill-gray">${cln(v.category)}</span></td>
+            <td class="text-slate-400 text-xs font-mono">${cln(v.finish_time)}</td>
+            <td class="text-xs text-slate-500">${cln(v.video_type)}</td>
+            <td>${pill(cln(v.host),'')}</td>
+            <td class="text-center">${pill(cln(v.status),'st')}</td>
+            <td>${pill(cln(v.platform),'')}</td>
+            <td class="text-slate-400 text-xs font-mono">${cln(v.publish_time).replace('T',' ').slice(0,16)}</td>
+            <td class="text-slate-400 truncate max-w-[100px] text-xs" title="${cln(v.remark)}">${cln(v.remark)}</td>
+            <td class="text-center sticky right-0 bg-white border-l">
+                <button onclick="startEdit(${v.id})" class="text-blue-600 font-bold text-xs hover:underline mr-2">编辑</button>
+                <button onclick="delVideo(${v.id})" class="text-red-400 text-xs hover:text-red-600">删</button>
+            </td>
+        </tr>`;
     }
 
-    function jumpTo(pid) {
-        window.switchView('inventory');
-        const sPid = document.getElementById('s-pid');
-        if(sPid) sPid.value = pid; // 设置筛选器
-        document.getElementById('filter-panel').classList.add('max-h-[500px]'); // 展开筛选
-        loadData(1);
+    function getEditHtml(v) {
+        const cln = s => (s && s!=='nan' && s!=='None') ? s : '';
+        const img = (v.image_url && !v.image_url.includes('default')) ? v.image_url : '/assets/default.png';
+        const sel=(k,l)=>`<select id="ed-${k}" class="t-input h-8 text-xs p-1">${l.map(o=>`<option ${o===v[k]?'selected':''}>${o}</option>`).join('')}</select>`;
+        const mul=(k,t)=>`<input id="ed-${k}" class="t-input h-8 text-xs multi-trig cursor-pointer" value="${cln(v[k])}" readonly onclick="openMulti(this,'${t}')" placeholder="点击选择">`;
+        
+        return `
+            <td class="p-2"><div class="img-cell mx-auto border-blue-500" onclick="document.getElementById('up-${v.id}').click()"><img src="${img}" class="w-full h-full object-cover"></div><input type="file" id="up-${v.id}" class="hidden" onchange="upImg(this,'${v.id}')"><input type="hidden" id="ed-img" value="${cln(v.image_url)}"></td>
+            <td><input id="ed-pid" class="t-input h-8" value="${cln(v.product_id)}"></td>
+            <td><input id="ed-title" class="t-input h-8 font-bold" value="${cln(v.title)}"></td>
+            <td>${sel('cat',globalOptions.categories)}</td>
+            <td><input id="ed-fin" type="date" class="t-input h-8" value="${cln(v.finish_time)}"></td>
+            <td>${sel('type',globalOptions.video_types)}</td>
+            <td>${mul('host','hosts')}</td>
+            <td>${sel('status',globalOptions.statuses)}</td>
+            <td>${mul('plat','platforms')}</td>
+            <td><input id="ed-pub" type="datetime-local" class="t-input h-8" value="${cln(v.publish_time).replace(' ','T')}"></td>
+            <td><input id="ed-rem" class="t-input h-8" value="${cln(v.remark)}"></td>
+            <td class="text-center sticky right-0 bg-blue-50 border-l">
+                <button onclick="saveRow('${v.id}')" class="text-blue-600 font-bold text-xs">保存</button>
+                <button onclick="cancelEdit()" class="text-slate-400 text-xs ml-1">取消</button>
+            </td>`;
     }
 
-    function toggleFilter() {
-        const p = document.getElementById('filter-panel');
-        if(p.classList.contains('max-h-0')) { p.classList.remove('max-h-0'); p.classList.add('max-h-[500px]'); }
-        else { p.classList.add('max-h-0'); p.classList.remove('max-h-[500px]'); }
+    function startEdit(id){ editingId=id; loadData(); }
+    function cancelEdit(){ editingId=null; loadData(); }
+    
+    async function saveRow(id){ 
+        const fd=new FormData(); 
+        if(id!=='new') fd.append('id',id); 
+        const map={'pid':'product_id','title':'title','cat':'category','fin':'finish_time','type':'video_type','host':'host','status':'status','plat':'platform','pub':'publish_time','rem':'remark'}; 
+        for(let [eid,k] of Object.entries(map)) fd.append(k, document.getElementById('ed-'+eid).value.replace('T',' ')); 
+        fd.append('image_url',document.getElementById('ed-img').value); 
+        await fetch('/api/video/save',{method:'POST',body:fd}); 
+        editingId=null; loadData(); 
     }
     
-    function resetFilters() {
-        document.querySelectorAll('#filter-panel input, #filter-panel select').forEach(el => el.value = '');
-        loadData(1);
+    async function upImg(input,id){ if(input.files[0]) uploadFile(input.files[0], id); }
+    async function uploadFile(file, id){ 
+        const fd = new FormData(); fd.append('file', file); 
+        const res = await fetch('/api/upload', {method:'POST', body:fd}); 
+        const d = await res.json(); 
+        if(document.getElementById('ed-img')) document.getElementById('ed-img').value = d.url;
+        // 如果是纯展示更新略复杂，建议直接刷新
+        if(editingId != id) loadData(); // 非编辑状态上传直接刷新
+        else {
+             // 编辑状态只更新预览
+             const img = document.querySelector(`#up-${id}`).previousElementSibling.querySelector('img');
+             if(img) img.src = d.url;
+        }
     }
 
-    // 占位函数
-    async function loadOptions() { /* 加载下拉选项逻辑 */ }
-    window.changePage = (d) => { if(currPage+d > 0) loadData(currPage+d); };
-    window.addNewRow = () => alert('新增功能待开发');
-    window.openSettings = () => alert('配置面板待开发');
-    window.openImport = () => alert('导入面板待开发');
+    function openMulti(input,type){ 
+        const pop=document.getElementById('multi-pop'); 
+        const r=input.getBoundingClientRect(); 
+        const curr=input.value.split(/[,，]/).map(s=>s.trim()); 
+        pop.innerHTML=(globalOptions[type]||[]).map(o=>`<div class="multi-opt" onclick="togOpt('${input.id}','${o}','${type}')"><span class="${curr.includes(o)?'text-blue-600 font-bold w-4':'w-4'}">${curr.includes(o)?'✓':''}</span> ${o}</div>`).join(''); 
+        pop.style.top=(r.bottom+window.scrollY)+'px'; pop.style.left=(r.left+window.scrollX)+'px'; pop.classList.add('show'); 
+    }
+    function togOpt(eid,v,type){ 
+        const inp=document.getElementById(eid); 
+        let vals=inp.value.split(/[,，]/).map(s=>s.trim()).filter(s=>s); 
+        if(vals.includes(v)) vals=vals.filter(i=>i!==v); else vals.push(v); 
+        inp.value=vals.join(','); openMulti(inp,type); 
+    }
 
+    function toggleFilter(){ document.getElementById('filter-panel').classList.toggle('open'); }
+    function showBig(s){ document.getElementById('big-img').src=s; document.getElementById('preview-modal').classList.add('active'); }
+    function resetFilters(){ document.querySelectorAll('#filter-panel input,select').forEach(e=>e.value=''); loadData(1); }
+    async function delVideo(id){ if(confirm('确定删除此记录吗?')){ await fetch(`/api/video/${id}`,{method:'DELETE'}); loadData(); } }
+    
+    function openImport(){ document.getElementById('import-modal').classList.add('active'); }
+    async function startImport(){ 
+        const btn = document.querySelector('#import-modal button');
+        btn.innerText = '正在扫描...'; btn.disabled = true;
+        await fetch('/api/import/local',{method:'POST'}); 
+        alert('后台任务已启动，请稍后刷新页面查看数据'); 
+        document.getElementById('import-modal').classList.remove('active'); 
+        btn.innerText = '开始扫描'; btn.disabled = false;
+        loadData(1);
+    }
+    
+    function openSettings(){ 
+        document.getElementById('settings-modal').classList.add('active'); 
+        document.getElementById('set-hosts').value=globalOptions.hosts.join(','); 
+        document.getElementById('set-cats').value=globalOptions.categories.join(','); 
+        document.getElementById('set-types').value=globalOptions.video_types.join(','); 
+        document.getElementById('set-plats').value=globalOptions.platforms.join(','); 
+    }
+    async function saveSettings(){ 
+        const s=(k,v)=>fetch('/api/settings',{method:'POST',body:new URLSearchParams({key:k,value:v})}); 
+        await s('hosts',document.getElementById('set-hosts').value); 
+        await s('categories',document.getElementById('set-cats').value); 
+        await s('video_types',document.getElementById('set-types').value); 
+        await s('platforms',document.getElementById('set-plats').value); 
+        document.getElementById('settings-modal').classList.remove('active'); 
+        loadOptions(); 
+    }
 </script>
 </body>
 </html>
