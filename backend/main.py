@@ -17,7 +17,7 @@ from sqlalchemy import func
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("VideoHub")
 
-main_app = FastAPI(title="VideoHub V28.0 Stable")
+main_app = FastAPI(title="VideoHub V28.0 Fix")
 engine = create_engine("sqlite:///data/inventory.db")
 
 # === 模型定义 ===
@@ -28,26 +28,26 @@ class Product(SQLModel, table=True):
 
 from .models import Video, AppSettings
 
-# === 工具函数：暴力日期解析 (修复数据丢失) ===
+# === 强力工具：安全转字符串 ===
+def safe_str(val):
+    if val is None: return ""
+    return str(val).strip()
+
+# === 强力工具：日期解析 ===
 def parse_safe_date(date_str):
-    if not date_str: return None
-    s = str(date_str).strip().lower()
-    if s in ['nan', 'none', '', 'nat', 'null']: return None
-    
+    s = safe_str(date_str).lower()
+    if not s or s in ['nan', 'none', '', 'nat', 'null']: return None
     try:
-        # 1. 尝试截取标准格式 YYYY-MM-DD
+        # 1. 优先截取前10位
         clean_s = s[:10]
         for fmt in ("%Y-%m-%d", "%Y/%m/%d", "%Y%m%d", "%Y.%m.%d"):
             try: return datetime.datetime.strptime(clean_s, fmt)
             except: continue
-            
-        # 2. 正则提取 (针对 "2024-01-01 12:00:00" 或 "2024年1月1日")
-        match = re.search(r'(\d{4})[-/年.](\d{1,2})[-/月.](\d{1,2})', s)
+        # 2. 失败则正则提取
+        match = re.search(r'(\d{4})[-/年](\d{1,2})[-/月](\d{1,2})', s)
         if match:
             return datetime.datetime(int(match.group(1)), int(match.group(2)), int(match.group(3)))
-            
-    except:
-        pass
+    except: pass
     return None
 
 # === 初始化 ===
@@ -59,14 +59,13 @@ def on_startup():
     SQLModel.metadata.create_all(engine)
     
     with Session(engine) as session:
-        # 自动修复数据库列
+        # 字段修复
         try: session.exec(text("SELECT created_at FROM video LIMIT 1"))
         except: 
             try: session.exec(text("ALTER TABLE video ADD COLUMN created_at DATETIME"))
             except: pass
             session.commit()
-        
-        # 补全时间数据
+        # 数据修复
         session.exec(text("UPDATE video SET created_at = finish_time WHERE created_at IS NULL AND finish_time IS NOT NULL"))
         session.exec(text(f"UPDATE video SET created_at = '{datetime.datetime.now()}' WHERE created_at IS NULL"))
         
@@ -93,11 +92,11 @@ def get_dashboard_data(dim: str = "day"):
     with Session(engine) as session:
         videos = session.exec(select(Video)).all()
         total = len(videos)
-        pending = sum(1 for v in videos if v.status == "待发布")
+        pending = sum(1 for v in videos if safe_str(v.status) == "待发布")
         
         now = datetime.datetime.now()
-        today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
-        month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        today = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
         
         flow = {"t_in":0, "t_out":0, "m_in":0, "m_out":0}
         trend = {}
@@ -108,97 +107,101 @@ def get_dashboard_data(dim: str = "day"):
         dist = 0
 
         for v in videos:
-            t_in = parse_safe_date(v.finish_time)
-            t_pub = parse_safe_date(v.publish_time)
-            
-            # 入库统计
-            if t_in:
-                if t_in >= today_start: flow["t_in"] += 1
-                if t_in >= month_start: flow["m_in"] += 1
+            try:
+                t_in = parse_safe_date(v.finish_time)
+                t_pub = parse_safe_date(v.publish_time)
+                v_stat = safe_str(v.status)
+                v_plat = safe_str(v.platform)
                 
-                k = t_in.strftime("%Y-%m-%d")
-                if dim == 'month': k = t_in.strftime("%Y-%m")
-                elif dim == 'week': k = t_in.strftime("%Y-W%W")
-                
-                if k not in trend: trend[k] = {"in":0, "out":0}
-                trend[k]["in"] += 1
-                
-                if v.host:
-                    for h in v.host.replace('，', ',').split(','):
-                        h = h.strip()
-                        if h: hosts[h] = hosts.get(h, 0) + 1
+                # 入库
+                if t_in:
+                    if t_in >= today: flow["t_in"] += 1
+                    if t_in >= month: flow["m_in"] += 1
+                    k = t_in.strftime("%Y-%m-%d")
+                    if dim=='month': k=t_in.strftime("%Y-%m")
+                    elif dim=='week': k=t_in.strftime("%Y-W%W")
+                    if k not in trend: trend[k] = {"in":0, "out":0}
+                    trend[k]["in"] += 1
+                    
+                    if v.host:
+                        for h in safe_str(v.host).replace('，', ',').split(','):
+                            h = h.strip()
+                            if h: hosts[h] = hosts.get(h, 0) + 1
 
-            # 发布统计
-            if t_pub:
-                if t_pub >= today_start: flow["t_out"] += 1
-                if t_pub >= month_start: flow["m_out"] += 1
+                # 发布
+                if t_pub:
+                    if t_pub >= today: flow["t_out"] += 1
+                    if t_pub >= month: flow["m_out"] += 1
+                    k = t_pub.strftime("%Y-%m-%d")
+                    if dim=='month': k=t_pub.strftime("%Y-%m")
+                    elif dim=='week': k=t_pub.strftime("%Y-W%W")
+                    if k not in trend: trend[k] = {"in":0, "out":0}
+                    trend[k]["out"] += 1
+                    
+                    if v_stat == "已发布" and v_plat:
+                        accs = [p.strip() for p in v_plat.replace('，', ',').split(',') if p.strip()]
+                        for acc in accs:
+                            dist += 1
+                            if acc not in matrix: matrix[acc] = {"day":0, "week":0, "month":0, "year":0}
+                            if t_pub >= today: matrix[acc]["day"] += 1
+                            if t_pub >= month: matrix[acc]["month"] += 1
+                            matrix[acc]["year"] += 1
+                            plats[acc] = plats.get(acc, 0) + 1
                 
-                k = t_pub.strftime("%Y-%m-%d")
-                if dim == 'month': k = t_pub.strftime("%Y-%m")
-                elif dim == 'week': k = t_pub.strftime("%Y-W%W")
-                
-                if k not in trend: trend[k] = {"in":0, "out":0}
-                trend[k]["out"] += 1
-                
-                if v.status == "已发布" and v.platform:
-                    accs = [p.strip() for p in v.platform.replace('，', ',').split(',') if p.strip()]
-                    for acc in accs:
-                        dist += 1
-                        if acc not in matrix: matrix[acc] = {"day":0, "week":0, "month":0, "year":0}
-                        if t_pub >= today_start: matrix[acc]["day"] += 1
-                        if t_pub >= month_start: matrix[acc]["month"] += 1
-                        matrix[acc]["year"] += 1
-                        plats[acc] = plats.get(acc, 0) + 1
-            
-            if v.video_type: types[v.video_type] = types.get(v.video_type, 0) + 1
+                if v.video_type:
+                    vt = safe_str(v.video_type)
+                    types[vt] = types.get(vt, 0) + 1
+            except Exception:
+                continue
 
         dates = sorted(trend.keys())[-30:]
         mat_list = [{"name":k, **v} for k,v in matrix.items()]
         mat_list.sort(key=lambda x:x["year"], reverse=True)
-        host_list = sorted([{"name":k, "value":v} for k,v in hosts.items()], key=lambda x:x['value'], reverse=True)[:5]
         
         return {
             "kpi": {"total":total, "pending":pending, "dist":dist, "t_in":flow["t_in"], "t_out":flow["t_out"], "m_in":flow["m_in"], "m_out":flow["m_out"]},
             "trend": {"dates":dates, "in":[trend[k]["in"] for k in dates], "out":[trend[k]["out"] for k in dates]},
-            "matrix": mat_list, "hosts": host_list, 
+            "matrix": mat_list, 
+            "hosts": sorted([{"name":k, "value":v} for k,v in hosts.items()], key=lambda x:x['value'], reverse=True)[:5], 
             "types": [{"name":k, "value":v} for k,v in types.items()], 
             "plats": [{"name":k, "value":v} for k,v in plats.items()]
         }
 
-# === 接口 2: 产品统计 (防爆修复) ===
+# === 接口 2: 产品统计 (防崩溃重写) ===
 @main_app.get("/api/product_stats")
 def get_product_stats():
     with Session(engine) as session:
-        # 1. 强制查询 Video 表，不管 Product 表有没有数据
+        # 1. 查所有视频
         videos = session.exec(select(Video)).all()
         
         stats = {}
         for v in videos:
-            # === 核心修复：强制转字符串，防止 int.strip() 报错 ===
-            raw_pid = v.product_id
-            if not raw_pid: 
-                pid = "未分类"
-            else:
-                pid = str(raw_pid).strip() # 强制转 str
-                if pid.lower() in ['nan', 'none', '']: 
+            try:
+                # [核心修复]：强制转字符串，防止 int.strip() 报错
+                pid = safe_str(v.product_id)
+                if not pid or pid.lower() in ['nan', 'none']: 
                     pid = "未分类"
-            
-            if pid not in stats: 
-                stats[pid] = {"name": pid, "total": 0, "pending": 0, "image_url": None}
-            
-            stats[pid]["total"] += 1
-            if v.status == "待发布": 
-                stats[pid]["pending"] += 1
+                
+                if pid not in stats: 
+                    stats[pid] = {"name": pid, "total": 0, "pending": 0, "image_url": None}
+                
+                stats[pid]["total"] += 1
+                if safe_str(v.status) == "待发布": 
+                    stats[pid]["pending"] += 1
+            except Exception as e:
+                # 这一条数据坏了，跳过，不崩整个接口
+                logger.error(f"Data error: {e}")
+                continue
         
-        # 2. 尝试去 Product 表找图片
+        # 2. 尝试匹配图片 (即使这步失败，也不影响数据显示)
         try:
             products = session.exec(select(Product)).all()
-            img_map = {p.name: p.image_url for p in products}
+            img_map = {str(p.name): p.image_url for p in products}
             for pid in stats:
                 if pid in img_map and img_map[pid]:
                     stats[pid]["image_url"] = img_map[pid]
-        except Exception as e:
-            logger.error(f"Image fetch error: {e}")
+        except:
+            pass
 
         res = list(stats.values())
         res.sort(key=lambda x: (x["pending"], x["total"]), reverse=True)
@@ -208,9 +211,11 @@ def get_product_stats():
 @main_app.post("/api/product/save_image")
 def save_product_image(name: str = Form(...), image_url: str = Form(...)):
     with Session(engine) as session:
-        product = session.get(Product, name)
+        # 强制转 str 存储
+        name_str = str(name).strip()
+        product = session.get(Product, name_str)
         if not product:
-            product = Product(name=name, image_url=image_url)
+            product = Product(name=name_str, image_url=image_url)
         else:
             product.image_url = image_url
             product.updated_at = datetime.datetime.now()
@@ -218,7 +223,7 @@ def save_product_image(name: str = Form(...), image_url: str = Form(...)):
         session.commit()
     return {"message": "ok"}
 
-# === 接口 3: 列表查询 (保持) ===
+# === 接口 3: 列表查询 (增强筛选) ===
 @main_app.get("/api/videos")
 def list_videos(page: int=1, size: int=100, sort_by: str="id", order: str="desc", keyword: Optional[str]=None, host: Optional[str]=None, status: Optional[str]=None, category: Optional[str]=None, platform: Optional[str]=None, video_type: Optional[str]=None, product_id: Optional[str]=None, title: Optional[str]=None, remark: Optional[str]=None, finish_start: Optional[str]=None, finish_end: Optional[str]=None, publish_start: Optional[str]=None, publish_end: Optional[str]=None):
     with Session(engine) as session:
@@ -309,7 +314,6 @@ async def import_local(bg_tasks: BackgroundTasks):
     if not os.path.exists("temp_uploads"): raise HTTPException(404)
     files = [f for f in os.listdir("temp_uploads") if f.endswith(".xlsx")]
     if not files: raise HTTPException(404)
-    # 注意：需确保 processor.py 存在
     from .processor import process_excel_background 
     bg_tasks.add_task(process_excel_background, os.path.join("temp_uploads", files[0]), engine)
     return {"message": "started"}
