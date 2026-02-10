@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>VideoHub V50.0 Final</title>
+    <title>VideoHub V51.0 Final</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/echarts/5.4.3/echarts.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        /* === 布局核心 === */
-        body { font-family: 'Inter', sans-serif; background: #f1f5f9; color: #334155; margin: 0; height: 100vh; overflow: hidden; }
+        /* === 核心布局 === */
+        body { font-family: 'Inter', sans-serif; background: #f8fafc; color: #334155; margin: 0; height: 100vh; overflow: hidden; }
         .app-container { display: flex; height: 100%; width: 100%; overflow: hidden; }
         .hidden { display: none !important; }
 
@@ -23,29 +23,34 @@
         /* 主内容区 */
         .main-content { flex: 1; position: relative; height: 100%; background: #f1f5f9; overflow: hidden; }
         .view-container { position: absolute; top: 0; left: 0; right: 0; bottom: 0; display: flex; flex-direction: column; overflow: hidden; }
-        .scroll-content { flex: 1; overflow-y: auto; padding: 24px; min-height: 0; }
+        .scroll-content { flex: 1; overflow-y: auto; padding: 24px; min-height: 0; scrollbar-width: thin; }
 
-        /* 仪表盘 */
+        /* 仪表盘组件 */
         .kpi-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 16px; margin-bottom: 24px; }
         .stat-card { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); border: 1px solid #e2e8f0; display:flex; flex-direction:column; justify-content:space-between; }
         .stat-num { font-size: 28px; font-weight: 800; color: #0f172a; }
         .chart-grid { display: grid; grid-template-columns: 2fr 1.5fr 1.5fr; gap: 16px; margin-bottom: 24px; }
         .chart-box { background: white; border-radius: 12px; padding: 20px; border: 1px solid #e2e8f0; height: 380px; display: flex; flex-direction: column; }
         .trend-box { background: white; border-radius: 12px; padding: 20px; border: 1px solid #e2e8f0; height: 380px; margin-bottom: 24px; }
+        
         .matrix-box { background: white; border-radius: 12px; border: 1px solid #e2e8f0; overflow: hidden; height: 380px; display: flex; flex-direction: column; }
         .matrix-header { padding: 16px 20px; border-bottom: 1px solid #f1f5f9; font-weight: 700; color: #334155; display: flex; justify-content: space-between; align-items: center; background: #fff; }
         .matrix-content { flex: 1; overflow-y: auto; }
         .matrix-table { width: 100%; border-collapse: collapse; text-align: left; }
         .matrix-table th { position: sticky; top: 0; background: #f8fafc; color: #64748b; font-weight: 600; font-size: 12px; padding: 12px 16px; border-bottom: 1px solid #e2e8f0; z-index: 10; }
         .matrix-table td { padding: 12px 16px; border-bottom: 1px solid #f1f5f9; font-size: 13px; color: #334155; font-weight: 500; }
+        .matrix-table tr:hover td { background: #f8fafc; }
+        .rank-badge { display: inline-flex; width: 20px; height: 20px; align-items: center; justify-content: center; border-radius: 4px; font-size: 12px; font-weight: 700; margin-right: 8px; color: #64748b; background: #f1f5f9; }
+        .rank-1 { background: #fef9c3; color: #b45309; } .rank-2 { background: #f3f4f6; color: #4b5563; } .rank-3 { background: #ffedd5; color: #c2410c; }
         .val-today { color: #ef4444; font-weight: 800; }
 
-        /* === 库存表 (Layout Optimization) === */
+        /* === 库存表 (Excel 模式) === */
         .inventory-layout { display: flex; flex-direction: column; height: 100%; }
         .inv-header { flex-shrink: 0; z-index: 20; background: #f8fafc; border-bottom: 1px solid #e2e8f0; }
         .toolbar { padding: 12px 24px; background: white; display: flex; justify-content: space-between; align-items: center; }
         .inv-body { flex: 1; overflow: auto; position: relative; margin: 0; background: white; border-top: 1px solid #e2e8f0; }
         
+        /* 固定布局，防抖动 */
         .main-table { width: 100%; table-layout: fixed; border-collapse: collapse; min-width: 1600px; }
         .main-table th { 
             position: sticky; top: 0; background: #f1f5f9; color: #475569; font-weight: 600; font-size: 12px; 
@@ -55,28 +60,30 @@
         .resizer { position: absolute; top: 0; right: 0; width: 5px; cursor: col-resize; height: 100%; z-index: 20; }
         .resizer:hover { background: #3b82f6; }
 
-        /* 关键：内容自动换行，不截断 */
         .main-table td { 
             padding: 0; border-bottom: 1px solid #e2e8f0; border-right: 1px solid #f1f5f9; 
             font-size: 13px; vertical-align: top; color: #334155; 
-            word-wrap: break-word; white-space: normal; line-height: 1.5;
+            height: 44px;
         }
         .main-table tr:hover td { background: #f8fafc; }
 
-        /* 单元格内输入框 - 自动撑开 */
+        /* 单元格内输入框 - 允许自动换行 */
         .cell-input { 
             width: 100%; height: 100%; min-height: 44px; border: none; outline: none; background: transparent; 
             padding: 12px; font-family: inherit; font-size: inherit; color: inherit;
-            display: block; resize: none; overflow: hidden;
+            display: block; resize: none; overflow: hidden; white-space: normal; line-height: 1.4;
         }
         .cell-input:focus { background: #fff; box-shadow: inset 0 0 0 2px #3b82f6; z-index: 2; position: relative; }
         
         .cell-select { width: 100%; height: 100%; min-height: 44px; border: none; outline: none; background: transparent; padding: 0 8px; cursor: pointer; }
-        .cell-trigger { width: 100%; min-height: 44px; padding: 8px 12px; cursor: pointer; display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+        .cell-trigger { 
+            width: 100%; min-height: 44px; padding: 8px 12px; cursor: pointer; 
+            display: flex; flex-wrap: wrap; gap: 4px; align-items: center; 
+        }
         .cell-trigger:hover { background: #f8fafc; }
 
-        /* 图片交互分离 */
-        .img-wrapper { position: relative; width: 40px; height: 40px; margin: 4px auto; }
+        /* 图片单元格优化 */
+        .img-wrapper { position: relative; width: 36px; height: 36px; margin: 4px auto; }
         .img-thumb { width: 100%; height: 100%; object-fit: cover; border-radius: 4px; cursor: zoom-in; border: 1px solid #e2e8f0; }
         .img-upload-btn { 
             position: absolute; bottom: -6px; right: -6px; 
@@ -86,25 +93,30 @@
         }
         .img-upload-btn:hover { transform: scale(1.1); background: #2563eb; }
 
-        /* 胶囊 */
-        .pill { display: inline-flex; align-items: center; padding: 1px 6px; border-radius: 4px; font-size: 11px; margin-right: 3px; border: 1px solid transparent; white-space: nowrap; }
+        /* 胶囊标签 */
+        .pill { display: inline-flex; align-items: center; padding: 1px 6px; border-radius: 4px; font-size: 11px; margin-right: 3px; border: 1px solid transparent; white-space: nowrap; line-height: 1.2; }
         
+        /* 提示 */
         #save-toast { position: fixed; top: 20px; right: 20px; background: #10b981; color: white; padding: 8px 16px; border-radius: 4px; font-size: 13px; font-weight: 600; opacity: 0; transition: opacity 0.3s; z-index: 100; pointer-events: none; }
         #save-toast.show { opacity: 1; }
 
+        /* 控件 */
         .t-input { width: 100%; padding: 6px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px; outline: none; background: white; height: 34px; }
         .btn { padding: 6px 16px; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; gap: 4px; border: 1px solid transparent; }
         .btn-primary { background: #0f172a; color: white; }
         .btn-secondary { background: white; border-color: #cbd5e1; color: #475569; }
         
+        /* 多选弹窗 */
         .multi-pop { position: absolute; background: white; border: 1px solid #cbd5e1; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); border-radius: 6px; width: 220px; max-height: 260px; overflow-y: auto; z-index: 60; display: none; }
         .multi-pop.show { display: block; }
         .multi-opt { padding: 8px 12px; cursor: pointer; display: flex; align-items: center; gap: 8px; font-size: 13px; }
         .multi-opt:hover { background: #f1f5f9; color: #2563eb; }
         
+        /* 筛选面板 */
         .filter-panel { background: white; border-bottom: 1px solid #e2e8f0; overflow: hidden; transition: max-height 0.3s; max-height: 0; padding: 0 24px; }
         .filter-panel.open { max-height: 600px; padding-top: 20px; padding-bottom: 20px; }
 
+        /* 模态框 */
         .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 50; display: none; align-items: center; justify-content: center; }
         .modal.active { display: flex; }
         .card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; padding-bottom: 40px; }
@@ -114,7 +126,7 @@
 </head>
 <body>
 
-<div id="save-toast">√ 已保存</div>
+<div id="save-toast">√ 已自动保存</div>
 
 <div class="app-container">
     <aside class="sidebar">

@@ -13,16 +13,15 @@ from fastapi.responses import FileResponse
 from sqlmodel import Session, create_engine, SQLModel, select, col, or_, desc, asc, text
 from sqlalchemy import func, cast, String
 
-# 日志配置
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("VideoHub")
 
-main_app = FastAPI(title="VideoHub V50.0 Final Stable")
+main_app = FastAPI(title="VideoHub V51.0 Final Force")
 engine = create_engine("sqlite:///data/inventory.db")
 
 from .models import Video, AppSettings
 
-# === 核心工具 ===
+# === 工具函数 ===
 def safe_str(val):
     if val is None: return ""
     return str(val).strip()
@@ -34,30 +33,47 @@ def parse_safe_date(date_str):
         clean_s = s[:10].replace('/', '-').replace('.', '-')
         return datetime.datetime.strptime(clean_s, "%Y-%m-%d")
     except:
-        try:
-            match = re.search(r'(\d{4})[-/年.](\d{1,2})[-/月.](\d{1,2})', s)
-            if match:
-                return datetime.datetime(int(match.group(1)), int(match.group(2)), int(match.group(3)))
-        except: pass
-    return None
+        return None
 
+# === 启动逻辑 (强行插入数据) ===
 @main_app.on_event("startup")
 def on_startup():
     os.makedirs("data", exist_ok=True)
     os.makedirs("assets/previews", exist_ok=True)
     os.makedirs("temp_uploads", exist_ok=True)
     SQLModel.metadata.create_all(engine)
+    
     with Session(engine) as session:
+        # 1. 修复表结构
         try: session.exec(text("SELECT created_at FROM video LIMIT 1"))
         except: 
             try: session.exec(text("ALTER TABLE video ADD COLUMN created_at DATETIME"))
             except: pass
             session.commit()
-        session.exec(text("UPDATE video SET created_at = finish_time WHERE created_at IS NULL AND finish_time IS NOT NULL"))
-        session.exec(text(f"UPDATE video SET created_at = '{datetime.datetime.now()}' WHERE created_at IS NULL"))
+        
+        # 2. 初始化默认配置
         defaults = {"hosts":"小梨,VIVI,七七,杨总,其他", "statuses":"待发布,已发布,剪辑中,拍摄中,脚本中", "categories":"球服,球鞋,球拍,周边,配件", "platforms":"抖音-炬鑫,小红书-有家,视频号-羽球,B站-官方,快手-炬鑫", "video_types":"产品展示,剧情,口播,Vlog,花絮"}
         for k, v in defaults.items():
             if not session.get(AppSettings, k): session.add(AppSettings(key=k, value=v))
+        
+        # 3. 【绝杀】如果没数据，插入一条测试数据，证明系统是活的！
+        count = session.exec(select(func.count()).select_from(Video)).one()
+        if count == 0:
+            logger.info("Database empty! Inserting dummy record...")
+            dummy = Video(
+                product_id="TEST-001",
+                title="系统自动生成的测试数据 (看到我说明系统正常)",
+                host="小梨",
+                status="待发布",
+                platform="抖音-炬鑫",
+                category="球拍",
+                video_type="产品展示",
+                remark="请尝试导入您的Excel",
+                finish_time=datetime.datetime.now(),
+                created_at=datetime.datetime.now()
+            )
+            session.add(dummy)
+        
         session.commit()
 
 main_app.mount("/assets", StaticFiles(directory="assets"), name="assets")
@@ -66,6 +82,7 @@ main_app.mount("/assets", StaticFiles(directory="assets"), name="assets")
 async def read_index():
     return FileResponse(os.path.join("frontend", "index.html"))
 
+# === 仪表盘 ===
 @main_app.get("/api/dashboard")
 def get_dashboard_data(dim: str = "day"):
     with Session(engine) as session:
@@ -127,29 +144,13 @@ def get_dashboard_data(dim: str = "day"):
             "plats": [{"name":k, "value":v} for k,v in plats.items()]
         }
 
-@main_app.get("/api/product_stats")
-def get_product_stats():
-    with Session(engine) as session:
-        videos = session.exec(select(Video)).all()
-        stats = {}
-        for v in videos:
-            try:
-                pid = safe_str(v.product_id)
-                if not pid or pid.lower() in ['nan', 'none']: pid = "未分类"
-                if pid not in stats: stats[pid] = {"name": pid, "total": 0, "pending": 0}
-                stats[pid]["total"] += 1
-                if "待发布" in safe_str(v.status): stats[pid]["pending"] += 1
-            except: continue
-        res = list(stats.values())
-        res.sort(key=lambda x: (x["pending"], x["total"]), reverse=True)
-        return res
-
+# === 列表查询 (防崩) ===
 @main_app.get("/api/videos")
 def list_videos(page: int=1, size: int=100, sort_by: str="id", order: str="desc", keyword: Optional[str]=None, host: Optional[str]=None, status: Optional[str]=None, category: Optional[str]=None, platform: Optional[str]=None, video_type: Optional[str]=None, product_id: Optional[str]=None, title: Optional[str]=None, remark: Optional[str]=None, finish_start: Optional[str]=None, finish_end: Optional[str]=None, publish_start: Optional[str]=None, publish_end: Optional[str]=None):
     with Session(engine) as session:
         stmt = select(Video)
         if keyword: 
-            # 关键修复：强制转换类型，防止 int 导致的 crash
+            # 强制转换类型，防止 int 导致的 crash
             kw = f"%{keyword}%"
             stmt = stmt.where(or_(
                 col(Video.title).contains(keyword), 
@@ -174,6 +175,23 @@ def list_videos(page: int=1, size: int=100, sort_by: str="id", order: str="desc"
         total = session.exec(select(func.count()).select_from(stmt.subquery())).one()
         stmt = stmt.order_by(asc(getattr(Video, sort_by)) if order=="asc" else desc(getattr(Video, sort_by))).offset((page-1)*size).limit(size)
         return {"items": session.exec(stmt).all(), "total": total, "page": page, "size": size, "total_pages": math.ceil(total/size)}
+
+@main_app.get("/api/product_stats")
+def get_product_stats():
+    with Session(engine) as session:
+        videos = session.exec(select(Video)).all()
+        stats = {}
+        for v in videos:
+            try:
+                pid = safe_str(v.product_id)
+                if not pid or pid.lower() in ['nan', 'none']: pid = "未分类"
+                if pid not in stats: stats[pid] = {"name": pid, "total": 0, "pending": 0}
+                stats[pid]["total"] += 1
+                if "待发布" in safe_str(v.status): stats[pid]["pending"] += 1
+            except: continue
+        res = list(stats.values())
+        res.sort(key=lambda x: (x["pending"], x["total"]), reverse=True)
+        return res
 
 @main_app.post("/api/video/save")
 async def save_video(id: Optional[str]=Form(None), product_id: Optional[str]=Form(None), title: Optional[str]=Form(None), host: Optional[str]=Form(None), status: Optional[str]=Form(None), category: Optional[str]=Form(None), video_type: Optional[str]=Form(None), platform: Optional[str]=Form(None), finish_time: Optional[str]=Form(None), publish_time: Optional[str]=Form(None), remark: Optional[str]=Form(None), image_url: Optional[str]=Form(None)):
