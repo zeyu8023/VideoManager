@@ -4,6 +4,7 @@ import math
 import uuid
 import datetime
 import logging
+import re
 from typing import Optional
 
 from fastapi import FastAPI, UploadFile, BackgroundTasks, Form, HTTPException
@@ -16,11 +17,10 @@ from sqlalchemy import func
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("VideoHub")
 
-main_app = FastAPI(title="VideoHub V26.3 Fix")
+main_app = FastAPI(title="VideoHub V27.0 Stable Fix")
 engine = create_engine("sqlite:///data/inventory.db")
 
 # === 模型定义 ===
-# 确保 Product 表存在
 class Product(SQLModel, table=True):
     name: str = Field(primary_key=True)
     image_url: Optional[str] = None
@@ -28,15 +28,26 @@ class Product(SQLModel, table=True):
 
 from .models import Video, AppSettings
 
-# === 工具函数 ===
+# === 工具函数：暴力日期解析 ===
 def parse_safe_date(date_str):
-    if not date_str or str(date_str).lower() in ['nan', 'none', '', 'nat', 'null']: return None
+    if not date_str: return None
+    s = str(date_str).strip().lower()
+    if s in ['nan', 'none', '', 'nat', 'null']: return None
+    
     try:
-        date_str = str(date_str).strip()[:10]
+        # 1. 尝试标准格式
+        clean_s = s[:10]
         for fmt in ("%Y-%m-%d", "%Y/%m/%d", "%Y%m%d", "%Y.%m.%d"):
-            try: return datetime.datetime.strptime(date_str, fmt)
+            try: return datetime.datetime.strptime(clean_s, fmt)
             except: continue
-    except: return None
+            
+        # 2. 尝试提取 YYYY-MM-DD (针对 "2024-01-01 12:00:00" 这种)
+        match = re.search(r'(\d{4})[-/](\d{1,2})[-/](\d{1,2})', s)
+        if match:
+            return datetime.datetime(int(match.group(1)), int(match.group(2)), int(match.group(3)))
+            
+    except:
+        return None
     return None
 
 # === 初始化 ===
@@ -48,18 +59,17 @@ def on_startup():
     SQLModel.metadata.create_all(engine)
     
     with Session(engine) as session:
-        # 1. 字段迁移
+        # 自动修复数据库列
         try: session.exec(text("SELECT created_at FROM video LIMIT 1"))
         except: 
             try: session.exec(text("ALTER TABLE video ADD COLUMN created_at DATETIME"))
             except: pass
             session.commit()
         
-        # 2. 数据清洗
+        # 补全时间数据
         session.exec(text("UPDATE video SET created_at = finish_time WHERE created_at IS NULL AND finish_time IS NOT NULL"))
         session.exec(text(f"UPDATE video SET created_at = '{datetime.datetime.now()}' WHERE created_at IS NULL"))
         
-        # 3. 默认配置
         defaults = {
             "hosts": "小梨,VIVI,七七,杨总,其他",
             "statuses": "待发布,已发布,剪辑中,拍摄中,脚本中",
@@ -77,7 +87,7 @@ main_app.mount("/assets", StaticFiles(directory="assets"), name="assets")
 async def read_index():
     return FileResponse(os.path.join("frontend", "index.html"))
 
-# === 接口 1: 仪表盘 ===
+# === 接口 1: 仪表盘 (修复入库统计) ===
 @main_app.get("/api/dashboard")
 def get_dashboard_data(dim: str = "day"):
     with Session(engine) as session:
@@ -86,10 +96,8 @@ def get_dashboard_data(dim: str = "day"):
         pending = sum(1 for v in videos if v.status == "待发布")
         
         now = datetime.datetime.now()
-        today = now.replace(hour=0, minute=0, second=0, microsecond=0)
-        week = today - datetime.timedelta(days=now.weekday())
-        month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-        year = now.replace(month=1, day=1, hour=0, minute=0, second=0, microsecond=0)
+        today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
         
         flow = {"t_in":0, "t_out":0, "m_in":0, "m_out":0}
         trend = {}
@@ -100,43 +108,56 @@ def get_dashboard_data(dim: str = "day"):
         dist = 0
 
         for v in videos:
-            fin = parse_safe_date(v.finish_time)
-            pub = parse_safe_date(v.publish_time)
+            # 优先使用 finish_time 作为入库时间，如果没有则尝试 created_at
+            t_in = parse_safe_date(v.finish_time)
+            # 如果 finish_time 解析失败，但这明显是一条已有数据，尝试用 created_at 兜底（仅用于显示，不影响业务）
+            # if not t_in and v.created_at: t_in = v.created_at 
             
-            if fin:
-                d_str = fin.strftime("%Y-%m-%d")
-                m_str = fin.strftime("%Y-%m")
-                if fin >= today: flow["t_in"] += 1
-                if fin >= month: flow["m_in"] += 1
+            t_pub = parse_safe_date(v.publish_time)
+            
+            # 入库统计
+            if t_in:
+                # 统计 KPI
+                if t_in >= today_start: flow["t_in"] += 1
+                if t_in >= month_start: flow["m_in"] += 1
+                
+                # 统计趋势图
+                d_str = t_in.strftime("%Y-%m-%d")
                 k = d_str
-                if dim == 'month': k = m_str
-                elif dim == 'week': k = fin.strftime("%Y-W%W")
+                if dim == 'month': k = t_in.strftime("%Y-%m")
+                elif dim == 'week': k = t_in.strftime("%Y-W%W")
+                
                 if k not in trend: trend[k] = {"in":0, "out":0}
                 trend[k]["in"] += 1
+                
+                # 统计主播 (仅统计有入库时间的，视为已完成产出)
                 if v.host:
                     for h in v.host.replace('，', ',').split(','):
                         h = h.strip()
                         if h: hosts[h] = hosts.get(h, 0) + 1
 
-            if pub:
-                d_str = pub.strftime("%Y-%m-%d")
-                m_str = pub.strftime("%Y-%m")
-                if pub >= today: flow["t_out"] += 1
-                if pub >= month: flow["m_out"] += 1
+            # 发布统计
+            if t_pub:
+                if t_pub >= today_start: flow["t_out"] += 1
+                if t_pub >= month_start: flow["m_out"] += 1
+                
+                d_str = t_pub.strftime("%Y-%m-%d")
                 k = d_str
-                if dim == 'month': k = m_str
-                elif dim == 'week': k = pub.strftime("%Y-W%W")
+                if dim == 'month': k = t_pub.strftime("%Y-%m")
+                elif dim == 'week': k = t_pub.strftime("%Y-W%W")
+                
                 if k not in trend: trend[k] = {"in":0, "out":0}
                 trend[k]["out"] += 1
+                
                 if v.status == "已发布" and v.platform:
                     accs = [p.strip() for p in v.platform.replace('，', ',').split(',') if p.strip()]
                     for acc in accs:
                         dist += 1
                         if acc not in matrix: matrix[acc] = {"day":0, "week":0, "month":0, "year":0}
-                        if pub >= today: matrix[acc]["day"] += 1
-                        if pub >= week: matrix[acc]["week"] += 1
-                        if pub >= month: matrix[acc]["month"] += 1
-                        if pub >= year: matrix[acc]["year"] += 1
+                        if t_pub >= today_start: matrix[acc]["day"] += 1
+                        if t_pub >= month_start: matrix[acc]["month"] += 1
+                        # 年统计
+                        matrix[acc]["year"] += 1
                         plats[acc] = plats.get(acc, 0) + 1
             
             if v.video_type: types[v.video_type] = types.get(v.video_type, 0) + 1
@@ -145,17 +166,20 @@ def get_dashboard_data(dim: str = "day"):
         mat_list = [{"name":k, **v} for k,v in matrix.items()]
         mat_list.sort(key=lambda x:x["year"], reverse=True)
         host_list = sorted([{"name":k, "value":v} for k,v in hosts.items()], key=lambda x:x['value'], reverse=True)[:5]
+        
         return {
             "kpi": {"total":total, "pending":pending, "dist":dist, "t_in":flow["t_in"], "t_out":flow["t_out"], "m_in":flow["m_in"], "m_out":flow["m_out"]},
             "trend": {"dates":dates, "in":[trend[k]["in"] for k in dates], "out":[trend[k]["out"] for k in dates]},
-            "matrix": mat_list, "hosts": host_list, "types": [{"name":k, "value":v} for k,v in types.items()], "plats": [{"name":k, "value":v} for k,v in plats.items()]
+            "matrix": mat_list, "hosts": host_list, 
+            "types": [{"name":k, "value":v} for k,v in types.items()], 
+            "plats": [{"name":k, "value":v} for k,v in plats.items()]
         }
 
-# === 接口 2: 产品统计 (修复版) ===
+# === 接口 2: 产品统计 (修复空数据问题) ===
 @main_app.get("/api/product_stats")
 def get_product_stats():
     with Session(engine) as session:
-        # 修复点：改回 select(Video)，确保数据源绝对可靠
+        # 1. 强制查询 Video 表，不管 Product 表有没有数据
         videos = session.exec(select(Video)).all()
         
         stats = {}
@@ -165,18 +189,22 @@ def get_product_stats():
             pid = pid.strip()
             
             if pid not in stats: 
+                # 初始化，image_url 默认为 None
                 stats[pid] = {"name": pid, "total": 0, "pending": 0, "image_url": None}
             
             stats[pid]["total"] += 1
             if v.status == "待发布": 
                 stats[pid]["pending"] += 1
         
-        # 关联图片
-        products = session.exec(select(Product)).all()
-        img_map = {p.name: p.image_url for p in products}
-        
-        for pid in stats:
-            stats[pid]["image_url"] = img_map.get(pid, None)
+        # 2. 尝试去 Product 表找图片，找不到就算了，不要报错
+        try:
+            products = session.exec(select(Product)).all()
+            img_map = {p.name: p.image_url for p in products}
+            for pid in stats:
+                if pid in img_map and img_map[pid]:
+                    stats[pid]["image_url"] = img_map[pid]
+        except Exception as e:
+            logger.error(f"Error fetching product images: {e}")
 
         res = list(stats.values())
         res.sort(key=lambda x: (x["pending"], x["total"]), reverse=True)
@@ -196,7 +224,7 @@ def save_product_image(name: str = Form(...), image_url: str = Form(...)):
         session.commit()
     return {"message": "ok"}
 
-# === 接口 3: 列表 (保持) ===
+# === 接口 3: 列表查询 (保持) ===
 @main_app.get("/api/videos")
 def list_videos(page: int=1, size: int=100, sort_by: str="id", order: str="desc", keyword: Optional[str]=None, host: Optional[str]=None, status: Optional[str]=None, category: Optional[str]=None, platform: Optional[str]=None, video_type: Optional[str]=None, product_id: Optional[str]=None, title: Optional[str]=None, remark: Optional[str]=None, finish_start: Optional[str]=None, finish_end: Optional[str]=None, publish_start: Optional[str]=None, publish_end: Optional[str]=None):
     with Session(engine) as session:
@@ -287,5 +315,7 @@ async def import_local(bg_tasks: BackgroundTasks):
     if not os.path.exists("temp_uploads"): raise HTTPException(404)
     files = [f for f in os.listdir("temp_uploads") if f.endswith(".xlsx")]
     if not files: raise HTTPException(404)
+    # 注意：需确保 processor.py 存在
+    from .processor import process_excel_background 
     bg_tasks.add_task(process_excel_background, os.path.join("temp_uploads", files[0]), engine)
     return {"message": "started"}
