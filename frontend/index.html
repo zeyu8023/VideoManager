@@ -3,12 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>VideoHub V33.0 Stable</title>
+    <title>VideoHub V33.0 Final</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/echarts/5.4.3/echarts.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
     <style>
-        /* === 布局核心修复 === */
         body { font-family: 'Inter', 'Noto Sans SC', sans-serif; background: #f8fafc; color: #1e293b; margin: 0; height: 100vh; overflow: hidden; }
         .app-container { display: flex; height: 100%; width: 100%; overflow: hidden; }
         
@@ -83,7 +82,7 @@
         .main-table th { position: sticky; top: 0; background: #f8fafc; color: #475569; font-weight: 700; font-size: 13px; padding: 12px; border-bottom: 2px solid #e2e8f0; z-index: 10; text-align: left; }
         .main-table td { padding: 10px 12px; border-bottom: 1px solid #f1f5f9; font-size: 14px; vertical-align: middle; color: #334155; }
 
-        /* Pure Text Card Grid (Clean Style) */
+        /* Pure Text Card Grid */
         .card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; padding-bottom: 40px; }
         .prod-card { background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; cursor: pointer; transition: all 0.2s; position: relative; overflow: hidden; }
         .prod-card:hover { transform: translateY(-2px); box-shadow: 0 8px 12px -3px rgba(0,0,0,0.1); border-color: #3b82f6; }
@@ -257,18 +256,23 @@
     const Product = {
         allData: [],
         init: async function() {
-            const res = await fetch('/api/product_stats');
-            this.allData = await res.json();
-            this.render(this.allData);
+            try {
+                const res = await fetch('/api/product_stats');
+                if(!res.ok) throw new Error("API Error");
+                this.allData = await res.json();
+                this.render(this.allData);
+            } catch(e) { console.error("Product fetch failed", e); document.getElementById('product-grid').innerHTML = `<div class="text-red-500 p-4">Error loading data: ${e.message}</div>`; }
         },
         search: function(keyword) {
             if(!keyword) { this.render(this.allData); return; }
-            const filtered = this.allData.filter(item => item.name && item.name.toLowerCase().includes(keyword.toLowerCase()));
+            const filtered = this.allData.filter(item => item.name && String(item.name).toLowerCase().includes(keyword.toLowerCase()));
             this.render(filtered);
         },
         render: function(data) {
             const grid = document.getElementById('product-grid');
             if(!grid) return;
+            if(!data || data.length === 0) { grid.innerHTML = `<div class="text-slate-400 p-4 text-center w-full col-span-full">暂无数据</div>`; return; }
+            
             grid.innerHTML = data.map(item => {
                 const pct = Math.round(((item.total - item.pending)/item.total)*100)||0;
                 let color = '#3b82f6';
