@@ -3,456 +3,532 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>VideoHub V22.0 Ultimate</title>
+    <title>VideoHub V24.0 Ultimate</title>
+    
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/echarts/5.4.3/echarts.min.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
     
     <style>
-        /* =========================================
-           全局基础样式 (Base Styles)
-           ========================================= */
-        body { 
-            font-family: 'Inter', 'Noto Sans SC', sans-serif; 
-            background-color: #f8fafc; 
-            color: #1e293b; 
-            overflow: hidden; /* 防止整个页面出现双滚动条 */
+        /* =================================================================
+           1. 全局与基础样式 (Global & Base)
+           ================================================================= */
+        :root {
+            --sidebar-width: 240px;
+            --sidebar-width-mobile: 60px;
+            --primary-color: #2563eb;
+            --header-height: 64px;
         }
-        
+
+        body {
+            font-family: 'Inter', 'Noto Sans SC', sans-serif;
+            background-color: #f8fafc;
+            color: #1e293b;
+            overflow: hidden; /* App-like feel */
+            margin: 0;
+            padding: 0;
+        }
+
         /* 布局框架 */
-        .app-container { 
-            display: flex; 
-            height: 100vh; 
-            width: 100vw; 
-        }
-        
-        .main-content { 
-            flex: 1; 
-            display: flex; 
-            flex-direction: column; 
-            overflow: hidden; 
-            background: #f1f5f9; 
-            position: relative; 
+        .app-container {
+            display: flex;
+            height: 100vh;
+            width: 100vw;
         }
 
-        /* =========================================
-           侧边栏样式 (Sidebar)
-           ========================================= */
-        .sidebar { 
-            width: 240px; 
-            background-color: #0f172a; 
-            color: #94a3b8; 
-            display: flex; 
-            flex-direction: column; 
-            flex-shrink: 0; 
-            transition: width 0.3s ease; 
-            box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            background: #f1f5f9;
+            position: relative;
+        }
+
+        /* 滚动条美化 */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+        /* =================================================================
+           2. 侧边栏样式 (Sidebar)
+           ================================================================= */
+        .sidebar {
+            width: var(--sidebar-width);
+            background-color: #0f172a;
+            color: #94a3b8;
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0;
+            transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             z-index: 50;
+            box-shadow: 4px 0 24px rgba(0,0,0,0.1);
         }
-        
-        .sidebar-header { 
-            height: 64px; 
-            display: flex; 
-            align-items: center; 
-            padding: 0 24px; 
-            color: white; 
-            font-weight: 700; 
-            font-size: 18px; 
-            border-bottom: 1px solid #1e293b; 
+
+        .sidebar-header {
+            height: var(--header-height);
+            display: flex;
+            align-items: center;
+            padding: 0 24px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            color: white;
+            font-weight: 700;
+            font-size: 18px;
+            white-space: nowrap;
+            overflow: hidden;
         }
-        
-        .logo-icon {
-            width: 32px; 
-            height: 32px; 
-            background-color: #2563eb; 
-            border-radius: 8px; 
-            display: flex; 
-            align-items: center; 
-            justify-content: center; 
-            color: white; 
-            font-weight: bold;
+
+        .logo-box {
+            width: 32px;
+            height: 32px;
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 800;
+            font-size: 16px;
             margin-right: 12px;
+            flex-shrink: 0;
         }
 
-        .nav-item { 
-            padding: 16px 24px; 
-            cursor: pointer; 
-            display: flex; 
-            align-items: center; 
-            gap: 12px; 
-            font-size: 14px; 
-            font-weight: 500; 
-            transition: all 0.2s; 
-            border-left: 3px solid transparent; 
-        }
-        
-        .nav-item:hover { 
-            background-color: #1e293b; 
-            color: white; 
-        }
-        
-        .nav-item.active { 
-            background-color: #1e293b; 
-            color: white; 
-            border-left-color: #3b82f6; 
-        }
-        
-        .nav-text { 
-            white-space: nowrap; 
-            opacity: 1;
-            transition: opacity 0.2s;
+        .nav-menu {
+            flex: 1;
+            padding-top: 16px;
+            overflow-y: auto;
         }
 
-        /* 移动端适配：侧边栏自动收起 */
+        .nav-item {
+            padding: 14px 24px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.2s;
+            border-left: 3px solid transparent;
+            color: #94a3b8;
+        }
+
+        .nav-item:hover {
+            background-color: rgba(255,255,255,0.05);
+            color: white;
+        }
+
+        .nav-item.active {
+            background-color: rgba(255,255,255,0.1);
+            color: white;
+            border-left-color: #3b82f6;
+        }
+
+        .nav-icon { font-size: 18px; width: 24px; text-align: center; }
+        .nav-text { white-space: nowrap; transition: opacity 0.2s; }
+
+        /* 移动端适配 */
         @media (max-width: 768px) {
-            .sidebar { width: 60px; }
-            .sidebar-header { padding: 0 10px; justify-content: center; }
+            .sidebar { width: var(--sidebar-width-mobile); }
+            .sidebar-header { padding: 0; justify-content: center; }
             .sidebar-header h1 { display: none; }
-            .nav-item { padding: 14px 0; justify-content: center; }
+            .logo-box { margin-right: 0; }
+            .nav-item { padding: 16px 0; justify-content: center; }
             .nav-text { display: none; }
-            .logo-icon { margin-right: 0; }
-            
-            /* 移动端Grid调整 */
-            .kpi-grid { grid-template-columns: 1fr !important; }
-            .chart-grid { grid-template-columns: 1fr !important; }
+            /* 修正移动端Grid */
+            .kpi-grid, .chart-grid { grid-template-columns: 1fr !important; }
+            .filter-panel .grid { grid-template-columns: 1fr 1fr !important; }
             .trend-box { height: 300px; }
-            .filter-panel .grid { grid-template-columns: 1fr 1fr; }
         }
 
-        /* =========================================
-           仪表盘视图样式 (Dashboard View)
-           ========================================= */
-        .dash-container { 
-            padding: 24px; 
-            overflow-y: auto; 
-            height: 100%; 
-            scrollbar-width: thin; /* Firefox */
+        /* =================================================================
+           3. 仪表盘样式 (Dashboard)
+           ================================================================= */
+        .dash-container {
+            padding: 24px;
+            overflow-y: auto;
+            height: 100%;
         }
-        
-        /* KPI 卡片区域 */
-        .kpi-grid { 
-            display: grid; 
-            grid-template-columns: repeat(5, 1fr); 
-            gap: 16px; 
-            margin-bottom: 24px; 
+
+        /* KPI 卡片 */
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 20px;
+            margin-bottom: 24px;
         }
-        
-        .stat-card { 
-            background: white; 
-            border-radius: 12px; 
-            padding: 20px; 
-            box-shadow: 0 1px 3px rgba(0,0,0,0.05); 
-            border: 1px solid #e2e8f0; 
-            display: flex; 
-            flex-direction: column; 
+
+        .stat-card {
+            background: white;
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+            border: 1px solid #f1f5f9;
+            display: flex;
+            flex-direction: column;
             justify-content: space-between;
-            min-height: 120px;
+            min-height: 140px;
+            transition: transform 0.2s;
         }
         
-        .stat-label { 
-            font-size: 12px; 
-            font-weight: 700; 
-            color: #64748b; 
-            text-transform: uppercase; 
-            margin-bottom: 8px; 
+        .stat-card:hover { transform: translateY(-2px); box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); }
+
+        .stat-label {
+            font-size: 12px;
+            font-weight: 700;
+            color: #64748b;
+            text-transform: uppercase;
             letter-spacing: 0.5px;
+            margin-bottom: 8px;
         }
-        
-        .stat-num { 
-            font-size: 28px; 
-            font-weight: 800; 
-            color: #0f172a; 
+
+        .stat-num {
+            font-size: 32px;
+            font-weight: 800;
+            color: #0f172a;
+            line-height: 1;
         }
-        
+
         .stat-sub {
             font-size: 12px;
             color: #94a3b8;
-            margin-top: 4px;
+            margin-top: 8px;
+            font-weight: 500;
         }
 
-        /* 中部图表区域 */
-        .chart-grid { 
-            display: grid; 
-            grid-template-columns: 2fr 1.5fr 1.5fr; 
-            gap: 16px; 
-            margin-bottom: 24px; 
+        /* 图表容器 */
+        .chart-grid {
+            display: grid;
+            grid-template-columns: 2fr 1.5fr 1.5fr; /* 左侧宽一些 */
+            gap: 20px;
+            margin-bottom: 24px;
         }
-        
-        .chart-box { 
-            background: white; 
-            border-radius: 12px; 
-            padding: 20px; 
-            box-shadow: 0 1px 3px rgba(0,0,0,0.05); 
-            border: 1px solid #e2e8f0; 
-            height: 360px; 
-            position: relative;
+
+        .chart-box {
+            background: white;
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+            border: 1px solid #f1f5f9;
+            height: 380px;
+            display: flex;
+            flex-direction: column;
         }
-        
-        .chart-title { 
-            font-size: 14px; 
-            font-weight: 700; 
-            color: #334155; 
-            margin-bottom: 12px; 
-            display: flex; 
-            justify-content: space-between; 
-            align-items: center; 
+
+        .chart-title {
+            font-size: 15px;
+            font-weight: 700;
+            color: #334155;
+            margin-bottom: 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
-        
-        /* 底部趋势图 */
-        .trend-box { 
-            background: white; 
-            border-radius: 12px; 
-            padding: 20px; 
-            box-shadow: 0 1px 3px rgba(0,0,0,0.05); 
-            border: 1px solid #e2e8f0; 
-            height: 420px; 
-            margin-bottom: 24px; 
+
+        .chart-content { flex: 1; width: 100%; min-height: 0; }
+
+        /* 趋势图通栏 */
+        .trend-box {
+            background: white;
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+            border: 1px solid #f1f5f9;
+            height: 420px;
+            margin-bottom: 24px;
+            display: flex;
+            flex-direction: column;
         }
-        
-        /* 底部账号矩阵表 */
-        .matrix-box { 
-            background: white; 
-            border-radius: 12px; 
-            border: 1px solid #e2e8f0; 
-            overflow: hidden; 
-            margin-bottom: 40px; 
-            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+
+        /* 矩阵表格 */
+        .matrix-box {
+            background: white;
+            border-radius: 16px;
+            border: 1px solid #e2e8f0;
+            overflow: hidden;
+            margin-bottom: 40px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
         }
-        
-        .matrix-header { 
-            padding: 16px 24px; 
-            border-bottom: 1px solid #e2e8f0; 
-            font-weight: 700; 
-            color: #334155; 
-            background: #f8fafc; 
+
+        .matrix-header {
+            padding: 16px 24px;
+            border-bottom: 1px solid #e2e8f0;
+            font-weight: 700;
+            color: #334155;
+            background: #f8fafc;
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }
-        
-        .matrix-table { 
-            width: 100%; 
-            text-align: left; 
-            border-collapse: collapse; 
+
+        .matrix-table {
+            width: 100%;
+            text-align: left;
+            border-collapse: collapse;
         }
-        
-        .matrix-table th { 
-            padding: 14px 24px; 
-            font-size: 12px; 
-            color: #64748b; 
-            font-weight: 700; 
-            background: #f8fafc; 
-            border-bottom: 1px solid #e2e8f0; 
+
+        .matrix-table th {
+            padding: 14px 24px;
+            font-size: 12px;
+            color: #64748b;
+            font-weight: 700;
+            background: #fcfcfc;
+            border-bottom: 1px solid #e2e8f0;
             text-transform: uppercase;
         }
-        
-        .matrix-table td { 
-            padding: 14px 24px; 
-            font-size: 13px; 
-            border-bottom: 1px solid #f1f5f9; 
+
+        .matrix-table td {
+            padding: 14px 24px;
+            font-size: 13px;
+            border-bottom: 1px solid #f1f5f9;
             color: #334155;
         }
-        
-        .matrix-table tr:hover td { background-color: #f8fafc; }
-        .val-today { color: #ef4444; font-weight: 800; } /* 今日数据高亮 */
 
-        /* =========================================
-           库存管理视图样式 (Inventory View)
-           ========================================= */
-        .inventory-view { 
-            display: flex; 
-            flex-direction: column; 
-            height: 100%; 
+        .matrix-table tr:hover td { background-color: #f8fafc; }
+        .val-today { color: #ef4444; font-weight: 800; }
+
+        /* =================================================================
+           4. 库存管理视图样式 (Inventory)
+           ================================================================= */
+        .inventory-view {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
         }
-        
-        .toolbar { 
-            padding: 16px 24px; 
-            background: white; 
-            border-bottom: 1px solid #e2e8f0; 
-            display: flex; 
-            justify-content: space-between; 
-            align-items: center; 
-            shrink-0; 
+
+        .toolbar {
+            padding: 16px 24px;
+            background: white;
+            border-bottom: 1px solid #e2e8f0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            shrink-0;
             z-index: 20;
         }
-        
-        /* 筛选面板 */
-        .filter-panel { 
-            background: white; 
-            border-bottom: 1px solid #e2e8f0; 
-            overflow: hidden; 
-            transition: max-height 0.3s ease-out; 
-            max-height: 0; 
-            padding: 0 24px; 
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+
+        /* 筛选面板动画 */
+        .filter-panel {
+            background: white;
+            border-bottom: 1px solid #e2e8f0;
+            overflow: hidden;
+            transition: max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            max-height: 0;
+            padding: 0 24px;
+            box-shadow: 0 4px 10px -5px rgba(0,0,0,0.05);
             z-index: 15;
         }
-        
-        .filter-panel.open { 
-            max-height: 600px; 
-            padding-top: 24px; 
-            padding-bottom: 24px; 
+
+        .filter-panel.open {
+            max-height: 600px;
+            padding-top: 24px;
+            padding-bottom: 24px;
         }
-        
-        .filter-label { 
-            font-size: 12px; 
-            font-weight: 700; 
-            color: #64748b; 
-            margin-bottom: 6px; 
-            display: block; 
+
+        .filter-label {
+            font-size: 12px;
+            font-weight: 700;
+            color: #64748b;
+            margin-bottom: 6px;
+            display: block;
         }
-        
+
         /* 表格区域 */
-        .table-wrap { 
-            flex: 1; 
-            overflow: auto; 
-            background: white; 
-            margin: 16px 24px; 
-            border-radius: 8px; 
-            border: 1px solid #e2e8f0; 
-            box-shadow: 0 1px 3px rgba(0,0,0,0.05); 
+        .table-wrap {
+            flex: 1;
+            overflow: auto;
+            background: white;
+            margin: 16px 24px;
+            border-radius: 12px;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.02);
             position: relative;
         }
-        
-        .main-table { 
-            width: 100%; 
-            border-collapse: collapse; 
-            min-width: 1800px; /* 强制宽度，触发横向滚动 */
+
+        .main-table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 1800px; /* 保证不挤压 */
         }
-        
-        .main-table th { 
-            position: sticky; 
-            top: 0; 
-            background: #f8fafc; 
-            color: #475569; 
-            font-weight: 700; 
-            font-size: 13px; 
-            padding: 14px; 
-            border-bottom: 2px solid #e2e8f0; 
-            z-index: 10; 
-            text-align: left; 
+
+        .main-table th {
+            position: sticky;
+            top: 0;
+            background: #f8fafc;
+            color: #475569;
+            font-weight: 700;
+            font-size: 13px;
+            padding: 14px;
+            border-bottom: 2px solid #e2e8f0;
+            z-index: 10;
+            text-align: left;
             white-space: nowrap;
         }
-        
-        .main-table td { 
-            padding: 12px 14px; 
-            border-bottom: 1px solid #f1f5f9; 
-            font-size: 14px; 
-            vertical-align: middle; 
-            color: #334155; 
+
+        .main-table td {
+            padding: 12px 14px;
+            border-bottom: 1px solid #f1f5f9;
+            font-size: 14px;
+            vertical-align: middle;
+            color: #334155;
         }
-        
+
         .main-table tr:hover td { background-color: #f8fafc; }
 
-        /* =========================================
-           UI 组件样式 (Components)
-           ========================================= */
-        /* 表格输入框 */
-        .t-input { 
-            width: 100%; 
-            padding: 8px 10px; 
-            border: 1px solid #cbd5e1; 
-            border-radius: 6px; 
-            font-size: 13px; 
-            outline: none; 
-            background: white; 
-            height: 36px; 
-            transition: all 0.2s;
-        }
-        
-        .t-input:focus { 
-            border-color: #3b82f6; 
-            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1); 
-        }
-        
-        .editing { 
-            background-color: #eff6ff !important; 
-        }
-        
-        /* 标签 */
-        .pill { 
-            padding: 4px 10px; 
-            border-radius: 6px; 
-            font-size: 12px; 
-            font-weight: 600; 
-            display: inline-block; 
-            margin-right: 4px; 
-            border: 1px solid transparent; 
-            white-space: nowrap;
-        }
-        
-        /* 图片上传格 */
-        .img-cell { 
-            width: 48px; 
-            height: 48px; 
-            border-radius: 6px; 
-            border: 1px solid #e2e8f0; 
-            background: white; 
-            overflow: hidden; 
-            cursor: pointer; 
-            display: flex; 
-            align-items: center; 
-            justify-content: center; 
-            position: relative; 
-            transition: border-color 0.2s;
-        }
-        
-        .img-cell:hover { border-color: #3b82f6; }
-        
-        .img-cell:hover::after { 
-            content: '+'; 
-            position: absolute; 
-            inset: 0; 
-            background: rgba(0,0,0,0.4); 
-            color: white; 
-            display: flex; 
-            align-items: center; 
-            justify-content: center; 
-            font-weight: bold; 
-            font-size: 20px;
+        /* =================================================================
+           5. 产品 SPU 卡片视图 (Card Grid)
+           ================================================================= */
+        .card-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 24px;
+            padding-bottom: 40px;
         }
 
-        /* 弹窗通用 */
-        .modal { 
-            position: fixed; 
-            inset: 0; 
-            background: rgba(0,0,0,0.5); 
-            z-index: 60; 
-            display: none; 
-            align-items: center; 
-            justify-content: center; 
-            backdrop-filter: blur(2px);
+        .prod-card {
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 16px;
+            padding: 24px;
+            transition: all 0.2s ease;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
         }
+
+        .prod-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 20px -5px rgba(0,0,0,0.1);
+            border-color: #3b82f6;
+        }
+
+        /* 状态标记条 */
+        .prod-card::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 6px; }
+        .prod-card.safe::before { background-color: #10b981; }   /* 绿：完成 */
+        .prod-card.danger::before { background-color: #ef4444; } /* 红：积压 */
+        .prod-card.warn::before { background-color: #f59e0b; }   /* 黄：缺货 */
+        .prod-card.normal::before { background-color: #3b82f6; } /* 蓝：正常 */
+
+        .pc-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; }
+        .pc-title { font-weight: 700; font-size: 18px; color: #1e293b; line-height: 1.4; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 80%; }
+        .pc-badge { font-size: 10px; font-weight: 700; padding: 4px 8px; border-radius: 6px; background: #f1f5f9; color: #64748b; }
+
+        .pc-body { flex: 1; display: flex; align-items: flex-end; justify-content: space-between; margin-bottom: 20px; }
+        .pc-stat { text-align: left; }
+        .pc-num { font-size: 40px; font-weight: 800; line-height: 1; letter-spacing: -1px; }
+        .pc-label { font-size: 12px; color: #64748b; font-weight: 600; margin-top: 6px; }
+
+        .pc-footer { border-top: 1px solid #f1f5f9; pt-4; display: flex; align-items: center; justify-content: space-between; }
+        .pc-progress-bg { flex: 1; height: 8px; background: #f1f5f9; border-radius: 4px; overflow: hidden; margin-right: 12px; }
+        .pc-progress-fill { height: 100%; border-radius: 4px; transition: width 0.5s ease; }
+        .pc-total { font-size: 13px; color: #64748b; font-weight: 600; }
+
+        /* =================================================================
+           6. 通用组件样式 (Components)
+           ================================================================= */
+        /* 输入框 */
+        .t-input {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            font-size: 13px;
+            outline: none;
+            background: white;
+            height: 38px;
+            transition: all 0.2s;
+        }
+        .t-input:focus { border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15); }
         
+        /* 行内编辑高亮 */
+        .editing { background-color: #eff6ff !important; }
+        .new-row { background-color: #f0fdf4 !important; }
+
+        /* 标签 Pill */
+        .pill {
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 600;
+            display: inline-block;
+            margin-right: 4px;
+            border: 1px solid transparent;
+            white-space: nowrap;
+        }
+
+        /* 图片上传格 */
+        .img-cell {
+            width: 48px;
+            height: 48px;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+            background: white;
+            overflow: hidden;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            transition: all 0.2s;
+        }
+        .img-cell:hover { border-color: #3b82f6; box-shadow: 0 0 0 2px rgba(59,130,246,0.2); }
+        .img-cell:hover::after {
+            content: '+'; position: absolute; inset: 0;
+            background: rgba(0,0,0,0.4); color: white;
+            display: flex; align-items: center; justify-content: center;
+            font-weight: 800; font-size: 20px;
+        }
+
+        /* Toast 消息提示 */
+        #toast-container { position: fixed; top: 20px; right: 20px; z-index: 100; display: flex; flex-direction: column; gap: 10px; }
+        .toast {
+            background: white; padding: 12px 20px; border-radius: 8px;
+            box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);
+            border-left: 4px solid #3b82f6;
+            display: flex; align-items: center; gap: 10px;
+            font-size: 14px; font-weight: 500;
+            animation: slideIn 0.3s ease-out;
+        }
+        @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+        /* 模态弹窗 */
+        .modal {
+            position: fixed; inset: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 60;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(4px);
+        }
         .modal.active { display: flex; }
-        
-        /* 多选下拉框 */
-        .multi-pop { 
-            position: absolute; 
-            background: white; 
-            border: 1px solid #cbd5e1; 
-            box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1), 0 8px 10px -6px rgba(0,0,0,0.1); 
-            border-radius: 8px; 
-            width: 240px; 
-            max-height: 280px; 
-            overflow-y: auto; 
-            z-index: 40; 
-            display: none; 
+
+        /* 多选菜单 */
+        .multi-pop {
+            position: absolute;
+            background: white;
+            border: 1px solid #cbd5e1;
+            box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1), 0 8px 10px -6px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            width: 240px;
+            max-height: 280px;
+            overflow-y: auto;
+            z-index: 40;
+            display: none;
         }
-        
         .multi-pop.show { display: block; }
-        
-        .multi-opt { 
-            padding: 10px 16px; 
-            cursor: pointer; 
-            display: flex; 
-            align-items: center; 
-            gap: 10px; 
-            font-size: 13px; 
+        .multi-opt {
+            padding: 10px 16px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 13px;
             transition: background 0.1s;
         }
-        
-        .multi-opt:hover { 
-            background-color: #f1f5f9; 
-            color: #2563eb; 
-        }
+        .multi-opt:hover { background-color: #f1f5f9; color: #2563eb; }
     </style>
 </head>
 <body>
@@ -460,34 +536,34 @@
 <div class="app-container">
     <aside class="sidebar">
         <div class="sidebar-header">
-            <div class="logo-icon">V</div>
+            <div class="logo-box">V</div>
             <h1 class="text-xl font-bold text-white tracking-tight">VideoHub</h1>
         </div>
         
-        <nav class="flex-1 py-4 space-y-1">
+        <div class="nav-menu">
             <div class="nav-item active" onclick="switchView('dashboard', this)">
-                <span class="text-lg">📊</span> 
+                <span class="nav-icon">📊</span>
                 <span class="nav-text">数据驾驶舱</span>
             </div>
             <div class="nav-item" onclick="switchView('inventory', this)">
-                <span class="text-lg">📦</span> 
+                <span class="nav-icon">📦</span>
                 <span class="nav-text">视频库存表</span>
             </div>
             <div class="nav-item" onclick="switchView('product', this)">
-                <span class="text-lg">🏷️</span> 
+                <span class="nav-icon">🏷️</span>
                 <span class="nav-text">产品库存 (SPU)</span>
             </div>
-        </nav>
+        </div>
         
         <div class="p-4 border-t border-slate-700 text-xs text-slate-500 text-center">
-            V22.0 Ultimate
+            V24.0 Enterprise
         </div>
     </aside>
 
     <main class="main-content">
-        
+        <div id="toast-container"></div>
+
         <div id="view-dashboard" class="dash-container">
-            
             <div class="kpi-grid">
                 <div class="stat-card border-l-4 border-blue-500">
                     <div class="stat-label">总库存 (视频)</div>
@@ -525,15 +601,15 @@
             <div class="chart-grid">
                 <div class="chart-box">
                     <div class="chart-title">🏆 主播产出 Top 5</div>
-                    <div id="chart-host" class="w-full h-full pb-6"></div>
+                    <div id="chart-host" class="chart-content"></div>
                 </div>
                 <div class="chart-box">
                     <div class="chart-title">📊 内容类型占比</div>
-                    <div id="chart-type" class="w-full h-full pb-6"></div>
+                    <div id="chart-type" class="chart-content"></div>
                 </div>
                 <div class="chart-box">
                     <div class="chart-title">🕸️ 平台分发矩阵</div>
-                    <div id="chart-plat" class="w-full h-full pb-6"></div>
+                    <div id="chart-plat" class="chart-content"></div>
                 </div>
             </div>
 
@@ -546,7 +622,7 @@
                         <button onclick="loadDashboard('month')" class="text-xs font-bold px-3 py-1 rounded bg-slate-100 hover:bg-blue-100 transition-colors">月</button>
                     </div>
                 </div>
-                <div id="chart-trend" class="w-full h-[340px]"></div>
+                <div id="chart-trend" class="chart-content"></div>
             </div>
 
             <div class="matrix-box">
@@ -561,8 +637,7 @@
                             <th style="width: 25%">年度累计 (Rank)</th>
                         </tr>
                     </thead>
-                    <tbody id="matrix-body">
-                        </tbody>
+                    <tbody id="matrix-body"></tbody>
                 </table>
             </div>
         </div>
@@ -572,56 +647,28 @@
                 <h2 class="text-lg font-bold text-slate-800 hidden md:block">库存明细</h2>
                 <div class="flex gap-3 items-center flex-1 justify-end">
                     <input id="g-search" onkeydown="if(event.key==='Enter') loadData(1)" placeholder="全局搜索: 标题/编号/备注" class="t-input w-48 md:w-72 bg-slate-50 border-transparent focus:bg-white transition-all">
-                    
-                    <button onclick="toggleFilter()" class="px-4 py-2 text-sm font-bold text-slate-600 bg-slate-100 rounded-lg hover:bg-slate-200 transition-colors flex items-center gap-1">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"></path></svg>
-                        筛选
-                    </button>
-                    
-                    <button onclick="openSettings()" class="px-3 py-2 text-slate-500 hover:text-slate-800">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
-                    </button>
-                    
-                    <div class="h-6 w-px bg-slate-300 mx-1"></div>
-                    
-                    <button onclick="openImport()" class="px-4 py-2 text-sm font-bold text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors">
-                        导入 Excel
-                    </button>
-                    
-                    <button onclick="addNewRow()" class="px-5 py-2 text-sm font-bold text-white bg-blue-600 rounded-lg shadow hover:bg-blue-700 transition-transform active:scale-95 flex items-center gap-1">
-                        <span>+</span> 新增一行
-                    </button>
+                    <button onclick="toggleFilter()" class="px-4 py-2 text-sm font-bold text-slate-600 bg-slate-100 rounded-lg hover:bg-slate-200">筛选</button>
+                    <button onclick="openSettings()" class="px-4 py-2 text-sm font-bold text-slate-600 bg-slate-100 rounded-lg hover:bg-slate-200">配置</button>
+                    <button onclick="openImport()" class="px-4 py-2 text-sm font-bold text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100">导入</button>
+                    <button onclick="addNewRow()" class="px-5 py-2 text-sm font-bold text-white bg-blue-600 rounded-lg shadow hover:bg-blue-700 active:scale-95 flex items-center gap-1"><span>+</span> 新增</button>
                 </div>
             </div>
 
             <div id="filter-panel" class="filter-panel">
-                <div class="grid grid-cols-2 md:grid-cols-6 gap-x-4 gap-y-4">
+                <div class="grid grid-cols-2 md:grid-cols-6 gap-4">
                     <div><label class="filter-label">产品编号</label><input id="s-pid" list="dl-pids" class="t-input" placeholder="输入编号..."></div>
                     <div><label class="filter-label">视频标题</label><input id="s-title" class="t-input" placeholder="包含标题..."></div>
-                    
                     <div><label class="filter-label">产品类型</label><select id="s-cat" class="t-input"></select></div>
                     <div><label class="filter-label">视频类型</label><select id="s-type" class="t-input"></select></div>
-                    
-                    <div><label class="filter-label">主播 (包含)</label><select id="s-host" class="t-input"></select></div>
-                    <div><label class="filter-label">当前状态</label><select id="s-status" class="t-input"></select></div>
-                    
-                    <div><label class="filter-label">发布平台</label><select id="s-plat" class="t-input"></select></div>
-                    
-                    <div class="col-span-2">
-                        <label class="filter-label">完成时间范围</label>
-                        <div class="flex gap-2"><input type="date" id="s-fin-start" class="t-input"><input type="date" id="s-fin-end" class="t-input"></div>
-                    </div>
-                    
-                    <div class="col-span-2">
-                        <label class="filter-label">发布时间范围</label>
-                        <div class="flex gap-2"><input type="date" id="s-pub-start" class="t-input"><input type="date" id="s-pub-end" class="t-input"></div>
-                    </div>
-                    
-                    <div><label class="filter-label">备注信息</label><input id="s-remark" class="t-input" placeholder="包含备注..."></div>
-
+                    <div><label class="filter-label">主播</label><select id="s-host" class="t-input"></select></div>
+                    <div><label class="filter-label">状态</label><select id="s-status" class="t-input"></select></div>
+                    <div><label class="filter-label">平台</label><select id="s-plat" class="t-input"></select></div>
+                    <div class="col-span-2"><label class="filter-label">完成时间</label><div class="flex gap-2"><input type="date" id="s-fin-start" class="t-input"><input type="date" id="s-fin-end" class="t-input"></div></div>
+                    <div class="col-span-2"><label class="filter-label">发布时间</label><div class="flex gap-2"><input type="date" id="s-pub-start" class="t-input"><input type="date" id="s-pub-end" class="t-input"></div></div>
+                    <div><label class="filter-label">备注</label><input id="s-remark" class="t-input" placeholder="备注..."></div>
                     <div class="col-span-2 md:col-span-6 flex justify-end gap-2 border-t pt-4 mt-2">
-                        <button onclick="loadData(1)" class="px-6 py-2 bg-slate-800 text-white rounded-lg text-sm font-bold hover:bg-black transition-colors">执行查询</button>
-                        <button onclick="resetFilters()" class="px-6 py-2 bg-white border border-slate-300 text-slate-700 rounded-lg text-sm font-bold hover:bg-slate-50 transition-colors">重置条件</button>
+                        <button onclick="loadData(1)" class="px-6 py-2 bg-slate-800 text-white rounded-lg text-sm font-bold">执行查询</button>
+                        <button onclick="resetFilters()" class="px-6 py-2 bg-white border border-slate-300 text-slate-700 rounded-lg text-sm font-bold">重置</button>
                     </div>
                 </div>
             </div>
@@ -630,539 +677,289 @@
                 <table class="main-table">
                     <thead>
                         <tr>
-                            <th class="w-16 text-center">预览</th>
-                            <th class="w-32">产品/编号</th>
-                            <th style="min-width: 260px;">视频标题</th>
-                            <th class="w-24">类型</th>
-                            <th class="w-28">完成时间</th>
-                            <th class="w-24">视类</th>
-                            <th class="w-32">主播(多选)</th>
-                            <th class="w-24 text-center">状态</th>
-                            <th class="w-32">平台(多选)</th>
-                            <th class="w-32">发布时间</th>
-                            <th class="w-40">备注</th>
-                            <th class="w-20 text-center sticky right-0 bg-slate-50 border-l shadow-sm">操作</th>
+                            <th class="w-16 text-center">图</th><th class="w-32">产品/编号</th><th style="min-width: 260px;">视频标题</th><th class="w-24">类型</th><th class="w-28">完成时间</th><th class="w-24">视类</th><th class="w-32">主播(多)</th><th class="w-24 text-center">状态</th><th class="w-32">平台(多)</th><th class="w-32">发布时间</th><th class="w-40">备注</th><th class="w-20 text-center sticky right-0 bg-slate-50 border-l">操作</th>
                         </tr>
                     </thead>
-                    <tbody id="table-body">
-                        </tbody>
+                    <tbody id="table-body"></tbody>
                 </table>
             </div>
 
             <div class="h-14 bg-white border-t border-slate-200 px-6 flex justify-between items-center shrink-0">
                 <span class="text-xs text-slate-500 font-medium" id="page-info">正在加载...</span>
                 <div class="flex gap-2">
-                    <button onclick="changePage(-1)" class="px-4 py-1.5 bg-slate-100 rounded-md text-xs font-bold hover:bg-slate-200 disabled:opacity-50 transition-colors">◀ 上一页</button>
-                    <button onclick="changePage(1)" class="px-4 py-1.5 bg-slate-100 rounded-md text-xs font-bold hover:bg-slate-200 disabled:opacity-50 transition-colors">下一页 ▶</button>
+                    <button onclick="changePage(-1)" class="px-4 py-1.5 bg-slate-100 rounded-md text-xs font-bold disabled:opacity-50">◀</button>
+                    <button onclick="changePage(1)" class="px-4 py-1.5 bg-slate-100 rounded-md text-xs font-bold disabled:opacity-50">▶</button>
                 </div>
             </div>
         </div>
 
         <div id="view-product" class="dash-container hidden">
-            <h2 class="text-xl font-bold text-slate-800 mb-6 flex items-center gap-2">
-                <span>🏷️</span> 产品视频库存监控
-            </h2>
-            <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-                <table class="w-full text-left border-collapse">
-                    <thead>
-                        <tr>
-                            <th class="p-4 bg-slate-50 border-b border-slate-200 font-bold text-sm text-slate-600 w-1/4">产品/编号</th>
-                            <th class="p-4 bg-slate-50 border-b border-slate-200 font-bold text-sm text-slate-600 w-1/4">库存概览 (总数)</th>
-                            <th class="p-4 bg-slate-50 border-b border-slate-200 font-bold text-sm text-slate-600 w-1/4">待发布</th>
-                            <th class="p-4 bg-slate-50 border-b border-slate-200 font-bold text-sm text-slate-600 w-1/4">操作</th>
-                        </tr>
-                    </thead>
-                    <tbody id="product-body">
-                        </tbody>
-                </table>
-            </div>
+            <h2 class="text-xl font-bold text-slate-800 mb-6 flex items-center gap-2"><span>🏷️</span> 产品库存监控 (SPU)</h2>
+            <div id="product-grid" class="card-grid"></div>
         </div>
-
     </main>
 </div>
 
-<div id="preview-modal" class="modal bg-black/95" onclick="this.classList.remove('active')">
-    <img id="big-img" src="" class="max-h-[90vh] max-w-[95vw] object-contain rounded shadow-2xl">
-</div>
-
+<div id="preview-modal" class="modal bg-black/95" onclick="this.classList.remove('active')"><img id="big-img" src="" class="max-h-[90vh] rounded shadow-2xl"></div>
 <div id="multi-pop" class="multi-pop"></div>
+<datalist id="dl-pids"></datalist>
 
 <div id="import-modal" class="modal">
     <div class="bg-white rounded-xl w-[400px] p-8 text-center shadow-2xl">
-        <div class="text-5xl mb-4">📂</div>
-        <h3 class="font-bold text-xl mb-4 text-slate-800">批量导入数据</h3>
-        <p class="text-sm text-slate-500 mb-6">请确认 Excel 文件已上传至 NAS <code class="bg-slate-100 px-1 rounded">temp_uploads</code> 目录</p>
-        <button onclick="startImport()" class="w-full bg-slate-800 text-white py-3 rounded-lg font-bold hover:bg-black transition-transform active:scale-95">开始扫描并导入</button>
-        <button onclick="document.getElementById('import-modal').classList.remove('active')" class="mt-4 text-slate-400 text-xs hover:text-slate-600">关闭窗口</button>
+        <h3 class="font-bold text-xl mb-4 text-slate-800">批量导入</h3>
+        <p class="text-sm text-slate-500 mb-6">请确认文件在 <code class="bg-slate-100 px-1 rounded">temp_uploads</code> 目录</p>
+        <button onclick="startImport()" class="w-full bg-slate-800 text-white py-3 rounded-lg font-bold">开始扫描</button>
+        <button onclick="document.getElementById('import-modal').classList.remove('active')" class="mt-4 text-slate-400 text-xs hover:text-slate-600">关闭</button>
     </div>
 </div>
 
 <div id="settings-modal" class="modal">
     <div class="bg-white rounded-xl w-[450px] p-6 shadow-2xl">
-        <h3 class="font-bold mb-6 text-lg text-slate-800 border-b pb-2">全局选项配置</h3>
-        <div class="space-y-4">
-            <div>
-                <label class="text-xs font-bold text-slate-400 mb-1 block">主播列表 (逗号分隔)</label>
-                <textarea id="set-hosts" class="t-input h-20 resize-none"></textarea>
-            </div>
-            <div><label class="text-xs font-bold text-slate-400 mb-1 block">产品类型</label><input id="set-cats" class="t-input"></div>
-            <div><label class="text-xs font-bold text-slate-400 mb-1 block">视频类型</label><input id="set-types" class="t-input"></div>
-            <div><label class="text-xs font-bold text-slate-400 mb-1 block">发布平台</label><input id="set-plats" class="t-input"></div>
-        </div>
-        <button onclick="saveSettings()" class="w-full bg-blue-600 text-white py-3 rounded-lg font-bold mt-6 hover:bg-blue-700 shadow-lg transition-all">保存生效</button>
-        <button onclick="document.getElementById('settings-modal').classList.remove('active')" class="w-full mt-2 text-slate-400 text-xs hover:text-slate-600">取消关闭</button>
+        <h3 class="font-bold mb-6 text-lg border-b pb-2">全局配置</h3>
+        <textarea id="set-hosts" class="t-input h-20 mb-3" placeholder="主播..."></textarea>
+        <input id="set-cats" class="t-input mb-3" placeholder="类型...">
+        <input id="set-types" class="t-input mb-3" placeholder="视类...">
+        <input id="set-plats" class="t-input mb-3" placeholder="平台...">
+        <button onclick="saveSettings()" class="w-full bg-blue-600 text-white py-3 rounded-lg font-bold">保存配置</button>
+        <button onclick="document.getElementById('settings-modal').classList.remove('active')" class="w-full mt-2 text-slate-400 text-xs">取消</button>
     </div>
 </div>
 
-<datalist id="dl-pids"></datalist>
-
 <script>
-    // ==========================================
-    // 全局状态管理
-    // ==========================================
-    let currPage = 1;
-    let totalPages = 1;
-    let globalOptions = {};
-    let editingId = null;
-    let globalData = [];
-    let chartTrend = null; // 图表实例缓存
+    // 全局状态
+    let currPage = 1, totalPages = 1;
+    let globalOptions = {}, editingId = null, globalData = [];
+    let chartTrend = null;
 
-    // ==========================================
-    // 初始化逻辑
-    // ==========================================
+    // 初始化
     (function init() {
-        // 并行加载所有数据，互不阻塞
-        loadDashboard('day'); 
-        loadOptions(); 
+        loadDashboard('day');
+        loadOptions();
         loadData(1);
         loadProductStats();
         
-        // 全局点击监听：关闭多选弹窗
+        // 全局关闭事件
         document.addEventListener('click', e => {
             if(!e.target.closest('.multi-pop') && !e.target.closest('.multi-trig')) 
                 document.getElementById('multi-pop').classList.remove('show');
         });
     })();
 
-    // ==========================================
-    // 视图切换逻辑
-    // ==========================================
+    // 提示消息函数
+    function showToast(msg, type='info') {
+        const box = document.getElementById('toast-container');
+        const el = document.createElement('div');
+        el.className = 'toast';
+        el.innerHTML = `<span>${type==='success'?'✅':'ℹ️'}</span> ${msg}`;
+        box.appendChild(el);
+        setTimeout(() => el.remove(), 3000);
+    }
+
+    // 视图切换
     function switchView(view, btn) {
-        // 1. 导航栏样式切换
         document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
         btn.classList.add('active');
-        
-        // 2. 隐藏所有视图
-        document.getElementById('view-dashboard').classList.add('hidden');
-        document.getElementById('view-inventory').classList.add('hidden');
-        document.getElementById('view-product').classList.add('hidden');
-        
-        // 3. 显示目标视图并刷新数据
-        document.getElementById('view-' + view).classList.remove('hidden');
-        
+        ['dashboard', 'inventory', 'product'].forEach(v => document.getElementById('view-'+v).classList.add('hidden'));
+        document.getElementById('view-'+view).classList.remove('hidden');
         if(view === 'dashboard') loadDashboard('day');
         if(view === 'product') loadProductStats();
     }
 
-    // ==========================================
-    // 模块 1：仪表盘逻辑 (ECharts + DOM操作)
-    // ==========================================
+    // Dashboard
     async function loadDashboard(dim) {
-        try {
-            const res = await fetch(`/api/dashboard?dim=${dim}`);
-            const data = await res.json();
-            
-            // 1. 填充 KPI 数字
-            document.getElementById('d-total').innerText = data.kpi.total;
-            document.getElementById('d-dist').innerText = data.kpi.dist_total;
-            document.getElementById('d-pending').innerText = data.kpi.pending;
-            document.getElementById('d-today-in').innerText = data.kpi.today_in;
-            document.getElementById('d-today-out').innerText = data.kpi.today_out;
-            document.getElementById('d-month-in').innerText = data.kpi.month_in;
-            document.getElementById('d-month-out').innerText = data.kpi.month_out;
-            
-            // 2. 渲染矩阵表格
-            const tbody = document.getElementById('matrix-body');
-            tbody.innerHTML = data.matrix.map((row, idx) => `
-                <tr>
-                    <td class="font-bold flex items-center gap-2">
-                        <span class="w-5 h-5 rounded bg-slate-100 text-slate-500 text-xs flex items-center justify-center">${idx+1}</span>
-                        ${row.name}
-                    </td>
-                    <td class="${row.day > 0 ? 'val-today' : ''}">${row.day}</td>
-                    <td>${row.week}</td>
-                    <td>${row.month}</td>
-                    <td class="font-mono text-slate-700 font-bold">${row.year}</td>
-                </tr>
-            `).join('');
+        const res = await fetch(`/api/dashboard?dim=${dim}`);
+        const data = await res.json();
+        
+        // KPI
+        document.getElementById('d-total').innerText = data.kpi.total;
+        document.getElementById('d-dist').innerText = data.kpi.dist_total;
+        document.getElementById('d-pending').innerText = data.kpi.pending;
+        document.getElementById('d-today-in').innerText = data.kpi.today_in;
+        document.getElementById('d-today-out').innerText = data.kpi.today_out;
+        document.getElementById('d-month-in').innerText = data.kpi.month_in;
+        document.getElementById('d-month-out').innerText = data.kpi.month_out;
+        
+        // Matrix
+        document.getElementById('matrix-body').innerHTML = data.matrix.map((r, i) => `
+            <tr>
+                <td class="font-bold flex items-center gap-2">
+                    <span class="w-5 h-5 rounded bg-slate-100 text-slate-500 text-xs flex items-center justify-center">${i+1}</span>
+                    ${r.name}
+                </td>
+                <td class="${r.day>0?'val-today':''}">${r.day}</td>
+                <td>${r.week}</td><td>${r.month}</td><td class="font-mono font-bold">${r.year}</td>
+            </tr>`).join('');
 
-            // 3. 渲染 ECharts 图表
-            // (1) 趋势图
-            if(!chartTrend) chartTrend = echarts.init(document.getElementById('chart-trend'));
-            chartTrend.setOption({
-                tooltip: {trigger:'axis'},
-                legend: {data:['入库','发布'], bottom:0},
-                grid: {top:20, left:40, right:20, bottom:30},
-                xAxis: {type:'category', data:data.trend.dates},
-                yAxis: {type:'value'},
-                series: [
-                    {name:'入库', type:'line', data:data.trend.in, smooth:true, itemStyle:{color:'#3b82f6'}, areaStyle:{opacity:0.1}},
-                    {name:'发布', type:'bar', data:data.trend.out, itemStyle:{color:'#10b981'}}
-                ]
-            });
-
-            // (2) 主播排行
-            const ch = echarts.init(document.getElementById('chart-host'));
-            ch.setOption({
-                tooltip: {trigger:'axis'},
-                grid: {top:10, left:60, right:20, bottom:20},
-                xAxis: {type:'value'},
-                yAxis: {type:'category', data:data.hosts.map(i=>i.name).reverse()},
-                series: [{type:'bar', data:data.hosts.map(i=>i.value).reverse(), itemStyle:{color:'#f59e0b', borderRadius:[0,4,4,0]}}]
-            });
-
-            // (3) 类型占比
-            const ct = echarts.init(document.getElementById('chart-type'));
-            ct.setOption({
-                tooltip: {trigger:'item'},
-                series: [{type:'pie', radius:['40%','70%'], data:data.types, itemStyle:{borderRadius:5}}]
-            });
-
-            // (4) 平台雷达
-            const cp = echarts.init(document.getElementById('chart-plat'));
-            const maxV = Math.max(...data.plats.map(p=>p.value), 10);
-            cp.setOption({
-                tooltip: {},
-                radar: {indicator: data.plats.map(p=>({name:p.name, max:maxV}))},
-                series: [{type:'radar', data:[{value:data.plats.map(p=>p.value), name:'分发量', areaStyle:{color:'rgba(16,185,129,0.2)'}}]}]
-            });
-
-            // 监听窗口大小变化重绘图表
-            window.onresize = () => { chartTrend.resize(); ch.resize(); ct.resize(); cp.resize(); };
-
-        } catch(e) { console.error("Dashboard error:", e); }
+        // Charts
+        if(!chartTrend) chartTrend = echarts.init(document.getElementById('chart-trend'));
+        chartTrend.setOption({
+            tooltip:{trigger:'axis'}, legend:{data:['入库','发布'],bottom:0}, 
+            grid:{top:20,left:40,right:20,bottom:30}, xAxis:{type:'category',data:data.trend.dates}, yAxis:{type:'value'}, 
+            series:[{name:'入库',type:'line',data:data.trend.in,smooth:true,itemStyle:{color:'#3b82f6'},areaStyle:{opacity:0.1}}, {name:'发布',type:'bar',data:data.trend.out,itemStyle:{color:'#10b981'}}]
+        });
+        
+        echarts.init(document.getElementById('chart-host')).setOption({
+            tooltip:{trigger:'axis'}, grid:{top:10,left:60,right:20,bottom:20}, 
+            xAxis:{type:'value'}, yAxis:{type:'category',data:data.hosts.map(i=>i.name).reverse()}, 
+            series:[{type:'bar',data:data.hosts.map(i=>i.value).reverse(),itemStyle:{color:'#f59e0b',borderRadius:[0,4,4,0]}}]
+        });
+        
+        echarts.init(document.getElementById('chart-type')).setOption({tooltip:{trigger:'item'}, series:[{type:'pie',radius:['40%','70%'],data:data.types}]});
+        
+        echarts.init(document.getElementById('chart-plat')).setOption({
+            tooltip:{}, radar:{indicator:data.plats.map(p=>({name:p.name, max:Math.max(...data.plats.map(v=>v.value),10)}))}, 
+            series:[{type:'radar',data:[{value:data.plats.map(p=>p.value),name:'分发量'}]}]
+        });
     }
 
-    // ==========================================
-    // 模块 2：产品库存逻辑 (SPU View)
-    // ==========================================
+    // Product SPU
     async function loadProductStats() {
         const res = await fetch('/api/product_stats');
         const data = await res.json();
-        const tbody = document.getElementById('product-body');
+        const grid = document.getElementById('product-grid');
         
-        tbody.innerHTML = data.map(item => {
+        grid.innerHTML = data.map(item => {
             const pct = Math.round(((item.total - item.pending) / item.total) * 100) || 0;
+            let status = 'normal', color = '#3b82f6';
+            if(item.pending > 5) { status='danger'; color='#ef4444'; }
+            else if(item.pending === 0) { status='safe'; color='#10b981'; }
+            else if(item.total < 3) { status='warn'; }
+
             return `
-            <tr class="hover:bg-slate-50 border-b border-slate-100 transition-colors">
-                <td class="p-4 font-bold text-slate-800 text-lg">${item.name}</td>
-                <td class="p-4">
-                    <div class="flex items-center gap-3">
-                        <span class="text-sm font-bold text-slate-500 w-8">${item.total}</span>
-                        <div class="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden">
-                            <div class="h-full bg-blue-500" style="width: ${pct}%"></div>
-                        </div>
-                        <span class="text-xs text-slate-400 font-mono">${pct}%</span>
-                    </div>
-                </td>
-                <td class="p-4">
-                    <span class="px-3 py-1 rounded-full text-xs font-bold ${item.pending > 0 ? 'bg-orange-100 text-orange-600' : 'bg-emerald-100 text-emerald-600'}">
-                        ${item.pending > 0 ? item.pending + ' 待发' : '✅ 完成'}
-                    </span>
-                </td>
-                <td class="p-4">
-                    <button onclick="jumpToProduct('${item.name}')" class="text-blue-600 hover:text-blue-800 hover:underline font-bold text-sm transition-colors">
-                        查看库存详情 &rarr;
-                    </button>
-                </td>
-            </tr>`;
+            <div class="prod-card ${status}" onclick="jumpTo('${item.name}')">
+                <div class="pc-header"><div class="pc-title" title="${item.name}">${item.name}</div><div class="pc-badge">SPU</div></div>
+                <div class="pc-body">
+                    <div class="pc-stat"><div class="pc-num" style="color:${color}">${item.pending}</div><div class="pc-label">待发布</div></div>
+                    <div class="text-right"><div class="text-2xl font-bold text-slate-300">${pct}%</div><div class="text-xs text-slate-400">完成</div></div>
+                </div>
+                <div class="pc-footer">
+                    <div class="pc-progress-bg"><div class="pc-progress-fill" style="width:${pct}%; background:${color}"></div></div>
+                    <div class="pc-total">总库 ${item.total}</div>
+                </div>
+            </div>`;
         }).join('');
     }
 
-    function jumpToProduct(pid) {
-        // 跳转并筛选逻辑
-        document.querySelectorAll('.nav-item')[1].click(); // Click 'Inventory' tab
+    function jumpTo(pid) {
+        document.querySelectorAll('.nav-item')[1].click();
         document.getElementById('s-pid').value = pid;
-        // 如果筛选栏没展开，自动展开
         if(!document.getElementById('filter-panel').classList.contains('open')) toggleFilter();
         loadData(1);
     }
 
-    // ==========================================
-    // 模块 3：库存管理核心逻辑 (Inventory View)
-    // ==========================================
-    
-    // 3.1 加载选项字典
+    // Inventory Core
     async function loadOptions() {
-        const res = await fetch('/api/options');
-        globalOptions = await res.json();
-        
-        // 辅助填充函数
-        const fill = (id, list, label) => {
-            document.getElementById(id).innerHTML = `<option value="">全部${label}</option>` + 
-                list.map(i => `<option value="${i}">${i}</option>`).join('');
-        };
-        
-        fill('s-cat', globalOptions.categories, '类型');
-        fill('s-type', globalOptions.video_types, '视类');
-        fill('s-host', globalOptions.hosts, '主播');
-        fill('s-status', globalOptions.statuses, '状态');
-        fill('s-plat', globalOptions.platforms, '平台');
-        
-        // 填充编号联想列表
-        document.getElementById('dl-pids').innerHTML = globalOptions.product_ids.map(i => `<option value="${i}">`).join('');
+        const res = await fetch('/api/options'); globalOptions = await res.json();
+        const fill = (id, list, label) => document.getElementById(id).innerHTML = `<option value="">全部${label}</option>` + list.map(i=>`<option>${i}</option>`).join('');
+        fill('s-cat', globalOptions.categories, '类型'); fill('s-type', globalOptions.video_types, '视类');
+        fill('s-host', globalOptions.hosts, '主播'); fill('s-status', globalOptions.statuses, '状态'); fill('s-plat', globalOptions.platforms, '平台');
+        document.getElementById('dl-pids').innerHTML = globalOptions.product_ids.map(i=>`<option>${i}</option>`).join('');
     }
 
-    // 3.2 加载数据列表
     async function loadData(p) {
         currPage = p || currPage;
-        
-        // 构建复杂的查询参数
         const params = new URLSearchParams({
-            page: currPage, 
-            size: 100, 
-            keyword: document.getElementById('g-search').value,
-            product_id: document.getElementById('s-pid').value,
-            title: document.getElementById('s-title').value,
-            remark: document.getElementById('s-remark').value,
-            host: document.getElementById('s-host').value,
-            status: document.getElementById('s-status').value,
-            category: document.getElementById('s-cat').value,
-            video_type: document.getElementById('s-type').value,
-            platform: document.getElementById('s-plat').value,
-            finish_start: document.getElementById('s-fin-start').value,
-            finish_end: document.getElementById('s-fin-end').value,
-            publish_start: document.getElementById('s-pub-start').value,
-            publish_end: document.getElementById('s-pub-end').value
+            page:currPage, size:100, keyword:document.getElementById('g-search').value,
+            product_id:document.getElementById('s-pid').value, title:document.getElementById('s-title').value, remark:document.getElementById('s-remark').value,
+            host:document.getElementById('s-host').value, status:document.getElementById('s-status').value, category:document.getElementById('s-cat').value,
+            video_type:document.getElementById('s-type').value, platform:document.getElementById('s-plat').value,
+            finish_start:document.getElementById('s-fin-start').value, finish_end:document.getElementById('s-fin-end').value,
+            publish_start:document.getElementById('s-pub-start').value, publish_end:document.getElementById('s-pub-end').value
         });
-
-        try {
-            const res = await fetch(`/api/videos?${params}`);
-            const data = await res.json();
-            globalData = data.items;
-            totalPages = data.total_pages;
-            
-            document.getElementById('page-info').innerText = `共 ${data.total} 条 · ${data.page}/${data.total_pages} 页`;
-            renderTable(data.items);
-        } catch(e) {
-            console.error("Load data error:", e);
-        }
+        const res = await fetch(`/api/videos?${params}`);
+        const data = await res.json();
+        globalData = data.items;
+        totalPages = data.total_pages;
+        document.getElementById('page-info').innerText = `共 ${data.total} 条 · ${data.page}/${data.total_pages} 页`;
+        renderTable(data.items);
     }
 
-    // 3.3 新增行逻辑
     function addNewRow() {
-        // 在数组头部插入一个临时对象
-        globalData.unshift({id: 'new', product_id: '', title: '', isNew: true});
+        globalData.unshift({id:'new', product_id:'', title:'', isNew:true});
         editingId = 'new';
         renderTable(globalData);
-        // 滚动到顶部
         document.querySelector('.table-wrap').scrollTop = 0;
     }
 
-    // 3.4 渲染表格 (包含极其复杂的行内编辑逻辑)
     function renderTable(items) {
-        const tbody = document.getElementById('table-body');
-        
-        tbody.innerHTML = items.map(v => {
+        document.getElementById('table-body').innerHTML = items.map(v => {
             const isEdit = (v.id === editingId);
-            const cln = s => (s && s !== 'nan' && s !== 'None') ? s : '';
+            const cln = s => (s && s!=='nan' && s!=='None') ? s : '';
             const img = (v.image_url && !v.image_url.includes('default')) ? v.image_url : '/assets/default.png';
 
-            // --- 编辑状态渲染 ---
             if (isEdit) {
-                const sel = (k, list) => `<select id="ed-${k}" class="t-input">${list.map(o => `<option ${o===v[k]?'selected':''}>${o}</option>`).join('')}</select>`;
-                const mul = (k, type) => `<input id="ed-${k}" class="t-input multi-trig cursor-pointer" value="${cln(v[k])}" readonly onclick="openMulti(this, '${type}')" placeholder="点击选择">`;
+                const sel = (k,l) => `<select id="ed-${k}" class="t-input">${l.map(o=>`<option ${o===v[k]?'selected':''}>${o}</option>`).join('')}</select>`;
+                const mul = (k,t) => `<input id="ed-${k}" class="t-input multi-trig cursor-pointer" value="${cln(v[k])}" readonly onclick="openMulti(this,'${t}')" placeholder="点击选择">`;
                 
-                return `
-                <tr class="editing ${v.isNew ? 'new-row' : ''}">
-                    <td class="p-2 text-center">
-                        <div class="img-cell mx-auto relative group" 
-                             onclick="document.getElementById('up-${v.id}').click()"
-                             ondrop="handleDrop(event, '${v.id}')"
-                             ondragover="event.preventDefault()"
-                             onpaste="handlePaste(event, '${v.id}')">
-                            <img src="${img}" class="w-full h-full object-cover">
-                            <div class="absolute inset-0 bg-black/50 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 text-xs font-bold transition-opacity">上传</div>
-                        </div>
-                        <input type="file" id="up-${v.id}" class="hidden" onchange="upImg(this, '${v.id}')">
-                        <input type="hidden" id="ed-img" value="${cln(v.image_url)}">
-                    </td>
-                    <td><input id="ed-pid" class="t-input font-mono" value="${cln(v.product_id)}" placeholder="编号"></td>
+                return `<tr class="editing ${v.isNew?'new-row':''}">
+                    <td class="p-2"><div class="img-cell mx-auto" onclick="document.getElementById('up-${v.id}').click()" ondrop="handleDrop(event,'${v.id}')" ondragover="event.preventDefault()" onpaste="handlePaste(event,'${v.id}')"><img src="${img}" class="w-full h-full object-cover"></div><input type="file" id="up-${v.id}" class="hidden" onchange="upImg(this,'${v.id}')"><input type="hidden" id="ed-img" value="${cln(v.image_url)}"></td>
+                    <td><input id="ed-pid" class="t-input" value="${cln(v.product_id)}" placeholder="编号"></td>
                     <td><input id="ed-title" class="t-input font-bold" value="${cln(v.title)}" placeholder="标题"></td>
-                    <td>${sel('cat', globalOptions.categories)}</td>
-                    <td><input id="ed-fin" type="date" class="t-input" value="${cln(v.finish_time)}"></td>
-                    <td>${sel('type', globalOptions.video_types)}</td>
-                    <td>${mul('host', 'hosts')}</td>
-                    <td>${sel('status', globalOptions.statuses)}</td>
-                    <td>${mul('plat', 'platforms')}</td>
-                    <td><input id="ed-pub" type="datetime-local" class="t-input" value="${cln(v.publish_time).replace(' ', 'T')}"></td>
-                    <td><input id="ed-rem" class="t-input" value="${cln(v.remark)}"></td>
-                    <td class="text-center sticky right-0 bg-blue-50 border-l shadow-sm">
-                        <button onclick="saveRow('${v.id}')" class="text-white bg-blue-600 px-3 py-1 rounded text-xs font-bold shadow hover:bg-blue-700 transition-colors">保存</button>
-                        <button onclick="cancelEdit()" class="text-slate-400 text-xs ml-1 hover:text-slate-600">取消</button>
-                    </td>
-                </tr>`;
+                    <td>${sel('cat',globalOptions.categories)}</td><td><input id="ed-fin" type="date" class="t-input" value="${cln(v.finish_time)}"></td>
+                    <td>${sel('type',globalOptions.video_types)}</td><td>${mul('host','hosts')}</td><td>${sel('status',globalOptions.statuses)}</td><td>${mul('plat','platforms')}</td>
+                    <td><input id="ed-pub" type="datetime-local" class="t-input" value="${cln(v.publish_time).replace(' ','T')}"></td><td><input id="ed-rem" class="t-input" value="${cln(v.remark)}"></td>
+                    <td class="text-center sticky right-0 bg-blue-50 border-l"><button onclick="saveRow('${v.id}')" class="text-blue-600 font-bold text-xs">保存</button> <button onclick="cancelEdit()" class="text-slate-400 text-xs ml-1">取消</button></td></tr>`;
             }
             
-            // --- 浏览状态渲染 ---
-            const getColor = (s, t) => { 
-                if(t==='st') return s.includes('已') ? {b:'#dcfce7', c:'#166534'} : {b:'#fff7ed', c:'#c2410c'}; 
-                return {b:'#f1f5f9', c:'#475569'}; 
-            };
+            const pill = (s,t) => s.split(/[,，]/).map(x=>`<span class="pill" style="background:${t==='st'?(x.includes('已')?'#dcfce7':'#fff7ed'):'#f1f5f9'};color:${t==='st'?(x.includes('已')?'#166534':'#c2410c'):'#475569'}">${x}</span>`).join('');
             
-            const pill = (s, t) => s.split(/[,，]/).map(x => 
-                `<span class="pill" style="background:${getColor(x, t).b};color:${getColor(x, t).c}">${x}</span>`
-            ).join('');
-
-            return `
-            <tr class="hover:bg-slate-50 border-b border-slate-100 last:border-0 transition-colors">
-                <td class="p-2 text-center">
-                    <div class="img-cell mx-auto bg-slate-100" 
-                         onclick="showBig('${img}')"
-                         ondrop="handleDrop(event, '${v.id}')"
-                         ondragover="event.preventDefault()"
-                         onpaste="handlePaste(event, '${v.id}')">
-                        <img src="${img}" class="w-full h-full object-cover">
-                    </div>
-                </td>
-                <td class="font-mono text-slate-500 font-bold">${cln(v.product_id)}</td>
-                <td class="font-bold text-slate-700 truncate" style="max-width:260px" title="${cln(v.title)}">${cln(v.title)}</td>
-                <td><span class="pill bg-slate-100 text-slate-600">${cln(v.category)}</span></td>
-                <td class="text-slate-400 text-xs font-mono">${cln(v.finish_time)}</td>
-                <td><span class="pill bg-slate-100 text-slate-600">${cln(v.video_type)}</span></td>
-                <td>${pill(cln(v.host), '')}</td>
-                <td class="text-center">${pill(cln(v.status), 'st')}</td>
-                <td>${pill(cln(v.platform), '')}</td>
-                <td class="text-slate-400 text-xs font-mono">${cln(v.publish_time).replace('T', ' ')}</td>
-                <td class="text-slate-400 truncate max-w-[120px] text-xs" title="${cln(v.remark)}">${cln(v.remark)}</td>
-                <td class="text-center sticky right-0 bg-white group-hover:bg-slate-50 border-l shadow-sm">
-                    <button onclick="startEdit(${v.id})" class="text-blue-600 font-bold text-xs hover:underline mr-2">编辑</button>
-                    <button onclick="delVideo(${v.id})" class="text-red-400 text-xs hover:text-red-600">删</button>
-                </td>
-            </tr>`;
+            return `<tr class="hover:bg-slate-50 border-b border-slate-100 last:border-0">
+                <td class="p-2 text-center"><div class="img-cell mx-auto bg-slate-100" onclick="showBig('${img}')" ondrop="handleDrop(event,'${v.id}')" ondragover="event.preventDefault()" onpaste="handlePaste(event,'${v.id}')"><img src="${img}" class="w-full h-full object-cover"></div></td>
+                <td class="font-mono text-slate-500">${cln(v.product_id)}</td><td class="font-bold text-slate-700 truncate" style="max-width:260px" title="${cln(v.title)}">${cln(v.title)}</td>
+                <td><span class="pill bg-slate-100">${cln(v.category)}</span></td><td class="text-slate-400 text-xs font-mono">${cln(v.finish_time)}</td><td><span class="pill bg-slate-100">${cln(v.video_type)}</span></td>
+                <td>${pill(cln(v.host),'')}</td><td class="text-center">${pill(cln(v.status),'st')}</td><td>${pill(cln(v.platform),'')}</td>
+                <td class="text-slate-400 text-xs font-mono">${cln(v.publish_time).replace('T',' ')}</td><td class="text-slate-400 truncate max-w-[120px] text-xs" title="${cln(v.remark)}">${cln(v.remark)}</td>
+                <td class="text-center sticky right-0 bg-white group-hover:bg-slate-50 border-l"><button onclick="startEdit(${v.id})" class="text-blue-600 font-bold text-xs hover:underline mr-2">编辑</button><button onclick="delVideo(${v.id})" class="text-red-400 text-xs hover:text-red-600">删</button></td></tr>`;
         }).join('');
     }
 
-    // ==========================================
-    // 交互逻辑集 (CRUD + Drag&Drop)
-    // ==========================================
-    function startEdit(id) { editingId = id; renderTable(globalData); }
-    function cancelEdit() { editingId = null; loadData(); } // Reload to clear temp rows
+    function startEdit(id){ editingId=id; renderTable(globalData); }
+    function cancelEdit(){ editingId=null; loadData(); }
     
-    async function saveRow(id) {
+    async function saveRow(id){
         const fd = new FormData();
         if (id !== 'new') fd.append('id', id);
-        
-        // 收集所有字段
-        const map = {
-            'pid': 'product_id', 'title': 'title', 'cat': 'category', 
-            'fin': 'finish_time', 'type': 'video_type', 'host': 'host', 
-            'status': 'status', 'plat': 'platform', 'pub': 'publish_time', 'rem': 'remark'
-        };
-        
-        for (let [eid, key] of Object.entries(map)) {
-            fd.append(key, document.getElementById('ed-' + eid).value.replace('T', ' '));
-        }
+        ['pid','title','cat','fin','type','host','status','plat','pub','rem'].forEach(k => {
+            const key = {'pid':'product_id','title':'title','cat':'category','fin':'finish_time','type':'video_type','host':'host','status':'status','plat':'platform','pub':'publish_time','rem':'remark'}[k];
+            fd.append(key, document.getElementById('ed-'+k).value.replace('T', ' '));
+        });
         fd.append('image_url', document.getElementById('ed-img').value);
-        
-        await fetch('/api/video/save', {method: 'POST', body: fd});
-        editingId = null; 
-        loadData(); 
-        // 提示：可以在这里加一个 toast 提示保存成功
+        await fetch('/api/video/save', {method:'POST', body:fd});
+        editingId = null; loadData(); showToast('保存成功', 'success');
     }
 
-    // --- 图片处理核心逻辑 ---
-    async function handleDrop(e, id) { 
-        e.preventDefault(); 
-        if(e.dataTransfer.files[0]) uploadFile(e.dataTransfer.files[0], id); 
-    }
-    
-    async function handlePaste(e, id) { 
-        if(e.clipboardData.files[0]) uploadFile(e.clipboardData.files[0], id); 
-    }
-    
-    async function upImg(input, id) { 
-        if(input.files[0]) uploadFile(input.files[0], id); 
-    }
-    
-    async function uploadFile(file, id) {
+    // 图片上传 (含拖拽/粘贴)
+    async function handleDrop(e,id){ e.preventDefault(); if(e.dataTransfer.files[0]) uploadFile(e.dataTransfer.files[0], id); }
+    async function handlePaste(e,id){ if(e.clipboardData.files[0]) uploadFile(e.clipboardData.files[0], id); }
+    async function upImg(input,id){ if(input.files[0]) uploadFile(input.files[0], id); }
+    async function uploadFile(file, id){
         const fd = new FormData(); fd.append('file', file);
-        const res = await fetch('/api/upload', {method:'POST', body:fd});
-        const d = await res.json();
-        
-        if (editingId == id) { 
-            // 如果是编辑模式，只更新隐藏域
-            document.getElementById('ed-img').value = d.url; 
-        } else { 
-            // 如果是查看模式，直接保存图片链接到后端
-            const fd2 = new FormData(); fd2.append('id', id); fd2.append('image_url', d.url);
-            await fetch('/api/video/save', {method:'POST', body:fd2}); 
-        }
-        
-        // 更新本地数据并重绘，实现“即时预览”
-        const row = globalData.find(v => v.id == id || (id==='new' && v.id==='new'));
-        if(row) row.image_url = d.url;
-        renderTable(globalData);
+        const res = await fetch('/api/upload', {method:'POST', body:fd}); const d = await res.json();
+        if(editingId == id) document.getElementById('ed-img').value = d.url;
+        else { const fd2=new FormData(); fd2.append('id',id); fd2.append('image_url',d.url); await fetch('/api/video/save',{method:'POST',body:fd2}); }
+        globalData.find(v=>v.id==id||(id==='new'&&v.id==='new')).image_url = d.url;
+        renderTable(globalData); showToast('图片上传成功', 'success');
     }
 
-    // --- 多选菜单逻辑 ---
-    function openMulti(input, type) {
-        const pop = document.getElementById('multi-pop');
-        const rect = input.getBoundingClientRect();
-        const curr = input.value.split(/[,，]/).map(s => s.trim());
-        
-        pop.innerHTML = globalOptions[type].map(o => `
-            <div class="multi-opt" onclick="togOpt('${input.id}', '${o}', '${type}')">
-                <span class="${curr.includes(o) ? 'text-blue-600 font-bold w-4' : 'w-4'}">${curr.includes(o) ? '✓' : ''}</span> 
-                ${o}
-            </div>
-        `).join('');
-        
-        pop.style.top = (rect.bottom + window.scrollY) + 'px';
-        pop.style.left = (rect.left + window.scrollX) + 'px';
-        pop.classList.add('show');
+    // 辅助功能
+    function openMulti(input,type){
+        const pop=document.getElementById('multi-pop'); const r=input.getBoundingClientRect(); const curr=input.value.split(/[,，]/).map(s=>s.trim());
+        pop.innerHTML=globalOptions[type].map(o=>`<div class="multi-opt" onclick="togOpt('${input.id}','${o}','${type}')"><span class="${curr.includes(o)?'text-blue-600 font-bold w-4':'w-4'}">${curr.includes(o)?'✓':''}</span> ${o}</div>`).join('');
+        pop.style.top=(r.bottom+window.scrollY)+'px'; pop.style.left=(r.left+window.scrollX)+'px'; pop.classList.add('show');
     }
+    function togOpt(eid,v,type){ const inp=document.getElementById(eid); let vals=inp.value.split(/[,，]/).map(s=>s.trim()).filter(s=>s); if(vals.includes(v)) vals=vals.filter(i=>i!==v); else vals.push(v); inp.value=vals.join(','); openMulti(inp,type); }
     
-    function togOpt(eid, val, type) {
-        const inp = document.getElementById(eid);
-        let vals = inp.value.split(/[,，]/).map(s => s.trim()).filter(s => s);
-        
-        if (vals.includes(val)) vals = vals.filter(i => i !== val);
-        else vals.push(val);
-        
-        inp.value = vals.join(', ');
-        openMulti(inp, type); // 刷新选中状态
-    }
-
-    // --- 杂项交互 ---
-    function toggleFilter() { document.getElementById('filter-panel').classList.toggle('open'); }
-    function showBig(s) { document.getElementById('big-img').src = s; document.getElementById('preview-modal').classList.add('active'); }
-    function resetFilters() { document.querySelectorAll('#filter-panel input, #filter-panel select').forEach(e => e.value = ''); loadData(1); }
-    function changePage(d) { if(currPage + d > 0 && currPage + d <= totalPages) loadData(currPage + d); }
-    async function delVideo(id) { if(confirm('确认删除此条目吗？')) { await fetch(`/api/video/${id}`, {method: 'DELETE'}); loadData(); } }
+    function toggleFilter(){ document.getElementById('filter-panel').classList.toggle('open'); }
+    function showBig(s){ document.getElementById('big-img').src=s; document.getElementById('preview-modal').classList.add('active'); }
+    function resetFilters(){ document.querySelectorAll('#filter-panel input,select').forEach(e=>e.value=''); loadData(1); }
+    function changePage(d){ if(currPage+d>0 && currPage+d<=totalPages) loadData(currPage+d); }
     
-    // --- 导入与设置 ---
-    function openImport() { document.getElementById('import-modal').classList.add('active'); }
-    async function startImport() { await fetch('/api/import/local', {method: 'POST'}); alert('后台导入任务已启动，请稍后刷新。'); document.getElementById('import-modal').classList.remove('active'); }
+    async function delVideo(id){ if(confirm('确定删除该视频？此操作不可恢复。')){ await fetch(`/api/video/${id}`,{method:'DELETE'}); loadData(); showToast('已删除'); } }
+    function openImport(){ document.getElementById('import-modal').classList.add('active'); }
+    async function startImport(){ await fetch('/api/import/local',{method:'POST'}); showToast('后台任务已启动', 'info'); document.getElementById('import-modal').classList.remove('active'); }
     
-    function openSettings() { 
-        document.getElementById('settings-modal').classList.add('active'); 
-        document.getElementById('set-hosts').value = globalOptions.hosts.join(',');
-        document.getElementById('set-cats').value = globalOptions.categories.join(',');
-        document.getElementById('set-types').value = globalOptions.video_types.join(',');
-        document.getElementById('set-plats').value = globalOptions.platforms.join(',');
-    }
-    
-    async function saveSettings() {
-        const fd = new FormData();
-        const save = (k, v) => fetch('/api/settings', {method: 'POST', body: new URLSearchParams({key: k, value: v})});
-        await save('hosts', document.getElementById('set-hosts').value);
-        await save('categories', document.getElementById('set-cats').value);
-        await save('video_types', document.getElementById('set-types').value);
-        await save('platforms', document.getElementById('set-plats').value);
-        document.getElementById('settings-modal').classList.remove('active');
-        loadOptions(); // 刷新选项
-    }
+    function openSettings(){ document.getElementById('settings-modal').classList.add('active'); document.getElementById('set-hosts').value=globalOptions.hosts.join(','); document.getElementById('set-cats').value=globalOptions.categories.join(','); document.getElementById('set-types').value=globalOptions.video_types.join(','); document.getElementById('set-plats').value=globalOptions.platforms.join(','); }
+    async function saveSettings(){ const s=(k,v)=>fetch('/api/settings',{method:'POST',body:new URLSearchParams({key:k,value:v})}); await s('hosts',document.getElementById('set-hosts').value); await s('categories',document.getElementById('set-cats').value); await s('video_types',document.getElementById('set-types').value); await s('platforms',document.getElementById('set-plats').value); document.getElementById('settings-modal').classList.remove('active'); loadOptions(); showToast('配置已更新', 'success'); }
 </script>
 </body>
 </html>
