@@ -17,61 +17,39 @@ from sqlalchemy import func
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("VideoHub")
 
-main_app = FastAPI(title="VideoHub V33.0 Final")
+main_app = FastAPI(title="VideoHub V35.0 Final")
 engine = create_engine("sqlite:///data/inventory.db")
 
-# 引入模型
 from .models import Video, AppSettings
 
-# === 核心工具：安全转字符串 (这是救命的！) ===
+# === 核心工具：安全转字符串 ===
 def safe_str(val):
-    """
-    不管 val 是 123 (int), 123.0 (float), 还是 None
-    统统转成安全的字符串，防止 .strip() 报错
-    """
     if val is None: return ""
     return str(val).strip()
 
-# === 核心工具：日期解析 ===
 def parse_safe_date(date_str):
     s = safe_str(date_str).lower()
-    if not s or s in ['nan', 'none', '', 'nat', 'null']: return None
+    if not s or s in ['nan', 'none']: return None
     try:
         clean_s = s[:10]
-        for fmt in ("%Y-%m-%d", "%Y/%m/%d", "%Y%m%d", "%Y.%m.%d"):
-            try: return datetime.datetime.strptime(clean_s, fmt)
-            except: continue
-        match = re.search(r'(\d{4})[-/年.](\d{1,2})[-/月.](\d{1,2})', s)
-        if match:
-            return datetime.datetime(int(match.group(1)), int(match.group(2)), int(match.group(3)))
-    except: pass
-    return None
+        return datetime.datetime.strptime(clean_s, "%Y-%m-%d")
+    except: return None
 
-# === 初始化 ===
 @main_app.on_event("startup")
 def on_startup():
     os.makedirs("data", exist_ok=True)
     os.makedirs("assets/previews", exist_ok=True)
     os.makedirs("temp_uploads", exist_ok=True)
     SQLModel.metadata.create_all(engine)
-    
     with Session(engine) as session:
         try: session.exec(text("SELECT created_at FROM video LIMIT 1"))
         except: 
             try: session.exec(text("ALTER TABLE video ADD COLUMN created_at DATETIME"))
             except: pass
             session.commit()
-        
         session.exec(text("UPDATE video SET created_at = finish_time WHERE created_at IS NULL AND finish_time IS NOT NULL"))
         session.exec(text(f"UPDATE video SET created_at = '{datetime.datetime.now()}' WHERE created_at IS NULL"))
-        
-        defaults = {
-            "hosts": "小梨,VIVI,七七,杨总,其他",
-            "statuses": "待发布,已发布,剪辑中,拍摄中,脚本中",
-            "categories": "球服,球鞋,球拍,周边,配件",
-            "platforms": "抖音-炬鑫,小红书-有家,视频号-羽球,B站-官方,快手-炬鑫",
-            "video_types": "产品展示,剧情,口播,Vlog,花絮"
-        }
+        defaults = {"hosts":"小梨,VIVI,七七,杨总,其他", "statuses":"待发布,已发布,剪辑中,拍摄中,脚本中", "categories":"球服,球鞋,球拍,周边,配件", "platforms":"抖音-炬鑫,小红书-有家,视频号-羽球,B站-官方,快手-炬鑫", "video_types":"产品展示,剧情,口播,Vlog,花絮"}
         for k, v in defaults.items():
             if not session.get(AppSettings, k): session.add(AppSettings(key=k, value=v))
         session.commit()
@@ -82,39 +60,29 @@ main_app.mount("/assets", StaticFiles(directory="assets"), name="assets")
 async def read_index():
     return FileResponse(os.path.join("frontend", "index.html"))
 
-# === 接口 1: 仪表盘 ===
 @main_app.get("/api/dashboard")
 def get_dashboard_data(dim: str = "day"):
     with Session(engine) as session:
         videos = session.exec(select(Video)).all()
         total = len(videos)
         pending = 0
-        
         now = datetime.datetime.now()
         today = now.replace(hour=0, minute=0, second=0, microsecond=0)
         month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-        
         flow = {"t_in":0, "t_out":0, "m_in":0, "m_out":0}
-        trend = {}
-        hosts = {}
-        types = {}
-        plats = {}
-        matrix = {}
-        dist = 0
+        trend = {}; hosts = {}; types = {}; plats = {}; matrix = {}; dist = 0
 
         for v in videos:
-            if safe_str(v.status) == "待发布":
-                pending += 1
-
-            fin = parse_safe_date(v.finish_time)
-            pub = parse_safe_date(v.publish_time)
+            if safe_str(v.status) == "待发布": pending += 1
+            t_in = parse_safe_date(v.finish_time)
+            t_pub = parse_safe_date(v.publish_time)
             
-            if fin:
-                if fin >= today: flow["t_in"] += 1
-                if fin >= month: flow["m_in"] += 1
-                k = fin.strftime("%Y-%m-%d")
-                if dim == 'month': k = fin.strftime("%Y-%m")
-                elif dim == 'week': k = fin.strftime("%Y-W%W")
+            if t_in:
+                if t_in >= today: flow["t_in"] += 1
+                if t_in >= month: flow["m_in"] += 1
+                k = t_in.strftime("%Y-%m-%d")
+                if dim=='month': k=t_in.strftime("%Y-%m")
+                elif dim=='week': k=t_in.strftime("%Y-W%W")
                 if k not in trend: trend[k] = {"in":0, "out":0}
                 trend[k]["in"] += 1
                 if v.host:
@@ -122,12 +90,12 @@ def get_dashboard_data(dim: str = "day"):
                         h = h.strip()
                         if h: hosts[h] = hosts.get(h, 0) + 1
 
-            if pub:
-                if pub >= today: flow["t_out"] += 1
-                if pub >= month: flow["m_out"] += 1
-                k = pub.strftime("%Y-%m-%d")
-                if dim == 'month': k = pub.strftime("%Y-%m")
-                elif dim == 'week': k = pub.strftime("%Y-W%W")
+            if t_pub:
+                if t_pub >= today: flow["t_out"] += 1
+                if t_pub >= month: flow["m_out"] += 1
+                k = t_pub.strftime("%Y-%m-%d")
+                if dim=='month': k=t_pub.strftime("%Y-%m")
+                elif dim=='week': k=t_pub.strftime("%Y-W%W")
                 if k not in trend: trend[k] = {"in":0, "out":0}
                 trend[k]["out"] += 1
                 if safe_str(v.status) == "已发布" and v.platform:
@@ -135,8 +103,8 @@ def get_dashboard_data(dim: str = "day"):
                     for acc in accs:
                         dist += 1
                         if acc not in matrix: matrix[acc] = {"day":0, "week":0, "month":0, "year":0}
-                        if pub >= today: matrix[acc]["day"] += 1
-                        if pub >= month: matrix[acc]["month"] += 1
+                        if t_pub >= today: matrix[acc]["day"] += 1
+                        if t_pub >= month: matrix[acc]["month"] += 1
                         matrix[acc]["year"] += 1
                         plats[acc] = plats.get(acc, 0) + 1
             
@@ -156,39 +124,26 @@ def get_dashboard_data(dim: str = "day"):
             "plats": [{"name":k, "value":v} for k,v in plats.items()]
         }
 
-# === 接口 2: 产品统计 (修复空白的核心！！！) ===
+# === 接口 2: 产品统计 (修复空白核心) ===
 @main_app.get("/api/product_stats")
 def get_product_stats():
     with Session(engine) as session:
-        # 只查询 Video 表，不做任何复杂关联
         videos = session.exec(select(Video)).all()
-        
         stats = {}
         for v in videos:
             try:
-                # [核心修复]：强制转字符串！即使是数字也不会报错！
+                # [关键] 强制转字符串，防止 int.strip() 报错
                 pid = safe_str(v.product_id)
-                
-                if not pid or pid.lower() in ['nan', 'none']:
-                    pid = "未分类"
-                
-                if pid not in stats:
-                    stats[pid] = {"name": pid, "total": 0, "pending": 0}
-                
+                if not pid or pid.lower() in ['nan', 'none']: pid = "未分类"
+                if pid not in stats: stats[pid] = {"name": pid, "total": 0, "pending": 0}
                 stats[pid]["total"] += 1
-                
-                if safe_str(v.status) == "待发布":
-                    stats[pid]["pending"] += 1
-            except Exception as e:
-                # 万一还有错，打印日志并跳过，绝不让接口崩掉
-                print(f"Skipping bad row: {e}")
-                continue
+                if safe_str(v.status) == "待发布": stats[pid]["pending"] += 1
+            except: continue
         
         res = list(stats.values())
         res.sort(key=lambda x: (x["pending"], x["total"]), reverse=True)
         return res
 
-# === 接口 3: 列表查询 ===
 @main_app.get("/api/videos")
 def list_videos(page: int=1, size: int=100, sort_by: str="id", order: str="desc", keyword: Optional[str]=None, host: Optional[str]=None, status: Optional[str]=None, category: Optional[str]=None, platform: Optional[str]=None, video_type: Optional[str]=None, product_id: Optional[str]=None, title: Optional[str]=None, remark: Optional[str]=None, finish_start: Optional[str]=None, finish_end: Optional[str]=None, publish_start: Optional[str]=None, publish_end: Optional[str]=None):
     with Session(engine) as session:

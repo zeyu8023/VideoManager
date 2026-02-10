@@ -3,19 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>VideoHub V33.0 Final</title>
+    <title>VideoHub V35.0 Fixed</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/echarts/5.4.3/echarts.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
     <style>
+        /* === 布局核心 === */
         body { font-family: 'Inter', 'Noto Sans SC', sans-serif; background: #f8fafc; color: #1e293b; margin: 0; height: 100vh; overflow: hidden; }
         .app-container { display: flex; height: 100%; width: 100%; overflow: hidden; }
         
-        /* 侧边栏 */
         .sidebar { width: 240px; background: #0f172a; color: #94a3b8; display: flex; flex-direction: column; flex-shrink: 0; z-index: 50; box-shadow: 4px 0 24px rgba(0,0,0,0.1); }
         .sidebar-content { flex: 1; overflow-y: auto; }
         
-        /* 主内容区 - 绝对定位法 */
         .main-content { 
             flex: 1; 
             position: relative; 
@@ -24,7 +23,6 @@
             overflow: hidden; 
         }
 
-        /* 视图容器：强制占满，开启滚动 */
         .view-container {
             position: absolute;
             top: 0; left: 0; right: 0; bottom: 0;
@@ -33,7 +31,6 @@
             overflow: hidden;
         }
         
-        /* 通用滚动区域 */
         .scroll-content {
             flex: 1;
             overflow-y: auto;
@@ -41,7 +38,6 @@
             min-height: 0;
         }
 
-        /* 库存表特殊布局 */
         .inventory-layout { display: flex; flex-direction: column; height: 100%; }
         .inv-header { flex-shrink: 0; z-index: 20; background: #f1f5f9; }
         .inv-body { 
@@ -55,7 +51,6 @@
             box-shadow: 0 1px 2px rgba(0,0,0,0.05);
         }
         
-        /* === 其他样式 === */
         .sidebar-header { height: 64px; display: flex; align-items: center; padding: 0 24px; color: white; font-weight: 700; border-bottom: 1px solid rgba(255,255,255,0.1); flex-shrink: 0; }
         .nav-item { padding: 14px 24px; cursor: pointer; display: flex; align-items: center; gap: 12px; font-size: 14px; font-weight: 500; transition: all 0.2s; border-left: 3px solid transparent; }
         .nav-item:hover { background: rgba(255,255,255,0.05); color: white; }
@@ -65,8 +60,10 @@
         .stat-card { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); border: 1px solid #e2e8f0; display:flex; flex-direction:column; justify-content:space-between; }
         .stat-label { font-size: 12px; font-weight: 700; color: #64748b; text-transform: uppercase; margin-bottom: 8px; }
         .stat-num { font-size: 28px; font-weight: 800; color: #0f172a; }
+        
         .chart-grid { display: grid; grid-template-columns: 2fr 1.5fr 1.5fr; gap: 16px; margin-bottom: 24px; flex-shrink: 0; }
         .chart-box { background: white; border-radius: 12px; padding: 20px; border: 1px solid #e2e8f0; height: 340px; }
+        
         .trend-box { background: white; border-radius: 12px; padding: 20px; border: 1px solid #e2e8f0; height: 400px; margin-bottom: 24px; flex-shrink: 0; }
         .matrix-box { background: white; border-radius: 12px; border: 1px solid #e2e8f0; overflow: hidden; margin-bottom: 40px; flex-shrink: 0; }
         .matrix-header { padding: 16px 20px; border-bottom: 1px solid #e2e8f0; font-weight: 700; color: #334155; background: #f8fafc; }
@@ -78,6 +75,7 @@
         .toolbar { padding: 16px 24px; background: white; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; shrink-0; }
         .filter-panel { background: white; border-bottom: 1px solid #e2e8f0; overflow: hidden; transition: max-height 0.3s; max-height: 0; padding: 0 24px; shrink-0; }
         .filter-panel.open { max-height: 600px; padding-top: 20px; padding-bottom: 20px; }
+        
         .main-table { width: 100%; border-collapse: collapse; min-width: 1800px; }
         .main-table th { position: sticky; top: 0; background: #f8fafc; color: #475569; font-weight: 700; font-size: 13px; padding: 12px; border-bottom: 2px solid #e2e8f0; z-index: 10; text-align: left; }
         .main-table td { padding: 10px 12px; border-bottom: 1px solid #f1f5f9; font-size: 14px; vertical-align: middle; color: #334155; }
@@ -87,12 +85,15 @@
         .prod-card { background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; cursor: pointer; transition: all 0.2s; position: relative; overflow: hidden; }
         .prod-card:hover { transform: translateY(-2px); box-shadow: 0 8px 12px -3px rgba(0,0,0,0.1); border-color: #3b82f6; }
         .prod-card.danger { border-left: 4px solid #ef4444; } .prod-card.safe { border-left: 4px solid #10b981; } .prod-card.warn { border: 2px solid #f59e0b; }
+        
         .pc-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
         .pc-title { font-weight: 700; font-size: 15px; color: #1e293b; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 75%; }
         .pc-badge { font-size: 10px; background: #f1f5f9; padding: 2px 6px; border-radius: 4px; color: #64748b; }
+        
         .pc-body { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 12px; }
         .pc-num { font-size: 28px; font-weight: 800; line-height: 1; }
         .pc-label { font-size: 11px; color: #64748b; font-weight: 600; margin-top: 4px; }
+        
         .pc-bar-bg { height: 4px; background: #f1f5f9; border-radius: 2px; overflow: hidden; display: flex; }
         .pc-bar-fill { height: 100%; border-radius: 2px; }
         .pc-foot { display: flex; justify-content: space-between; margin-top: 10px; font-size: 11px; color: #94a3b8; }
@@ -215,44 +216,32 @@
 <div id="settings-modal" class="modal"><div class="bg-white rounded-xl w-[400px] p-6"><h3 class="font-bold mb-4">配置</h3><textarea id="set-hosts" class="t-input h-20 mb-2"></textarea><input id="set-cats" class="t-input mb-2"><input id="set-types" class="t-input mb-2"><input id="set-plats" class="t-input mb-2"><button onclick="saveSettings()" class="w-full bg-blue-600 text-white py-2 rounded font-bold">保存</button><button onclick="document.getElementById('settings-modal').classList.remove('active')" class="w-full mt-2 text-slate-400 text-xs">关闭</button></div></div>
 
 <script>
+    // 定义全局变量和函数
     let currPage=1, totalPages=1, globalOptions={}, editingId=null, globalData=[], chartTrend=null;
 
-    (function init() {
-        loadDashboard('day'); loadOptions(); loadData(1); loadProductStats();
-        document.addEventListener('click', e => { if(!e.target.closest('.multi-pop') && !e.target.closest('.multi-trig')) document.getElementById('multi-pop').classList.remove('show'); });
-        document.getElementById('prod-search').addEventListener('input', (e) => Product.search(e.target.value));
-    })();
+    const Dashboard = {
+        async init() {
+            try {
+                const res = await fetch(`/api/dashboard?dim=day`); 
+                if (!res.ok) throw new Error('Dashboard API Error');
+                const data = await res.json();
+                document.getElementById('d-total').innerText = data.kpi.total;
+                document.getElementById('d-dist').innerText = data.kpi.dist;
+                document.getElementById('d-pending').innerText = data.kpi.pending;
+                document.getElementById('d-today-in').innerText = data.kpi.t_in; 
+                document.getElementById('d-today-out').innerText = data.kpi.t_out;
+                document.getElementById('d-month-in').innerText = data.kpi.m_in;   
+                document.getElementById('d-month-out').innerText = data.kpi.m_out; 
+                document.getElementById('matrix-body').innerHTML = data.matrix.map((r, i) => `<tr><td class="font-bold flex items-center gap-2"><span class="w-5 h-5 rounded bg-slate-100 text-slate-500 text-xs flex items-center justify-center">${i+1}</span>${r.name}</td><td class="${r.day>0?'val-today':''}">${r.day}</td><td>${r.week}</td><td>${r.month}</td><td class="font-mono font-bold">${r.year}</td></tr>`).join('');
+                if(!chartTrend) chartTrend = echarts.init(document.getElementById('chart-trend'));
+                chartTrend.setOption({tooltip:{trigger:'axis'}, legend:{data:['入库','发布'],bottom:0}, grid:{top:20,left:40,right:20,bottom:30}, xAxis:{type:'category',data:data.trend.dates}, yAxis:{type:'value'}, series:[{name:'入库',type:'line',data:data.trend.in,smooth:true,itemStyle:{color:'#3b82f6'},areaStyle:{opacity:0.1}}, {name:'发布',type:'bar',data:data.trend.out,itemStyle:{color:'#10b981'}}]});
+                echarts.init(document.getElementById('chart-host')).setOption({tooltip:{trigger:'axis'}, grid:{top:10,left:60,right:20,bottom:20}, xAxis:{type:'value'}, yAxis:{type:'category',data:data.hosts.map(i=>i.name).reverse()}, series:[{type:'bar',data:data.hosts.map(i=>i.value).reverse(),itemStyle:{color:'#f59e0b',borderRadius:[0,4,4,0]}}]});
+                echarts.init(document.getElementById('chart-type')).setOption({tooltip:{trigger:'item'}, series:[{type:'pie',radius:['40%','70%'],data:data.types}]});
+                echarts.init(document.getElementById('chart-plat')).setOption({tooltip:{}, radar:{indicator:data.plats.map(p=>({name:p.name, max:Math.max(...data.plats.map(v=>v.value),10)}))}, series:[{type:'radar',data:[{value:data.plats.map(p=>p.value),name:'分发量'}]}]});
+            } catch(e) { console.error(e); }
+        }
+    };
 
-    function switchView(view, btn) {
-        document.querySelectorAll('.nav-item').forEach(el=>el.classList.remove('active')); btn.classList.add('active');
-        document.getElementById('view-dashboard').classList.add('hidden');
-        document.getElementById('view-inventory').classList.add('hidden');
-        document.getElementById('view-product').classList.add('hidden');
-        
-        if(view === 'dashboard') { document.getElementById('view-dashboard').classList.remove('hidden'); loadDashboard('day'); }
-        if(view === 'inventory') { document.getElementById('view-inventory').classList.remove('hidden'); }
-        if(view === 'product') { document.getElementById('view-product').classList.remove('hidden'); loadProductStats(); }
-    }
-
-    // Dashboard Logic
-    async function loadDashboard(dim) {
-        const res = await fetch(`/api/dashboard?dim=${dim}`); const data = await res.json();
-        document.getElementById('d-total').innerText = data.kpi.total;
-        document.getElementById('d-dist').innerText = data.kpi.dist;
-        document.getElementById('d-pending').innerText = data.kpi.pending;
-        document.getElementById('d-today-in').innerText = data.kpi.t_in; 
-        document.getElementById('d-today-out').innerText = data.kpi.t_out;
-        document.getElementById('d-month-in').innerText = data.kpi.m_in;   
-        document.getElementById('d-month-out').innerText = data.kpi.m_out; 
-        document.getElementById('matrix-body').innerHTML = data.matrix.map((r, i) => `<tr><td class="font-bold flex items-center gap-2"><span class="w-5 h-5 rounded bg-slate-100 text-slate-500 text-xs flex items-center justify-center">${i+1}</span>${r.name}</td><td class="${r.day>0?'val-today':''}">${r.day}</td><td>${r.week}</td><td>${r.month}</td><td class="font-mono font-bold">${r.year}</td></tr>`).join('');
-        if(!chartTrend) chartTrend = echarts.init(document.getElementById('chart-trend'));
-        chartTrend.setOption({tooltip:{trigger:'axis'}, legend:{data:['入库','发布'],bottom:0}, grid:{top:20,left:40,right:20,bottom:30}, xAxis:{type:'category',data:data.trend.dates}, yAxis:{type:'value'}, series:[{name:'入库',type:'line',data:data.trend.in,smooth:true,itemStyle:{color:'#3b82f6'},areaStyle:{opacity:0.1}}, {name:'发布',type:'bar',data:data.trend.out,itemStyle:{color:'#10b981'}}]});
-        echarts.init(document.getElementById('chart-host')).setOption({tooltip:{trigger:'axis'}, grid:{top:10,left:60,right:20,bottom:20}, xAxis:{type:'value'}, yAxis:{type:'category',data:data.hosts.map(i=>i.name).reverse()}, series:[{type:'bar',data:data.hosts.map(i=>i.value).reverse(),itemStyle:{color:'#f59e0b',borderRadius:[0,4,4,0]}}]});
-        echarts.init(document.getElementById('chart-type')).setOption({tooltip:{trigger:'item'}, series:[{type:'pie',radius:['40%','70%'],data:data.types}]});
-        echarts.init(document.getElementById('chart-plat')).setOption({tooltip:{}, radar:{indicator:data.plats.map(p=>({name:p.name, max:Math.max(...data.plats.map(v=>v.value),10)}))}, series:[{type:'radar',data:[{value:data.plats.map(p=>p.value),name:'分发量'}]}]});
-    }
-
-    // Product Logic
     const Product = {
         allData: [],
         init: async function() {
@@ -261,7 +250,7 @@
                 if(!res.ok) throw new Error("API Error");
                 this.allData = await res.json();
                 this.render(this.allData);
-            } catch(e) { console.error("Product fetch failed", e); document.getElementById('product-grid').innerHTML = `<div class="text-red-500 p-4">Error loading data: ${e.message}</div>`; }
+            } catch(e) { console.error("Product fetch failed", e); document.getElementById('product-grid').innerHTML = `<div class="text-red-500 p-8 text-center">加载失败: ${e.message}</div>`; }
         },
         search: function(keyword) {
             if(!keyword) { this.render(this.allData); return; }
@@ -271,7 +260,7 @@
         render: function(data) {
             const grid = document.getElementById('product-grid');
             if(!grid) return;
-            if(!data || data.length === 0) { grid.innerHTML = `<div class="text-slate-400 p-4 text-center w-full col-span-full">暂无数据</div>`; return; }
+            if(!data || data.length === 0) { grid.innerHTML = `<div class="text-slate-400 p-8 text-center col-span-full">暂无产品数据</div>`; return; }
             
             grid.innerHTML = data.map(item => {
                 const pct = Math.round(((item.total - item.pending)/item.total)*100)||0;
@@ -300,9 +289,18 @@
             }).join('');
         }
     };
-    window.loadProductStats = () => Product.init();
 
-    // Inventory Logic
+    function switchView(view, btn) {
+        document.querySelectorAll('.nav-item').forEach(el=>el.classList.remove('active')); btn.classList.add('active');
+        document.getElementById('view-dashboard').classList.add('hidden');
+        document.getElementById('view-inventory').classList.add('hidden');
+        document.getElementById('view-product').classList.add('hidden');
+        
+        if(view === 'dashboard') { document.getElementById('view-dashboard').classList.remove('hidden'); loadDashboard('day'); }
+        if(view === 'inventory') { document.getElementById('view-inventory').classList.remove('hidden'); }
+        if(view === 'product') { document.getElementById('view-product').classList.remove('hidden'); Product.init(); }
+    }
+
     function jumpTo(pid) { document.querySelectorAll('.nav-item')[1].click(); document.getElementById('s-pid').value = pid; if(!document.getElementById('filter-panel').classList.contains('open')) toggleFilter(); loadData(1); }
     async function loadOptions() { const res=await fetch('/api/options'); globalOptions=await res.json(); const fill=(id,l)=>document.getElementById(id).innerHTML=`<option value="">全部</option>`+l.map(i=>`<option>${i}</option>`).join(''); fill('s-cat',globalOptions.categories); fill('s-type',globalOptions.video_types); fill('s-host',globalOptions.hosts); fill('s-status',globalOptions.statuses); fill('s-plat',globalOptions.platforms); document.getElementById('dl-pids').innerHTML=globalOptions.product_ids.map(i=>`<option>${i}</option>`).join(''); }
     async function loadData(p) { currPage=p||currPage; const params=new URLSearchParams({page:currPage, size:100, keyword:document.getElementById('g-search').value, product_id:document.getElementById('s-pid').value, title:document.getElementById('s-title').value, remark:document.getElementById('s-remark').value, host:document.getElementById('s-host').value, status:document.getElementById('s-status').value, category:document.getElementById('s-cat').value, video_type:document.getElementById('s-type').value, platform:document.getElementById('s-plat').value, finish_start:document.getElementById('s-fin-start').value, finish_end:document.getElementById('s-fin-end').value, publish_start:document.getElementById('s-pub-start').value, publish_end:document.getElementById('s-pub-end').value}); const res=await fetch(`/api/videos?${params}`); const data=await res.json(); globalData=data.items; totalPages=data.total_pages; document.getElementById('page-info').innerText = `共 ${data.total} 条 · ${data.page}/${data.total_pages} 页`; renderTable(data.items); }
@@ -326,6 +324,10 @@
     async function startImport(){ await fetch('/api/import/local',{method:'POST'}); alert('后台任务已启动'); document.getElementById('import-modal').classList.remove('active'); }
     function openSettings(){ document.getElementById('settings-modal').classList.add('active'); document.getElementById('set-hosts').value=globalOptions.hosts.join(','); document.getElementById('set-cats').value=globalOptions.categories.join(','); document.getElementById('set-types').value=globalOptions.video_types.join(','); document.getElementById('set-plats').value=globalOptions.platforms.join(','); }
     async function saveSettings(){ const s=(k,v)=>fetch('/api/settings',{method:'POST',body:new URLSearchParams({key:k,value:v})}); await s('hosts',document.getElementById('set-hosts').value); await s('categories',document.getElementById('set-cats').value); await s('video_types',document.getElementById('set-types').value); await s('platforms',document.getElementById('set-plats').value); document.getElementById('settings-modal').classList.remove('active'); loadOptions(); }
+
+    // 关键修正：确保所有函数定义后再执行初始化
+    // 启动应用
+    init();
 </script>
 </body>
 </html>
