@@ -17,29 +17,24 @@ from sqlalchemy import func
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("VideoHub")
 
-main_app = FastAPI(title="VideoHub V39.0 Full Restore")
+main_app = FastAPI(title="VideoHub V42.0 Final Fix")
 engine = create_engine("sqlite:///data/inventory.db")
 
 from .models import Video, AppSettings
 
-# === 核心工具：防崩金钟罩 ===
+# === 核心工具：安全转字符串 ===
 def safe_str(val):
-    """不管什么类型，转为字符串，防止 .strip() 报错"""
     if val is None: return ""
     return str(val).strip()
 
+# === 核心工具：日期解析 ===
 def parse_safe_date(date_str):
-    """全能日期解析，找回仪表盘数据"""
     s = safe_str(date_str).lower()
     if not s or s in ['nan', 'none', '', 'nat', 'null']: return None
     try:
-        # 1. 优先截取前10位标准格式 YYYY-MM-DD
-        clean_s = s[:10]
-        # 常见分隔符处理
-        clean_s = clean_s.replace('/', '-').replace('.', '-')
+        clean_s = s[:10].replace('/', '-').replace('.', '-')
         return datetime.datetime.strptime(clean_s, "%Y-%m-%d")
     except:
-        # 2. 正则提取兜底
         try:
             match = re.search(r'(\d{4})[-/年.](\d{1,2})[-/月.](\d{1,2})', s)
             if match:
@@ -47,31 +42,21 @@ def parse_safe_date(date_str):
         except: pass
     return None
 
-# === 初始化 ===
 @main_app.on_event("startup")
 def on_startup():
     os.makedirs("data", exist_ok=True)
     os.makedirs("assets/previews", exist_ok=True)
     os.makedirs("temp_uploads", exist_ok=True)
     SQLModel.metadata.create_all(engine)
-    
     with Session(engine) as session:
         try: session.exec(text("SELECT created_at FROM video LIMIT 1"))
         except: 
             try: session.exec(text("ALTER TABLE video ADD COLUMN created_at DATETIME"))
             except: pass
             session.commit()
-        
         session.exec(text("UPDATE video SET created_at = finish_time WHERE created_at IS NULL AND finish_time IS NOT NULL"))
         session.exec(text(f"UPDATE video SET created_at = '{datetime.datetime.now()}' WHERE created_at IS NULL"))
-        
-        defaults = {
-            "hosts": "小梨,VIVI,七七,杨总,其他",
-            "statuses": "待发布,已发布,剪辑中,拍摄中,脚本中",
-            "categories": "球服,球鞋,球拍,周边,配件",
-            "platforms": "抖音-炬鑫,小红书-有家,视频号-羽球,B站-官方,快手-炬鑫",
-            "video_types": "产品展示,剧情,口播,Vlog,花絮"
-        }
+        defaults = {"hosts":"小梨,VIVI,七七,杨总,其他", "statuses":"待发布,已发布,剪辑中,拍摄中,脚本中", "categories":"球服,球鞋,球拍,周边,配件", "platforms":"抖音-炬鑫,小红书-有家,视频号-羽球,B站-官方,快手-炬鑫", "video_types":"产品展示,剧情,口播,Vlog,花絮"}
         for k, v in defaults.items():
             if not session.get(AppSettings, k): session.add(AppSettings(key=k, value=v))
         session.commit()
@@ -82,64 +67,47 @@ main_app.mount("/assets", StaticFiles(directory="assets"), name="assets")
 async def read_index():
     return FileResponse(os.path.join("frontend", "index.html"))
 
-# === 接口 1: 仪表盘 (修复空数据) ===
 @main_app.get("/api/dashboard")
 def get_dashboard_data(dim: str = "day"):
     with Session(engine) as session:
         videos = session.exec(select(Video)).all()
         total = len(videos)
         pending = 0
-        
         now = datetime.datetime.now()
         today = now.replace(hour=0, minute=0, second=0, microsecond=0)
         month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-        
         flow = {"t_in":0, "t_out":0, "m_in":0, "m_out":0}
-        trend = {}
-        hosts = {}
-        types = {}
-        plats = {}
-        matrix = {}
-        dist = 0
+        trend = {}; hosts = {}; types = {}; plats = {}; matrix = {}
 
         for v in videos:
-            # 状态统计防崩
             if "待发布" in safe_str(v.status): pending += 1
-
             t_in = parse_safe_date(v.finish_time)
             t_pub = parse_safe_date(v.publish_time)
             
-            # 入库统计
             if t_in:
                 if t_in >= today: flow["t_in"] += 1
                 if t_in >= month: flow["m_in"] += 1
                 k = t_in.strftime("%Y-%m-%d")
-                if dim == 'month': k = t_in.strftime("%Y-%m")
-                elif dim == 'week': k = t_in.strftime("%Y-W%W")
-                
+                if dim=='month': k=t_in.strftime("%Y-%m")
+                elif dim=='week': k=t_in.strftime("%Y-W%W")
                 if k not in trend: trend[k] = {"in":0, "out":0}
                 trend[k]["in"] += 1
-                
                 if v.host:
                     for h in safe_str(v.host).replace('，', ',').split(','):
-                        h_clean = h.strip()
-                        if h_clean: hosts[h_clean] = hosts.get(h_clean, 0) + 1
+                        h = h.strip()
+                        if h: hosts[h] = hosts.get(h, 0) + 1
 
-            # 发布统计
             if t_pub:
                 if t_pub >= today: flow["t_out"] += 1
                 if t_pub >= month: flow["m_out"] += 1
                 k = t_pub.strftime("%Y-%m-%d")
-                if dim == 'month': k = t_pub.strftime("%Y-%m")
-                elif dim == 'week': k = t_pub.strftime("%Y-W%W")
-                
+                if dim=='month': k=t_pub.strftime("%Y-%m")
+                elif dim=='week': k=t_pub.strftime("%Y-W%W")
                 if k not in trend: trend[k] = {"in":0, "out":0}
                 trend[k]["out"] += 1
-                
                 if "已发布" in safe_str(v.status) and v.platform:
                     accs = [p.strip() for p in safe_str(v.platform).replace('，', ',').split(',') if p.strip()]
                     for acc in accs:
-                        dist += 1
                         if acc not in matrix: matrix[acc] = {"day":0, "week":0, "month":0, "year":0}
                         if t_pub >= today: matrix[acc]["day"] += 1
                         if t_pub >= month: matrix[acc]["month"] += 1
@@ -151,78 +119,53 @@ def get_dashboard_data(dim: str = "day"):
                 if vt: types[vt] = types.get(vt, 0) + 1
 
         dates = sorted(trend.keys())[-30:]
-        mat_list = [{"name":k, **v} for k,v in matrix.items()]
-        mat_list.sort(key=lambda x:x["year"], reverse=True)
-        
         return {
-            "kpi": {"total":total, "pending":pending, "dist":dist, "t_in":flow["t_in"], "t_out":flow["t_out"], "m_in":flow["m_in"], "m_out":flow["m_out"]},
+            "kpi": {"total":total, "pending":pending, "dist":sum(p['year'] for p in matrix.values()), "t_in":flow["t_in"], "t_out":flow["t_out"], "m_in":flow["m_in"], "m_out":flow["m_out"]},
             "trend": {"dates":dates, "in":[trend[k]["in"] for k in dates], "out":[trend[k]["out"] for k in dates]},
-            "matrix": mat_list, 
+            "matrix": sorted([{"name":k, **v} for k,v in matrix.items()], key=lambda x:x["year"], reverse=True),
             "hosts": sorted([{"name":k, "value":v} for k,v in hosts.items()], key=lambda x:x['value'], reverse=True)[:5], 
             "types": [{"name":k, "value":v} for k,v in types.items()], 
             "plats": [{"name":k, "value":v} for k,v in plats.items()]
         }
 
-# === 接口 2: 产品统计 (纯净防崩版) ===
 @main_app.get("/api/product_stats")
 def get_product_stats():
     with Session(engine) as session:
-        # 只查 Video 表，避开 Product 表的所有坑
         videos = session.exec(select(Video)).all()
         stats = {}
         for v in videos:
             try:
-                # 强制类型转换，解决 int 报错
                 pid = safe_str(v.product_id)
                 if not pid or pid.lower() in ['nan', 'none']: pid = "未分类"
-                
                 if pid not in stats: stats[pid] = {"name": pid, "total": 0, "pending": 0}
                 stats[pid]["total"] += 1
                 if "待发布" in safe_str(v.status): stats[pid]["pending"] += 1
             except: continue
-        
         res = list(stats.values())
         res.sort(key=lambda x: (x["pending"], x["total"]), reverse=True)
         return res
 
-# === 接口 3: 列表查询 (全字段筛选支持) ===
 @main_app.get("/api/videos")
-def list_videos(page: int=1, size: int=100, sort_by: str="id", order: str="desc", 
-                keyword: Optional[str]=None, host: Optional[str]=None, status: Optional[str]=None, 
-                category: Optional[str]=None, platform: Optional[str]=None, video_type: Optional[str]=None, 
-                product_id: Optional[str]=None, title: Optional[str]=None, remark: Optional[str]=None, 
-                finish_start: Optional[str]=None, finish_end: Optional[str]=None, 
-                publish_start: Optional[str]=None, publish_end: Optional[str]=None):
+def list_videos(page: int=1, size: int=100, sort_by: str="id", order: str="desc", keyword: Optional[str]=None, host: Optional[str]=None, status: Optional[str]=None, category: Optional[str]=None, platform: Optional[str]=None, video_type: Optional[str]=None, product_id: Optional[str]=None, title: Optional[str]=None, remark: Optional[str]=None, finish_start: Optional[str]=None, finish_end: Optional[str]=None, publish_start: Optional[str]=None, publish_end: Optional[str]=None):
     with Session(engine) as session:
         stmt = select(Video)
-        # 全局模糊搜
-        if keyword: 
-            kw = f"%{keyword}%"
-            stmt = stmt.where(or_(col(Video.title).like(kw), col(Video.product_id).like(kw), col(Video.remark).like(kw)))
-        
-        # 精确字段搜
+        if keyword: stmt = stmt.where(or_(col(Video.title).contains(keyword), col(Video.product_id).contains(keyword), col(Video.remark).contains(keyword)))
         if product_id: stmt = stmt.where(col(Video.product_id).contains(product_id))
         if title: stmt = stmt.where(col(Video.title).contains(title))
         if remark: stmt = stmt.where(col(Video.remark).contains(remark))
-        
-        # 下拉框筛选
         if host and "全部" not in host: stmt = stmt.where(col(Video.host).contains(host))
         if platform and "全部" not in platform: stmt = stmt.where(col(Video.platform).contains(platform))
         if category and "全部" not in category: stmt = stmt.where(Video.category == category)
         if status and "全部" not in status: stmt = stmt.where(Video.status == status)
         if video_type and "全部" not in video_type: stmt = stmt.where(Video.video_type == video_type)
-        
-        # 时间筛选
         if finish_start: stmt = stmt.where(Video.finish_time >= finish_start)
         if finish_end: stmt = stmt.where(Video.finish_time <= finish_end)
         if publish_start: stmt = stmt.where(Video.publish_time >= publish_start)
         if publish_end: stmt = stmt.where(Video.publish_time <= publish_end)
-
         total = session.exec(select(func.count()).select_from(stmt.subquery())).one()
         stmt = stmt.order_by(asc(getattr(Video, sort_by)) if order=="asc" else desc(getattr(Video, sort_by))).offset((page-1)*size).limit(size)
         return {"items": session.exec(stmt).all(), "total": total, "page": page, "size": size, "total_pages": math.ceil(total/size)}
 
-# === 增删改查 & 配置 ===
 @main_app.post("/api/video/save")
 async def save_video(id: Optional[str]=Form(None), product_id: Optional[str]=Form(None), title: Optional[str]=Form(None), host: Optional[str]=Form(None), status: Optional[str]=Form(None), category: Optional[str]=Form(None), video_type: Optional[str]=Form(None), platform: Optional[str]=Form(None), finish_time: Optional[str]=Form(None), publish_time: Optional[str]=Form(None), remark: Optional[str]=Form(None), image_url: Optional[str]=Form(None)):
     with Session(engine) as session:
@@ -232,7 +175,6 @@ async def save_video(id: Optional[str]=Form(None), product_id: Optional[str]=For
         else:
             video = session.get(Video, int(id))
             if not video: raise HTTPException(404)
-        
         if product_id is not None: video.product_id = product_id
         if title is not None: video.title = title
         if host is not None: video.host = host
@@ -244,7 +186,6 @@ async def save_video(id: Optional[str]=Form(None), product_id: Optional[str]=For
         if publish_time is not None: video.publish_time = publish_time
         if remark is not None: video.remark = remark
         if image_url and "nan" not in image_url: video.image_url = image_url
-        
         session.commit()
         return {"message": "ok"}
 
@@ -265,10 +206,7 @@ def get_options():
             for i in db: 
                 if i and str(i).lower() not in ['nan', 'none', '']: clean.extend([x.strip() for x in str(i).replace('，', ',').split(',')])
             return sorted(list(set(clean + [x.strip() for x in settings.get(k, []) if x.strip()])))
-        return {
-            "hosts": merge(Video.host, "hosts"), "categories": merge(Video.category, "categories"), "statuses": merge(Video.status, "statuses"),
-            "platforms": merge(Video.platform, "platforms"), "video_types": merge(Video.video_type, "video_types"), "product_ids": merge(Video.product_id, "ignore")
-        }
+        return {"hosts": merge(Video.host, "hosts"), "categories": merge(Video.category, "categories"), "statuses": merge(Video.status, "statuses"), "platforms": merge(Video.platform, "platforms"), "video_types": merge(Video.video_type, "video_types"), "product_ids": merge(Video.product_id, "ignore")}
 
 @main_app.post("/api/settings")
 def update_settings(key: str=Form(...), value: str=Form(...)):
