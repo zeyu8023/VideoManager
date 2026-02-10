@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>VideoHub V43.0 UI Perfect</title>
+    <title>VideoHub V44.0 Fixed</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/echarts/5.4.3/echarts.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -29,28 +29,25 @@
         .kpi-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 16px; margin-bottom: 24px; }
         .stat-card { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); border: 1px solid #e2e8f0; display:flex; flex-direction:column; justify-content:space-between; }
         .stat-num { font-size: 28px; font-weight: 800; color: #0f172a; }
+        
         .chart-grid { display: grid; grid-template-columns: 2fr 1.5fr 1.5fr; gap: 16px; margin-bottom: 24px; }
-        .chart-box { background: white; border-radius: 12px; padding: 20px; border: 1px solid #e2e8f0; height: 360px; display: flex; flex-direction: column; }
+        .chart-box { background: white; border-radius: 12px; padding: 20px; border: 1px solid #e2e8f0; height: 380px; display: flex; flex-direction: column; }
         .trend-box { background: white; border-radius: 12px; padding: 20px; border: 1px solid #e2e8f0; height: 380px; margin-bottom: 24px; }
         
-        /* === 矩阵分发 (Matrix) 美化 === */
-        .matrix-box { background: white; border-radius: 12px; border: 1px solid #e2e8f0; overflow: hidden; height: 360px; display: flex; flex-direction: column; }
+        /* === 矩阵分发 (Matrix) 排行榜样式 === */
+        .matrix-box { background: white; border-radius: 12px; border: 1px solid #e2e8f0; overflow: hidden; height: 380px; display: flex; flex-direction: column; }
         .matrix-header { padding: 16px 20px; border-bottom: 1px solid #f1f5f9; font-weight: 700; color: #334155; display: flex; justify-content: space-between; align-items: center; }
         .matrix-list { flex: 1; overflow-y: auto; padding: 0 12px; }
-        .matrix-item { display: flex; align-items: center; padding: 12px 8px; border-bottom: 1px dashed #f1f5f9; transition: all 0.2s; }
-        .matrix-item:last-child { border-bottom: none; }
-        .matrix-item:hover { background: #f8fafc; transform: translateX(4px); }
-        .rank-icon { width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; font-size: 16px; margin-right: 12px; font-weight: 800; color: #94a3b8; }
-        .rank-top-1 { font-size: 20px; } .rank-top-2 { font-size: 18px; } .rank-top-3 { font-size: 18px; }
+        .matrix-item { display: flex; align-items: center; padding: 10px 8px; border-bottom: 1px dashed #f1f5f9; }
+        .matrix-item:hover { background: #f8fafc; }
+        .rank-icon { width: 24px; text-align: center; font-weight: 800; color: #94a3b8; margin-right: 12px; font-size: 14px; }
         .acc-info { flex: 1; }
         .acc-name { font-weight: 600; font-size: 13px; color: #334155; margin-bottom: 4px; }
         .acc-bar-bg { height: 6px; background: #f1f5f9; border-radius: 3px; width: 100%; overflow: hidden; }
         .acc-bar-fill { height: 100%; border-radius: 3px; background: #3b82f6; }
-        .acc-stat { width: 80px; text-align: right; }
-        .acc-val { font-weight: 800; color: #0f172a; font-size: 14px; }
-        .acc-sub { font-size: 10px; color: #94a3b8; }
+        .acc-stat { width: 60px; text-align: right; font-weight: 700; color: #0f172a; font-size: 14px; }
 
-        /* === 库存表 - 深度布局优化 === */
+        /* === 库存表 (布局修复) === */
         .inventory-layout { display: flex; flex-direction: column; height: 100%; }
         .inv-header { flex-shrink: 0; z-index: 20; background: #f8fafc; border-bottom: 1px solid #e2e8f0; }
         .toolbar { padding: 16px 24px; background: white; display: flex; justify-content: space-between; align-items: center; }
@@ -58,16 +55,15 @@
         .filter-panel.open { max-height: 600px; padding-top: 20px; padding-bottom: 20px; }
         .inv-body { flex: 1; overflow: auto; position: relative; margin: 16px 24px; background: white; border-radius: 8px; border: 1px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
         
-        /* 表格列宽控制 */
-        .main-table { width: 100%; table-layout: fixed; border-collapse: collapse; min-width: 1400px; }
+        /* 固定布局，列宽精确控制 */
+        .main-table { width: 100%; table-layout: fixed; border-collapse: collapse; min-width: 1500px; }
         .main-table th { position: sticky; top: 0; background: #f8fafc; color: #475569; font-weight: 600; font-size: 13px; padding: 14px 12px; border-bottom: 1px solid #e2e8f0; text-align: left; z-index: 10; white-space: nowrap; }
-        .main-table td { padding: 12px 12px; border-bottom: 1px solid #f1f5f9; font-size: 13px; vertical-align: middle; color: #334155; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .main-table td { padding: 10px 12px; border-bottom: 1px solid #f1f5f9; font-size: 13px; vertical-align: middle; color: #334155; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .main-table tr:hover td { background: #f8fafc; }
         
-        /* 标题列：自动换行，霸占剩余空间 */
-        .col-title { white-space: normal !important; line-height: 1.5; font-weight: 600; color: #1e293b; }
-        /* 备注列：保持单行截断，鼠标悬浮看详情 */
-        .col-remark { max-width: 120px; color: #94a3b8; cursor: help; }
+        /* 特殊列样式 */
+        .col-title { white-space: normal !important; line-height: 1.4; font-weight: 600; color: #1e293b; }
+        .col-remark { cursor: help; color: #94a3b8; }
 
         /* 胶囊标签 */
         .pill { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 6px; font-size: 12px; font-weight: 600; margin-right: 4px; border: 1px solid transparent; }
@@ -110,7 +106,7 @@
             <div class="scroll-content">
                 <div class="kpi-grid">
                     <div class="stat-card border-l-4 border-blue-500"><div class="text-xs font-bold text-slate-500 uppercase mb-2">总库存</div><div class="stat-num" id="d-total">-</div></div>
-                    <div class="stat-card border-l-4 border-purple-500"><div class="text-xs font-bold text-slate-500 uppercase mb-2">累计分发</div><div class="stat-num text-purple-700" id="d-dist">-</div></div>
+                    <div class="stat-card border-l-4 border-purple-500"><div class="text-xs font-bold text-slate-500 uppercase mb-2">累计分发</div><div class="stat-num" id="d-dist">-</div></div>
                     <div class="stat-card border-l-4 border-orange-500"><div class="text-xs font-bold text-slate-500 uppercase mb-2">待发布</div><div class="stat-num text-orange-700" id="d-pending">-</div></div>
                     <div class="stat-card"><div class="text-xs font-bold text-slate-500 uppercase mb-2">今日 入库 / 发布</div><div class="flex items-baseline gap-2 mt-auto"><span class="text-3xl font-black text-slate-800" id="d-today-in">-</span><span class="text-slate-400">/</span><span class="text-3xl font-black text-green-600" id="d-today-out">-</span></div></div>
                     <div class="stat-card"><div class="text-xs font-bold text-slate-500 uppercase mb-2">本月 入库 / 发布</div><div class="flex items-baseline gap-2 mt-auto"><span class="text-3xl font-black text-slate-800" id="d-month-in">-</span><span class="text-slate-400">/</span><span class="text-3xl font-black text-green-600" id="d-month-out">-</span></div></div>
@@ -125,10 +121,9 @@
                     <div class="matrix-box">
                         <div class="matrix-header">
                             <span>📱 账号矩阵热度</span>
-                            <span class="text-xs text-slate-400 bg-slate-50 px-2 py-1 rounded">Annual</span>
+                            <span class="text-xs text-slate-400 bg-slate-50 px-2 py-1 rounded">年度 Top</span>
                         </div>
-                        <div class="matrix-list" id="matrix-list">
-                            </div>
+                        <div class="matrix-list" id="matrix-list"></div>
                     </div>
                 </div>
             </div>
@@ -172,7 +167,7 @@
             <div class="inv-body">
                 <table class="main-table">
                     <colgroup>
-                        <col style="width: 60px;">  <col style="width: 110px;"> <col style="width: auto;">  <col style="width: 80px;">  <col style="width: 110px;"> <col style="width: 80px;">  <col style="width: 100px;"> <col style="width: 100px;"> <col style="width: 140px;"> <col style="width: 140px;"> <col style="width: 100px;"> <col style="width: 70px;">  </colgroup>
+                        <col style="width: 60px;">  <col style="width: 120px;"> <col style="width: auto;">  <col style="width: 90px;">  <col style="width: 110px;"> <col style="width: 90px;">  <col style="width: 110px;"> <col style="width: 100px;"> <col style="width: 160px;"> <col style="width: 140px;"> <col style="width: 120px;"> <col style="width: 70px;">  </colgroup>
                     <thead>
                         <tr>
                             <th class="text-center">图</th>
@@ -225,7 +220,6 @@
 <script>
     let currPage=1, totalPages=1, globalOptions={}, editingId=null;
 
-    // === 启动 ===
     window.addEventListener('load', async () => {
         await loadOptions();
         loadDashboard('day');
@@ -243,7 +237,7 @@
         if(view === 'product') Product.init();
     }
 
-    // === 色彩生成器 (全彩胶囊) ===
+    // === 胶囊颜色生成器 ===
     function getPillStyle(text) {
         if(!text || text==='-') return 'background:#f1f5f9; color:#64748b; border-color:#e2e8f0';
         if(text.includes('待')) return 'background:#fff7ed; color:#c2410c; border-color:#ffedd5'; 
@@ -266,48 +260,45 @@
         ).join('');
     }
 
-    // === Dashboard (Matrix 美化) ===
+    // === Dashboard ===
     async function loadDashboard(dim='day') {
         try {
             const res = await fetch(`/api/dashboard?dim=${dim}`);
             const data = await res.json();
             
-            // 数字更新
-            ['total','dist','pending','t_in','t_out','m_in','m_out'].forEach(k => {
-                document.getElementById('d-'+k.replace(/_/g,'-')).innerText = data.kpi[k] || 0;
-            });
+            // 修复：老老实实赋值，不玩花活
+            document.getElementById('d-total').innerText = data.kpi.total;
+            document.getElementById('d-dist').innerText = data.kpi.dist;
+            document.getElementById('d-pending').innerText = data.kpi.pending;
+            document.getElementById('d-today-in').innerText = data.kpi.t_in; 
+            document.getElementById('d-today-out').innerText = data.kpi.t_out;
+            document.getElementById('d-month-in').innerText = data.kpi.m_in;   
+            document.getElementById('d-month-out').innerText = data.kpi.m_out; 
             
-            // Matrix 美化渲染
+            // Matrix 排行榜渲染
             const maxVal = Math.max(...data.matrix.map(m => m.year), 1);
             document.getElementById('matrix-list').innerHTML = data.matrix.map((r, i) => {
-                let rankIcon = `<span class="text-slate-300 font-mono text-sm">#${i+1}</span>`;
-                if(i===0) rankIcon = '🥇'; if(i===1) rankIcon = '🥈'; if(i===2) rankIcon = '🥉';
-                const pct = (r.year / maxVal) * 100;
-                
+                let rankStr = `<span class="text-slate-300">#${i+1}</span>`;
+                if(i===0) rankStr = '🥇'; if(i===1) rankStr = '🥈'; if(i===2) rankStr = '🥉';
                 return `
                 <div class="matrix-item">
-                    <div class="rank-icon">${rankIcon}</div>
+                    <div class="rank-icon">${rankStr}</div>
                     <div class="acc-info">
                         <div class="acc-name">${r.name}</div>
-                        <div class="acc-bar-bg"><div class="acc-bar-fill" style="width: ${pct}%"></div></div>
+                        <div class="acc-bar-bg"><div class="acc-bar-fill" style="width: ${(r.year/maxVal)*100}%"></div></div>
                     </div>
-                    <div class="acc-stat">
-                        <div class="acc-val">${r.year}</div>
-                        <div class="acc-sub">Total</div>
-                    </div>
+                    <div class="acc-stat">${r.year}</div>
                 </div>`;
             }).join('');
             
-            // Charts
             if(typeof echarts !== 'undefined') {
                 echarts.init(document.getElementById('chart-trend')).setOption({tooltip:{trigger:'axis'}, xAxis:{type:'category',data:data.trend.dates}, yAxis:{type:'value'}, series:[{name:'入库',type:'line',smooth:true,itemStyle:{color:'#3b82f6'},areaStyle:{opacity:0.1},data:data.trend.in},{name:'发布',type:'bar',itemStyle:{color:'#10b981'},data:data.trend.out}]});
                 echarts.init(document.getElementById('chart-host')).setOption({tooltip:{trigger:'axis'}, xAxis:{type:'value'}, yAxis:{type:'category',data:data.hosts.map(i=>i.name).reverse()}, series:[{type:'bar',data:data.hosts.map(i=>i.value).reverse(), itemStyle:{color:'#f59e0b', borderRadius:[0,4,4,0]}}]});
                 echarts.init(document.getElementById('chart-type')).setOption({tooltip:{trigger:'item'}, series:[{type:'pie',radius:['40%','70%'],data:data.types}]});
             }
-        } catch(e) { console.error("Dash Error", e); }
+        } catch(e) { console.error(e); }
     }
 
-    // === Product ===
     const Product = {
         allData: [],
         init: async function() {
@@ -338,7 +329,6 @@
         }
     };
 
-    // === Inventory ===
     async function loadData(page) { 
         currPage = page || currPage; 
         const params = new URLSearchParams({
@@ -415,7 +405,6 @@
             </td>`;
     }
 
-    // === Helpers ===
     function startEdit(id){ editingId=id; loadData(); }
     function cancelEdit(){ editingId=null; loadData(); }
     async function saveRow(id){ const fd=new FormData(); if(id!=='new') fd.append('id',id); const map={'pid':'product_id','title':'title','cat':'category','fin':'finish_time','type':'video_type','host':'host','status':'status','plat':'platform','pub':'publish_time','rem':'remark'}; for(let [eid,k] of Object.entries(map)) fd.append(k, document.getElementById('ed-'+eid).value.replace('T',' ')); fd.append('image_url',document.getElementById('ed-img').value); await fetch('/api/video/save',{method:'POST',body:fd}); editingId=null; loadData(); }
