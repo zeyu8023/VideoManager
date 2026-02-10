@@ -3,7 +3,6 @@ import shutil
 import math
 import uuid
 import datetime
-from dateutil import parser # 需要确保环境支持，如果不行用自定义函数
 from fastapi import FastAPI, UploadFile, BackgroundTasks, Form, HTTPException
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
@@ -14,10 +13,10 @@ from typing import Optional
 from .processor import process_excel_background
 from .models import Video, AppSettings
 
-main_app = FastAPI(title="VideoHub V16.0")
+main_app = FastAPI(title="VideoHub V17.0 Enterprise")
 engine = create_engine("sqlite:///data/inventory.db")
 
-# === 辅助工具：强力日期解析 ===
+# === 强力日期解析工具 ===
 def parse_safe_date(date_str):
     """尝试将各种奇形怪状的字符串解析为 datetime 对象"""
     if not date_str or str(date_str).lower() in ['nan', 'none', '', 'nat']:
@@ -25,7 +24,6 @@ def parse_safe_date(date_str):
     try:
         # 截取前10位处理 YYYY-MM-DD
         date_str = str(date_str).strip()[:10]
-        # 简单解析格式
         for fmt in ("%Y-%m-%d", "%Y/%m/%d", "%Y%m%d"):
             try:
                 return datetime.datetime.strptime(date_str, fmt)
@@ -42,8 +40,19 @@ def on_startup():
     os.makedirs("temp_uploads", exist_ok=True)
     SQLModel.metadata.create_all(engine)
     
-    # 初始化默认配置
+    # 数据库自动修复
     with Session(engine) as session:
+        try: session.exec(text("SELECT created_at FROM video LIMIT 1"))
+        except: 
+            try: session.exec(text("ALTER TABLE video ADD COLUMN created_at DATETIME"))
+            except: pass
+            session.commit()
+        
+        # 给旧数据补默认时间，防止报表挂零
+        session.exec(text(f"UPDATE video SET created_at = '{datetime.datetime.now()}' WHERE created_at IS NULL"))
+        session.commit()
+
+        # 默认配置
         defaults = {
             "hosts": "小梨,VIVI,七七,杨总,其他",
             "statuses": "待发布,已发布,剪辑中,拍摄中,脚本中",
@@ -62,21 +71,17 @@ main_app.mount("/assets", StaticFiles(directory="assets"), name="assets")
 async def read_index():
     return FileResponse(os.path.join("frontend", "index.html"))
 
-# === 核心：仪表盘聚合接口 (基于业务时间) ===
+# === 核心：全能仪表盘数据接口 ===
 @main_app.get("/api/dashboard")
 def get_dashboard_data(dim: str = "day"):
     with Session(engine) as session:
         videos = session.exec(select(Video)).all()
         
-        # 1. 基础计数
+        # --- 1. 基础 KPI ---
         total = len(videos)
         pending = sum(1 for v in videos if v.status == "待发布")
         
-        # 2. 趋势统计容器
-        # key: 日期字符串, value: {in:0, out:0}
-        trend_map = {} 
-        
-        # 3. 周期统计 (今日/本月)
+        # 时间相关初始化
         now = datetime.datetime.now()
         today_str = now.strftime("%Y-%m-%d")
         month_str = now.strftime("%Y-%m")
@@ -85,24 +90,28 @@ def get_dashboard_data(dim: str = "day"):
         today_out = 0
         month_in = 0
         month_out = 0
-        host_map = {} # 劳模统计
+        
+        # 统计容器
+        trend_map = {} # {date: {in:0, out:0}}
+        host_map = {}  # {name: count}
+        type_map = {}  # {type: count}
+        plat_map = {}  # {plat: count}
+        turnover_days = [] # [days, ...]
 
         for v in videos:
-            # --- 解析时间 ---
-            dt_finish = parse_safe_date(v.finish_time) # 入库依据
-            dt_publish = parse_safe_date(v.publish_time) # 发布依据
+            dt_finish = parse_safe_date(v.finish_time)
+            dt_publish = parse_safe_date(v.publish_time)
             
             # --- 统计入库 (Finish Time) ---
             if dt_finish:
                 d_str = dt_finish.strftime("%Y-%m-%d")
                 m_str = dt_finish.strftime("%Y-%m")
                 
-                # 累加今日/本月
                 if d_str == today_str: today_in += 1
                 if m_str == month_str: month_in += 1
                 
-                # 累加趋势图
-                k_trend = d_str # 默认按日
+                # 趋势图 Key
+                k_trend = d_str
                 if dim == 'month': k_trend = m_str
                 elif dim == 'week': k_trend = dt_finish.strftime("%Y-W%W")
                 
@@ -110,8 +119,6 @@ def get_dashboard_data(dim: str = "day"):
                 trend_map[k_trend]["in"] += 1
 
             # --- 统计发布 (Publish Time) ---
-            # 只有当状态是“已发布”且有时间，或者单纯有发布时间时统计
-            # 这里逻辑宽容一点：只要有发布时间就算发布量
             if dt_publish:
                 d_str = dt_publish.strftime("%Y-%m-%d")
                 m_str = dt_publish.strftime("%Y-%m")
@@ -126,68 +133,80 @@ def get_dashboard_data(dim: str = "day"):
                 if k_trend not in trend_map: trend_map[k_trend] = {"in": 0, "out": 0}
                 trend_map[k_trend]["out"] += 1
                 
-                # 统计劳模 (仅统计有发布业绩的)
-                if v.host:
-                    for h in v.host.replace('，', ',').split(','):
-                        h = h.strip()
-                        if h: host_map[h] = host_map.get(h, 0) + 1
+                # 统计平台分布 (仅已发布)
+                if v.platform:
+                    for p in v.platform.replace('，', ',').split(','):
+                        p = p.strip()
+                        if p: plat_map[p] = plat_map.get(p, 0) + 1
 
-        # 4. 计算劳模
-        top_host = max(host_map, key=host_map.get) if host_map else "暂无"
+            # --- 统计主播产出 (基于完成时间) ---
+            # 只要完成了就算产出
+            if v.host and dt_finish:
+                for h in v.host.replace('，', ',').split(','):
+                    h = h.strip()
+                    if h: host_map[h] = host_map.get(h, 0) + 1
+            
+            # --- 统计内容结构 ---
+            if v.video_type:
+                type_map[v.video_type] = type_map.get(v.video_type, 0) + 1
 
-        # 5. 整理图表数据 (排序截取)
-        sorted_keys = sorted(trend_map.keys())
-        if len(sorted_keys) > 30: sorted_keys = sorted_keys[-30:] # 只看最近30个周期
+            # --- 统计周转效率 ---
+            # 如果既有完成时间，又有发布时间，计算差值
+            if dt_finish and dt_publish:
+                delta = (dt_publish - dt_finish).days
+                if delta >= 0: turnover_days.append(delta)
+
+        # 整理数据 - 趋势图
+        sorted_keys = sorted(trend_map.keys())[-30:] # 最近30周期
         
+        # 整理数据 - 主播排行 (Top 5)
+        sorted_hosts = sorted(host_map.items(), key=lambda x: x[1], reverse=True)[:5]
+        
+        # 整理数据 - 平均周转
+        avg_turnover = round(sum(turnover_days) / len(turnover_days), 1) if turnover_days else 0
+
         return {
-            "total": total, "pending": pending, "top_host": top_host,
+            "total": total, "pending": pending,
             "today_in": today_in, "today_out": today_out,
             "month_in": month_in, "month_out": month_out,
+            "avg_turnover": avg_turnover,
             "trend": {
                 "dates": sorted_keys,
                 "in": [trend_map[k]["in"] for k in sorted_keys],
                 "out": [trend_map[k]["out"] for k in sorted_keys]
-            }
+            },
+            "hosts": [{"name": k, "value": v} for k, v in sorted_hosts],
+            "types": [{"name": k, "value": v} for k, v in type_map.items()],
+            "plats": [{"name": k, "value": v} for k, v in plat_map.items()]
         }
 
-# === 全能筛选列表接口 ===
+# === 列表接口 (保持不变) ===
 @main_app.get("/api/videos")
 def list_videos(
     page: int = 1, size: int = 100, sort_by: str = "id", order: str = "desc",
     keyword: Optional[str] = None, 
-    # 筛选字段
     host: Optional[str] = None, status: Optional[str] = None,
     category: Optional[str] = None, platform: Optional[str] = None, video_type: Optional[str] = None,
     product_id: Optional[str] = None, title: Optional[str] = None, remark: Optional[str] = None,
-    # 时间范围筛选
     finish_start: Optional[str] = None, finish_end: Optional[str] = None,
     publish_start: Optional[str] = None, publish_end: Optional[str] = None
 ):
     with Session(engine) as session:
         stmt = select(Video)
-        
-        # 1. 搜索
         if keyword: stmt = stmt.where(or_(col(Video.title).contains(keyword), col(Video.product_id).contains(keyword), col(Video.remark).contains(keyword)))
-        
-        # 2. 文本精确/模糊筛选
         if product_id: stmt = stmt.where(col(Video.product_id).contains(product_id))
         if title: stmt = stmt.where(col(Video.title).contains(title))
         if remark: stmt = stmt.where(col(Video.remark).contains(remark))
-        
-        # 3. 下拉框筛选 (支持多选字段的模糊匹配)
         if host and "全部" not in host: stmt = stmt.where(col(Video.host).contains(host))
         if platform and "全部" not in platform: stmt = stmt.where(col(Video.platform).contains(platform))
         if category and "全部" not in category: stmt = stmt.where(Video.category == category)
         if status and "全部" not in status: stmt = stmt.where(Video.status == status)
         if video_type and "全部" not in video_type: stmt = stmt.where(Video.video_type == video_type)
-        
-        # 4. 时间范围筛选 (字符串比较)
         if finish_start: stmt = stmt.where(Video.finish_time >= finish_start)
         if finish_end: stmt = stmt.where(Video.finish_time <= finish_end)
         if publish_start: stmt = stmt.where(Video.publish_time >= publish_start)
         if publish_end: stmt = stmt.where(Video.publish_time <= publish_end)
 
-        # 5. 排序分页
         total = session.exec(select(func.count()).select_from(stmt.subquery())).one()
         sort_col = getattr(Video, sort_by, Video.id)
         stmt = stmt.order_by(asc(sort_col) if order == "asc" else desc(sort_col))
@@ -195,7 +214,7 @@ def list_videos(
         
         return {"items": session.exec(stmt).all(), "total": total, "page": page, "size": size, "total_pages": math.ceil(total / size)}
 
-# === 选项获取 ===
+# === 选项接口 ===
 @main_app.get("/api/options")
 def get_options():
     with Session(engine) as session:
@@ -217,7 +236,7 @@ def get_options():
             "product_ids": merge(Video.product_id, "ignore")
         }
 
-# === 增删改 ===
+# === 增删改查 (通用) ===
 @main_app.post("/api/video/save")
 async def save_video(
     id: Optional[str] = Form(None),
@@ -230,7 +249,7 @@ async def save_video(
 ):
     with Session(engine) as session:
         if not id or id in ['new', 'temp', 'undefined']:
-            video = Video(product_id=product_id or "", title=title or "", image_url="/assets/default.png")
+            video = Video(product_id=product_id or "", title=title or "", image_url="/assets/default.png", created_at=datetime.datetime.now())
             session.add(video)
         else:
             video = session.get(Video, int(id))

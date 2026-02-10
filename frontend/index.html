@@ -3,40 +3,47 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VideoHub V16.0</title>
+    <title>VideoHub V17.0</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/echarts/5.4.3/echarts.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Inter', 'Noto Sans SC', sans-serif; background: #f8fafc; color: #1e293b; overflow: hidden; }
         
-        /* 侧边栏 */
+        /* 布局框架 */
         .app-container { display: flex; height: 100vh; width: 100vw; }
         .sidebar { width: 240px; background: #0f172a; color: #94a3b8; display: flex; flex-direction: column; flex-shrink: 0; }
-        .sidebar-header { height: 64px; display: flex; align-items: center; padding: 0 24px; color: white; font-weight: 700; font-size: 18px; gap: 10px; border-bottom: 1px solid #1e293b; }
-        .nav-item { padding: 14px 24px; cursor: pointer; display: flex; align-items: center; gap: 12px; font-size: 14px; font-weight: 500; transition: all 0.2s; border-left: 3px solid transparent; }
+        .nav-item { padding: 16px 24px; cursor: pointer; display: flex; align-items: center; gap: 12px; font-size: 14px; font-weight: 500; transition: all 0.2s; border-left: 3px solid transparent; }
         .nav-item:hover { background: #1e293b; color: white; }
         .nav-item.active { background: #1e293b; color: white; border-left-color: #3b82f6; }
         
         .main-content { flex: 1; display: flex; flex-direction: column; overflow: hidden; background: #f1f5f9; position: relative; }
 
-        /* 仪表盘 */
-        .dashboard-grid { padding: 24px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; overflow-y: auto; }
-        .stat-card { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); border: 1px solid #e2e8f0; display: flex; flex-direction: column; justify-content: space-between; height: 140px; }
-        .stat-val { font-size: 36px; font-weight: 800; color: #0f172a; margin-top: 4px; }
-        .chart-container { grid-column: span 4; background: white; border-radius: 12px; padding: 24px; height: 450px; border: 1px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
-
-        /* 库存视图 */
-        .inventory-view { display: flex; flex-direction: column; height: 100%; }
-        .toolbar { padding: 16px 24px; background: white; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; shrink-0; }
+        /* === 仪表盘专属样式 === */
+        .dash-container { padding: 24px; overflow-y: auto; height: 100%; }
         
-        /* 筛选面板 (优化) */
+        /* 1. 顶栏 KPI */
+        .kpi-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 16px; margin-bottom: 24px; }
+        .stat-card { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); border: 1px solid #e2e8f0; }
+        .stat-label { font-size: 12px; font-weight: 700; color: #64748b; text-transform: uppercase; margin-bottom: 8px; }
+        .stat-num { font-size: 28px; font-weight: 800; color: #0f172a; }
+        .stat-sub { font-size: 12px; color: #94a3b8; margin-top: 4px; }
+
+        /* 2. 中段图表 */
+        .chart-grid { display: grid; grid-template-columns: 2fr 1.5fr 1.5fr; gap: 16px; margin-bottom: 24px; }
+        .chart-box { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); border: 1px solid #e2e8f0; height: 320px; position: relative; }
+        .chart-title { font-size: 14px; font-weight: 700; color: #334155; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; }
+
+        /* 3. 底部趋势 */
+        .trend-box { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); border: 1px solid #e2e8f0; height: 380px; }
+
+        /* === 库存表样式 === */
+        .toolbar { padding: 16px 24px; background: white; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; shrink-0; }
         .filter-panel { background: white; border-bottom: 1px solid #e2e8f0; overflow: hidden; transition: max-height 0.3s; max-height: 0; padding: 0 24px; }
         .filter-panel.open { max-height: 600px; padding-top: 20px; padding-bottom: 20px; }
         .filter-label { font-size: 12px; font-weight: 700; color: #64748b; margin-bottom: 4px; display: block; }
         
-        /* 表格 */
-        .table-wrap { flex: 1; overflow: auto; background: white; margin: 16px 24px; border-radius: 8px; border: 1px solid #e2e8f0; box-shadow: 0 1px 2px rgba(0,0,0,0.05); position: relative; }
+        .table-wrap { flex: 1; overflow: auto; background: white; margin: 16px 24px; border-radius: 8px; border: 1px solid #e2e8f0; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
         table { width: 100%; border-collapse: collapse; min-width: 1800px; }
         th { position: sticky; top: 0; background: #f8fafc; color: #475569; font-weight: 700; font-size: 13px; padding: 12px; border-bottom: 2px solid #e2e8f0; text-align: left; z-index: 10; }
         td { padding: 10px 12px; border-bottom: 1px solid #f1f5f9; font-size: 14px; vertical-align: middle; color: #334155; }
@@ -63,9 +70,9 @@
 
 <div class="app-container">
     <aside class="sidebar">
-        <div class="sidebar-header">
-            <div class="w-8 h-8 bg-blue-600 rounded flex items-center justify-center text-white">V</div>
-            VideoHub
+        <div class="h-16 flex items-center px-6 gap-3 mb-6">
+            <div class="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white font-bold text-xl">V</div>
+            <h1 class="text-xl font-bold text-white tracking-tight">VideoHub</h1>
         </div>
         <div class="nav-item active" onclick="switchView('dashboard', this)"><span>📊</span> 仪表盘</div>
         <div class="nav-item" onclick="switchView('inventory', this)"><span>📦</span> 视频库存</div>
@@ -73,38 +80,61 @@
 
     <main class="main-content">
         
-        <div id="view-dashboard" class="dashboard-grid h-full">
-            <div class="stat-card border-blue-200 bg-blue-50">
-                <div class="text-xs font-bold text-blue-600 uppercase">总库存</div>
-                <div class="stat-val text-blue-900" id="d-total">-</div>
-            </div>
-            <div class="stat-card border-orange-200 bg-orange-50">
-                <div class="text-xs font-bold text-orange-600 uppercase">待发布</div>
-                <div class="stat-val text-orange-900" id="d-pending">-</div>
-            </div>
-            <div class="stat-card border-emerald-200 bg-emerald-50">
-                <div class="text-xs font-bold text-emerald-600 uppercase">本月劳模</div>
-                <div class="stat-val text-emerald-900 text-2xl truncate" id="d-host">-</div>
-            </div>
-            <div class="stat-card">
-                <div class="text-xs font-bold text-slate-500 uppercase">今日 入库 / 发布</div>
-                <div class="flex items-baseline gap-2 mt-auto">
-                    <span class="text-3xl font-black text-slate-800" id="d-today-in">0</span>
-                    <span class="text-slate-400">/</span>
-                    <span class="text-3xl font-black text-green-600" id="d-today-out">0</span>
+        <div id="view-dashboard" class="dash-container">
+            
+            <div class="kpi-grid">
+                <div class="stat-card border-l-4 border-blue-500">
+                    <div class="stat-label">总库存</div>
+                    <div class="stat-num" id="d-total">-</div>
+                    <div class="stat-sub text-blue-500">Total Assets</div>
+                </div>
+                <div class="stat-card border-l-4 border-orange-500">
+                    <div class="stat-label">待发布</div>
+                    <div class="stat-num text-orange-600" id="d-pending">-</div>
+                    <div class="stat-sub">Backlog</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">本月入库</div>
+                    <div class="stat-num text-slate-700" id="d-m-in">-</div>
+                    <div class="stat-sub">Monthly In</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">本月发布</div>
+                    <div class="stat-num text-emerald-600" id="d-m-out">-</div>
+                    <div class="stat-sub">Monthly Out</div>
+                </div>
+                <div class="stat-card bg-slate-50 border border-slate-200">
+                    <div class="stat-label">平均周转</div>
+                    <div class="stat-num" id="d-turnover">-</div>
+                    <div class="stat-sub">Days / Video</div>
                 </div>
             </div>
-            
-            <div class="chart-container">
-                <div class="flex justify-between items-center mb-4">
-                    <h3 class="font-bold text-slate-700">业务趋势 (入库 vs 发布)</h3>
+
+            <div class="chart-grid">
+                <div class="chart-box">
+                    <div class="chart-title">🏆 主播产出 Top 5</div>
+                    <div id="chart-host" class="w-full h-full pb-6"></div>
+                </div>
+                <div class="chart-box">
+                    <div class="chart-title">📊 视频类型占比</div>
+                    <div id="chart-type" class="w-full h-full pb-6"></div>
+                </div>
+                <div class="chart-box">
+                    <div class="chart-title">🕸️ 平台分发雷达</div>
+                    <div id="chart-plat" class="w-full h-full pb-6"></div>
+                </div>
+            </div>
+
+            <div class="trend-box">
+                <div class="chart-title">
+                    <span>📈 业务趋势 (入库 vs 发布)</span>
                     <div class="flex gap-2">
-                        <button onclick="loadDashboard('day')" class="text-xs px-2 py-1 rounded bg-slate-100 hover:bg-blue-100">按日</button>
-                        <button onclick="loadDashboard('week')" class="text-xs px-2 py-1 rounded bg-slate-100 hover:bg-blue-100">按周</button>
-                        <button onclick="loadDashboard('month')" class="text-xs px-2 py-1 rounded bg-slate-100 hover:bg-blue-100">按月</button>
+                        <button onclick="loadDashboard('day')" class="text-xs px-2 py-1 rounded bg-slate-100 hover:bg-blue-100">日</button>
+                        <button onclick="loadDashboard('week')" class="text-xs px-2 py-1 rounded bg-slate-100 hover:bg-blue-100">周</button>
+                        <button onclick="loadDashboard('month')" class="text-xs px-2 py-1 rounded bg-slate-100 hover:bg-blue-100">月</button>
                     </div>
                 </div>
-                <div id="chart-trend" style="width:100%; height:380px;"></div>
+                <div id="chart-trend" class="w-full h-[320px]"></div>
             </div>
         </div>
 
@@ -130,14 +160,8 @@
                     <div><label class="filter-label">状态</label><select id="s-status" class="t-input"></select></div>
                     
                     <div><label class="filter-label">发布平台</label><select id="s-plat" class="t-input"></select></div>
-                    <div class="col-span-2">
-                        <label class="filter-label">完成时间范围</label>
-                        <div class="flex gap-2"><input type="date" id="s-fin-start" class="t-input"><input type="date" id="s-fin-end" class="t-input"></div>
-                    </div>
-                    <div class="col-span-2">
-                        <label class="filter-label">发布时间范围</label>
-                        <div class="flex gap-2"><input type="date" id="s-pub-start" class="t-input"><input type="date" id="s-pub-end" class="t-input"></div>
-                    </div>
+                    <div class="col-span-2"><label class="filter-label">完成时间范围</label><div class="flex gap-2"><input type="date" id="s-fin-start" class="t-input"><input type="date" id="s-fin-end" class="t-input"></div></div>
+                    <div class="col-span-2"><label class="filter-label">发布时间范围</label><div class="flex gap-2"><input type="date" id="s-pub-start" class="t-input"><input type="date" id="s-pub-end" class="t-input"></div></div>
                     <div><label class="filter-label">备注</label><input id="s-remark" class="t-input" placeholder="包含备注..."></div>
 
                     <div class="col-span-6 flex justify-end gap-2 border-t pt-3 mt-2">
@@ -196,7 +220,7 @@
 
 <div id="settings-modal" class="modal">
     <div class="bg-white rounded-xl w-[400px] p-6">
-        <h3 class="font-bold mb-4">配置</h3>
+        <h3 class="font-bold mb-4">全局配置</h3>
         <textarea id="set-hosts" class="t-input h-20 mb-2" placeholder="主播..."></textarea>
         <input id="set-cats" class="t-input mb-2" placeholder="类型...">
         <input id="set-types" class="t-input mb-2" placeholder="视类...">
@@ -209,13 +233,15 @@
 <script>
     let currPage=1, totalPages=1;
     let globalOptions={}, editingId=null, globalData=[];
-    let chartTrend=null;
+    let charts={};
 
     // --- 初始化 ---
     (function init() {
+        // 并行加载
         loadDashboard('day'); 
         loadOptions(); 
         loadData(1);
+        
         document.addEventListener('click', e => {
             if(!e.target.closest('.multi-pop') && !e.target.closest('.multi-trig')) 
                 document.getElementById('multi-pop').classList.remove('show');
@@ -231,23 +257,25 @@
         if(view === 'dashboard') loadDashboard('day');
     }
 
-    // --- 仪表盘 ---
+    // --- 仪表盘核心逻辑 (ECharts) ---
     async function loadDashboard(dim) {
         try {
             const res = await fetch(`/api/dashboard?dim=${dim}`);
             const data = await res.json();
             
+            // 填充 KPI
             document.getElementById('d-total').innerText = data.total;
             document.getElementById('d-pending').innerText = data.pending;
-            document.getElementById('d-host').innerText = data.top_host;
-            document.getElementById('d-today-in').innerText = data.today_in;
-            document.getElementById('d-today-out').innerText = data.today_out;
+            document.getElementById('d-m-in').innerText = data.month_in;
+            document.getElementById('d-m-out').innerText = data.month_out;
+            document.getElementById('d-turnover').innerText = data.avg_turnover;
             
-            if(!chartTrend) chartTrend = echarts.init(document.getElementById('chart-trend'));
-            chartTrend.setOption({
+            // 1. 趋势图 (Line)
+            if(!charts.t) charts.t = echarts.init(document.getElementById('chart-trend'));
+            charts.t.setOption({
                 tooltip: {trigger:'axis'},
                 legend: {data:['入库','发布'], bottom:0},
-                grid: {top:30, left:40, right:20, bottom:30},
+                grid: {top:20, left:40, right:20, bottom:30},
                 xAxis: {type:'category', data:data.trend.dates},
                 yAxis: {type:'value'},
                 series: [
@@ -255,26 +283,58 @@
                     {name:'发布', type:'bar', data:data.trend.out, itemStyle:{color:'#10b981'}}
                 ]
             });
-            window.onresize = () => chartTrend.resize();
+
+            // 2. 主播排行 (Bar)
+            if(!charts.h) charts.h = echarts.init(document.getElementById('chart-host'));
+            charts.h.setOption({
+                tooltip: {trigger:'axis'},
+                grid: {top:10, left:50, right:30, bottom:20},
+                xAxis: {type:'value'},
+                yAxis: {type:'category', data:data.hosts.map(i=>i.name).reverse()},
+                series: [{type:'bar', data:data.hosts.map(i=>i.value).reverse(), itemStyle:{color:'#f59e0b', borderRadius:[0,4,4,0]}}]
+            });
+
+            // 3. 视频类型 (Pie)
+            if(!charts.typ) charts.typ = echarts.init(document.getElementById('chart-type'));
+            charts.typ.setOption({
+                tooltip: {trigger:'item'},
+                series: [{
+                    type:'pie', radius:['40%','70%'], 
+                    data:data.types,
+                    itemStyle: {borderRadius: 5}
+                }]
+            });
+
+            // 4. 平台雷达 (Radar)
+            if(!charts.p) charts.p = echarts.init(document.getElementById('chart-plat'));
+            // 处理雷达数据
+            const maxVal = Math.max(...data.plats.map(p=>p.value), 10);
+            charts.p.setOption({
+                tooltip: {},
+                radar: { indicator: data.plats.map(p=>({name:p.name, max:maxVal})) },
+                series: [{
+                    type: 'radar',
+                    data: [{value: data.plats.map(p=>p.value), name: '发布量', areaStyle: {color:'rgba(16, 185, 129, 0.2)'}}]
+                }]
+            });
+
+            // 响应式重绘
+            window.onresize = () => Object.values(charts).forEach(c=>c.resize());
+
         } catch(e) { console.error(e); }
     }
 
-    // --- 选项 ---
+    // --- 选项逻辑 ---
     async function loadOptions() {
         const res=await fetch('/api/options'); globalOptions=await res.json();
-        // 带明确提示的填充函数
         const fill=(id,l,label)=>document.getElementById(id).innerHTML=`<option value="">全部${label}</option>`+l.map(i=>`<option>${i}</option>`).join('');
-        
-        fill('s-cat',globalOptions.categories, '类型'); 
-        fill('s-type',globalOptions.video_types, '视类');
-        fill('s-host',globalOptions.hosts, '主播'); 
-        fill('s-status',globalOptions.statuses, '状态');
+        fill('s-cat',globalOptions.categories, '类型'); fill('s-type',globalOptions.video_types, '视类');
+        fill('s-host',globalOptions.hosts, '主播'); fill('s-status',globalOptions.statuses, '状态');
         fill('s-plat',globalOptions.platforms, '平台');
-        
         document.getElementById('dl-pids').innerHTML=globalOptions.product_ids.map(i=>`<option>${i}</option>`).join('');
     }
 
-    // --- 列表加载 ---
+    // --- 列表逻辑 ---
     async function loadData(p) {
         currPage=p||currPage;
         const params=new URLSearchParams({page:currPage, size:100, 
@@ -289,11 +349,11 @@
         });
         const res=await fetch(`/api/videos?${params}`); const data=await res.json();
         globalData=data.items; totalPages=data.total_pages;
-        document.getElementById('page-info').innerText = `共 ${data.total} 条 · ${data.page}/${data.total_pages} 页`;
+        document.getElementById('page-info').innerText = `第 ${data.page}/${data.total_pages} 页`;
         renderTable(data.items);
     }
 
-    // --- 渲染 ---
+    // --- 表格渲染 ---
     function addNewRow() {
         globalData.unshift({id:'new', product_id:'', title:'', isNew:true});
         editingId='new';
@@ -353,7 +413,7 @@
         }).join('');
     }
 
-    // --- 交互 ---
+    // --- 交互逻辑 ---
     function startEdit(id){ editingId=id; renderTable(globalData); }
     function cancelEdit(){ editingId=null; loadData(); }
     
@@ -364,6 +424,7 @@
         fd.append('image_url',document.getElementById('ed-img').value);
         await fetch('/api/video/save',{method:'POST',body:fd});
         editingId=null; loadData(); 
+        // 这里可以加一个 loadDashboard() 实时更新图表
     }
 
     async function upImg(input, id) {
