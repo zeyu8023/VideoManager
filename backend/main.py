@@ -4,22 +4,25 @@ import math
 import uuid
 import datetime
 import logging
+from typing import Optional
+
 from fastapi import FastAPI, UploadFile, BackgroundTasks, Form, HTTPException
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from sqlmodel import Session, create_engine, SQLModel, select, col, or_, desc, asc, text
 from sqlalchemy import func
-from typing import Optional
 
 from .processor import process_excel_background
 from .models import Video, AppSettings
 
+# 日志配置
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("VideoHub")
 
-main_app = FastAPI(title="VideoHub V25.0 Modular")
+main_app = FastAPI(title="VideoHub V26.0 Stable")
 engine = create_engine("sqlite:///data/inventory.db")
 
+# === 工具函数 ===
 def parse_safe_date(date_str):
     if not date_str or str(date_str).lower() in ['nan', 'none', '', 'nat', 'null']: return None
     try:
@@ -30,6 +33,7 @@ def parse_safe_date(date_str):
     except: return None
     return None
 
+# === 初始化 ===
 @main_app.on_event("startup")
 def on_startup():
     os.makedirs("data", exist_ok=True)
@@ -43,9 +47,11 @@ def on_startup():
             try: session.exec(text("ALTER TABLE video ADD COLUMN created_at DATETIME"))
             except: pass
             session.commit()
+        
         session.exec(text("UPDATE video SET created_at = finish_time WHERE created_at IS NULL AND finish_time IS NOT NULL"))
         session.exec(text(f"UPDATE video SET created_at = '{datetime.datetime.now()}' WHERE created_at IS NULL"))
-        
+        session.commit()
+
         defaults = {
             "hosts": "小梨,VIVI,七七,杨总,其他",
             "statuses": "待发布,已发布,剪辑中,拍摄中,脚本中",
@@ -57,34 +63,27 @@ def on_startup():
             if not session.get(AppSettings, k): session.add(AppSettings(key=k, value=v))
         session.commit()
 
-# === 关键改动：挂载 frontend/static 目录 ===
-# 这样前端 HTML 才能引用 /static/js/app.js 等文件
-if not os.path.exists("frontend/static"):
-    os.makedirs("frontend/static/css", exist_ok=True)
-    os.makedirs("frontend/static/js", exist_ok=True)
-
 main_app.mount("/assets", StaticFiles(directory="assets"), name="assets")
-main_app.mount("/static", StaticFiles(directory="frontend/static"), name="static")
 
 @main_app.get("/")
 async def read_index():
     return FileResponse(os.path.join("frontend", "index.html"))
 
-# === 接口 1: 仪表盘 ===
+# === 核心接口 1: 仪表盘 ===
 @main_app.get("/api/dashboard")
 def get_dashboard_data(dim: str = "day"):
     with Session(engine) as session:
         videos = session.exec(select(Video)).all()
-        total = len(videos)
+        total_assets = len(videos)
         pending = sum(1 for v in videos if v.status == "待发布")
         
         now = datetime.datetime.now()
-        today = now.replace(hour=0, minute=0, second=0, microsecond=0)
-        week = today - datetime.timedelta(days=now.weekday())
-        month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-        year = now.replace(month=1, day=1, hour=0, minute=0, second=0, microsecond=0)
+        today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        week_start = today_start - datetime.timedelta(days=now.weekday())
+        month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        year_start = now.replace(month=1, day=1, hour=0, minute=0, second=0, microsecond=0)
         
-        flow = {"t_in":0, "t_out":0, "m_in":0, "m_out":0}
+        flow = {"today_in":0, "today_out":0, "month_in":0, "month_out":0}
         trend = {}
         hosts = {}
         types = {}
@@ -96,11 +95,12 @@ def get_dashboard_data(dim: str = "day"):
             fin = parse_safe_date(v.finish_time)
             pub = parse_safe_date(v.publish_time)
             
+            # 入库
             if fin:
                 d_str = fin.strftime("%Y-%m-%d")
                 m_str = fin.strftime("%Y-%m")
-                if fin >= today: flow["t_in"] += 1
-                if fin >= month: flow["m_in"] += 1
+                if fin >= today_start: flow["today_in"] += 1
+                if fin >= month_start: flow["month_in"] += 1
                 
                 k = d_str
                 if dim == 'month': k = m_str
@@ -113,11 +113,12 @@ def get_dashboard_data(dim: str = "day"):
                         h = h.strip()
                         if h: hosts[h] = hosts.get(h, 0) + 1
 
+            # 发布
             if pub:
                 d_str = pub.strftime("%Y-%m-%d")
                 m_str = pub.strftime("%Y-%m")
-                if pub >= today: flow["t_out"] += 1
-                if pub >= month: flow["m_out"] += 1
+                if pub >= today_start: flow["today_out"] += 1
+                if pub >= month_start: flow["month_out"] += 1
                 
                 k = d_str
                 if dim == 'month': k = m_str
@@ -130,10 +131,10 @@ def get_dashboard_data(dim: str = "day"):
                     for acc in accs:
                         dist_total += 1
                         if acc not in matrix: matrix[acc] = {"day":0, "week":0, "month":0, "year":0}
-                        if pub >= today: matrix[acc]["day"] += 1
-                        if pub >= week: matrix[acc]["week"] += 1
-                        if pub >= month: matrix[acc]["month"] += 1
-                        if pub >= year: matrix[acc]["year"] += 1
+                        if pub >= today_start: matrix[acc]["day"] += 1
+                        if pub >= week_start: matrix[acc]["week"] += 1
+                        if pub >= month_start: matrix[acc]["month"] += 1
+                        if pub >= year_start: matrix[acc]["year"] += 1
                         plats[acc] = plats.get(acc, 0) + 1
             
             if v.video_type: types[v.video_type] = types.get(v.video_type, 0) + 1
@@ -142,16 +143,16 @@ def get_dashboard_data(dim: str = "day"):
         mat_list = [{"name":k, **v} for k,v in matrix.items()]
         mat_list.sort(key=lambda x:x["year"], reverse=True)
         host_list = sorted([{"name":k, "value":v} for k,v in hosts.items()], key=lambda x:x['value'], reverse=True)[:5]
+        type_list = [{"name":k, "value":v} for k,v in types.items()]
+        plat_list = [{"name":k, "value":v} for k,v in plats.items()]
 
         return {
-            "kpi": {"total":total, "pending":pending, "dist":dist_total, "t_in":flow["t_in"], "t_out":flow["t_out"], "m_in":flow["m_in"], "m_out":flow["m_out"]},
+            "kpi": {"total":total_assets, "pending":pending, "dist":dist_total, "t_in":flow["today_in"], "t_out":flow["today_out"], "m_in":flow["month_in"], "m_out":flow["month_out"]},
             "trend": {"dates":dates, "in":[trend[k]["in"] for k in dates], "out":[trend[k]["out"] for k in dates]},
-            "matrix": mat_list, "hosts": host_list,
-            "types": [{"name":k, "value":v} for k,v in types.items()],
-            "plats": [{"name":k, "value":v} for k,v in plats.items()]
+            "matrix": mat_list, "hosts": host_list, "types": type_list, "plats": plat_list
         }
 
-# === 接口 2: 产品 SPU ===
+# === 接口 2: 产品统计 ===
 @main_app.get("/api/product_stats")
 def get_product_stats():
     with Session(engine) as session:
@@ -167,9 +168,16 @@ def get_product_stats():
         res.sort(key=lambda x: (x["pending"], x["total"]), reverse=True)
         return res
 
-# === 接口 3: 列表 ===
+# === 接口 3: 列表查询 ===
 @main_app.get("/api/videos")
-def list_videos(page: int=1, size: int=100, sort_by: str="id", order: str="desc", keyword: Optional[str]=None, host: Optional[str]=None, status: Optional[str]=None, category: Optional[str]=None, platform: Optional[str]=None, video_type: Optional[str]=None, product_id: Optional[str]=None, title: Optional[str]=None, remark: Optional[str]=None, finish_start: Optional[str]=None, finish_end: Optional[str]=None, publish_start: Optional[str]=None, publish_end: Optional[str]=None):
+def list_videos(
+    page: int=1, size: int=100, sort_by: str="id", order: str="desc",
+    keyword: Optional[str]=None, host: Optional[str]=None, status: Optional[str]=None,
+    category: Optional[str]=None, platform: Optional[str]=None, video_type: Optional[str]=None,
+    product_id: Optional[str]=None, title: Optional[str]=None, remark: Optional[str]=None,
+    finish_start: Optional[str]=None, finish_end: Optional[str]=None,
+    publish_start: Optional[str]=None, publish_end: Optional[str]=None
+):
     with Session(engine) as session:
         stmt = select(Video)
         if keyword: stmt = stmt.where(or_(col(Video.title).contains(keyword), col(Video.product_id).contains(keyword), col(Video.remark).contains(keyword)))
@@ -228,13 +236,12 @@ def get_options():
         def merge(col, k):
             db = session.exec(select(col).distinct()).all()
             clean = []
-            for i in db: 
-                if i and str(i).lower() not in ['nan', 'none']: clean.extend([x.strip() for x in str(i).replace('，',',').split(',')])
+            for i in db:
+                if i and str(i).lower() not in ['nan', 'none', '']: clean.extend([x.strip() for x in str(i).replace('，', ',').split(',')])
             return sorted(list(set(clean + [x.strip() for x in settings.get(k, []) if x.strip()])))
         return {
-            "hosts": merge(Video.host, "hosts"), "categories": merge(Video.category, "categories"),
-            "statuses": merge(Video.status, "statuses"), "platforms": merge(Video.platform, "platforms"),
-            "video_types": merge(Video.video_type, "video_types"), "product_ids": merge(Video.product_id, "ignore")
+            "hosts": merge(Video.host, "hosts"), "categories": merge(Video.category, "categories"), "statuses": merge(Video.status, "statuses"),
+            "platforms": merge(Video.platform, "platforms"), "video_types": merge(Video.video_type, "video_types"), "product_ids": merge(Video.product_id, "ignore")
         }
 
 @main_app.post("/api/settings")
