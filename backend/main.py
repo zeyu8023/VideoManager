@@ -17,7 +17,7 @@ from sqlalchemy import func
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("VideoHub")
 
-main_app = FastAPI(title="VideoHub V35.0 Final")
+main_app = FastAPI(title="VideoHub V37.0 Final")
 engine = create_engine("sqlite:///data/inventory.db")
 
 from .models import Video, AppSettings
@@ -27,13 +27,22 @@ def safe_str(val):
     if val is None: return ""
     return str(val).strip()
 
+# === 核心工具：全能日期解析 (修复趋势图为0的问题) ===
 def parse_safe_date(date_str):
     s = safe_str(date_str).lower()
-    if not s or s in ['nan', 'none']: return None
+    if not s or s in ['nan', 'none', '', 'nat', 'null']: return None
     try:
+        # 1. 尝试标准格式
         clean_s = s[:10]
-        return datetime.datetime.strptime(clean_s, "%Y-%m-%d")
-    except: return None
+        for fmt in ("%Y-%m-%d", "%Y/%m/%d", "%Y%m%d", "%Y.%m.%d"):
+            try: return datetime.datetime.strptime(clean_s, fmt)
+            except: continue
+        # 2. 尝试正则提取 (针对 "2024年1月1日" 或 "2024/1/1" 等非定长格式)
+        match = re.search(r'(\d{4})[-/年.](\d{1,2})[-/月.](\d{1,2})', s)
+        if match:
+            return datetime.datetime(int(match.group(1)), int(match.group(2)), int(match.group(3)))
+    except: pass
+    return None
 
 @main_app.on_event("startup")
 def on_startup():
@@ -70,10 +79,10 @@ def get_dashboard_data(dim: str = "day"):
         today = now.replace(hour=0, minute=0, second=0, microsecond=0)
         month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
         flow = {"t_in":0, "t_out":0, "m_in":0, "m_out":0}
-        trend = {}; hosts = {}; types = {}; plats = {}; matrix = {}; dist = 0
+        trend = {}; hosts = {}; types = {}; plats = {}; matrix = {}
 
         for v in videos:
-            if safe_str(v.status) == "待发布": pending += 1
+            if "待发布" in safe_str(v.status): pending += 1
             t_in = parse_safe_date(v.finish_time)
             t_pub = parse_safe_date(v.publish_time)
             
@@ -98,10 +107,9 @@ def get_dashboard_data(dim: str = "day"):
                 elif dim=='week': k=t_pub.strftime("%Y-W%W")
                 if k not in trend: trend[k] = {"in":0, "out":0}
                 trend[k]["out"] += 1
-                if safe_str(v.status) == "已发布" and v.platform:
+                if "已发布" in safe_str(v.status) and v.platform:
                     accs = [p.strip() for p in safe_str(v.platform).replace('，', ',').split(',') if p.strip()]
                     for acc in accs:
-                        dist += 1
                         if acc not in matrix: matrix[acc] = {"day":0, "week":0, "month":0, "year":0}
                         if t_pub >= today: matrix[acc]["day"] += 1
                         if t_pub >= month: matrix[acc]["month"] += 1
@@ -113,18 +121,15 @@ def get_dashboard_data(dim: str = "day"):
                 types[vt] = types.get(vt, 0) + 1
 
         dates = sorted(trend.keys())[-30:]
-        mat_list = [{"name":k, **v} for k,v in matrix.items()]
-        mat_list.sort(key=lambda x:x["year"], reverse=True)
         return {
-            "kpi": {"total":total, "pending":pending, "dist":dist, "t_in":flow["t_in"], "t_out":flow["t_out"], "m_in":flow["m_in"], "m_out":flow["m_out"]},
+            "kpi": {"total":total, "pending":pending, "dist":sum(p['year'] for p in matrix.values()), "t_in":flow["t_in"], "t_out":flow["t_out"], "m_in":flow["m_in"], "m_out":flow["m_out"]},
             "trend": {"dates":dates, "in":[trend[k]["in"] for k in dates], "out":[trend[k]["out"] for k in dates]},
-            "matrix": mat_list, 
+            "matrix": sorted([{"name":k, **v} for k,v in matrix.items()], key=lambda x:x["year"], reverse=True),
             "hosts": sorted([{"name":k, "value":v} for k,v in hosts.items()], key=lambda x:x['value'], reverse=True)[:5], 
             "types": [{"name":k, "value":v} for k,v in types.items()], 
             "plats": [{"name":k, "value":v} for k,v in plats.items()]
         }
 
-# === 接口 2: 产品统计 (修复空白核心) ===
 @main_app.get("/api/product_stats")
 def get_product_stats():
     with Session(engine) as session:
@@ -132,14 +137,12 @@ def get_product_stats():
         stats = {}
         for v in videos:
             try:
-                # [关键] 强制转字符串，防止 int.strip() 报错
                 pid = safe_str(v.product_id)
                 if not pid or pid.lower() in ['nan', 'none']: pid = "未分类"
                 if pid not in stats: stats[pid] = {"name": pid, "total": 0, "pending": 0}
                 stats[pid]["total"] += 1
-                if safe_str(v.status) == "待发布": stats[pid]["pending"] += 1
+                if "待发布" in safe_str(v.status): stats[pid]["pending"] += 1
             except: continue
-        
         res = list(stats.values())
         res.sort(key=lambda x: (x["pending"], x["total"]), reverse=True)
         return res
@@ -161,7 +164,7 @@ def list_videos(page: int=1, size: int=100, sort_by: str="id", order: str="desc"
         if finish_end: stmt = stmt.where(Video.finish_time <= finish_end)
         if publish_start: stmt = stmt.where(Video.publish_time >= publish_start)
         if publish_end: stmt = stmt.where(Video.publish_time <= publish_end)
-
+        
         total = session.exec(select(func.count()).select_from(stmt.subquery())).one()
         stmt = stmt.order_by(asc(getattr(Video, sort_by)) if order=="asc" else desc(getattr(Video, sort_by))).offset((page-1)*size).limit(size)
         return {"items": session.exec(stmt).all(), "total": total, "page": page, "size": size, "total_pages": math.ceil(total/size)}
@@ -206,10 +209,7 @@ def get_options():
             for i in db: 
                 if i and str(i).lower() not in ['nan', 'none', '']: clean.extend([x.strip() for x in str(i).replace('，', ',').split(',')])
             return sorted(list(set(clean + [x.strip() for x in settings.get(k, []) if x.strip()])))
-        return {
-            "hosts": merge(Video.host, "hosts"), "categories": merge(Video.category, "categories"), "statuses": merge(Video.status, "statuses"),
-            "platforms": merge(Video.platform, "platforms"), "video_types": merge(Video.video_type, "video_types"), "product_ids": merge(Video.product_id, "ignore")
-        }
+        return {"hosts": merge(Video.host, "hosts"), "categories": merge(Video.category, "categories"), "statuses": merge(Video.status, "statuses"), "platforms": merge(Video.platform, "platforms"), "video_types": merge(Video.video_type, "video_types"), "product_ids": merge(Video.product_id, "ignore")}
 
 @main_app.post("/api/settings")
 def update_settings(key: str=Form(...), value: str=Form(...)):
@@ -224,10 +224,8 @@ def update_settings(key: str=Form(...), value: str=Form(...)):
 @main_app.post("/api/upload")
 async def upload_image(file: UploadFile):
     os.makedirs("assets/previews", exist_ok=True)
-    ext = file.filename.split('.')[-1] if '.' in file.filename else "png"
-    name = f"upl_{uuid.uuid4().hex[:8]}.{ext}"
-    with open(f"assets/previews/{name}", "wb") as f: shutil.copyfileobj(file.file, f)
-    return {"url": f"/assets/previews/{name}"}
+    with open(f"assets/previews/{uuid.uuid4().hex[:8]}.png", "wb") as f: shutil.copyfileobj(file.file, f)
+    return {"url": ""} # Disabled
 
 @main_app.post("/api/import/local")
 async def import_local(bg_tasks: BackgroundTasks):
