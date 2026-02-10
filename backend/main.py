@@ -10,21 +10,22 @@ from typing import Optional
 from fastapi import FastAPI, UploadFile, BackgroundTasks, Form, HTTPException
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
-from sqlmodel import Session, create_engine, SQLModel, select, col, or_, desc, asc, text, Field
+from sqlmodel import Session, create_engine, SQLModel, select, col, or_, desc, asc, text
 from sqlalchemy import func
 
 # 日志配置
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("VideoHub")
 
-main_app = FastAPI(title="VideoHub V32.0 Pure Fix")
+main_app = FastAPI(title="VideoHub V32.0 Final Fix")
 engine = create_engine("sqlite:///data/inventory.db")
 
-# 引入 Video 和 AppSettings
+# 引入模型
 from .models import Video, AppSettings
 
-# === 核心工具：安全转字符串 (防止报错的关键) ===
+# === 核心工具：安全转字符串 (修复空白问题的关键) ===
 def safe_str(val):
+    """不管传入什么（None, int, float），都转为干净的字符串"""
     if val is None: return ""
     return str(val).strip()
 
@@ -152,18 +153,18 @@ def get_dashboard_data(dim: str = "day"):
             "plats": [{"name":k, "value":v} for k,v in plats.items()]
         }
 
-# === 接口 2: 产品统计 (核心修复：移除图片关联，强制类型转换) ===
+# === 接口 2: 产品统计 (核心修复：强制转字符串，移除图片关联) ===
 @main_app.get("/api/product_stats")
 def get_product_stats():
     with Session(engine) as session:
-        # 只查询 Video 表，确保数据源单一可靠
         videos = session.exec(select(Video)).all()
         
         stats = {}
         for v in videos:
             try:
-                # [关键修复点] 强制转字符串，防止 int.strip() 报错导致 500 错误
-                pid = safe_str(v.product_id)
+                # [核心修复]：强制将 product_id 转为字符串，防止 .strip() 报错
+                pid_raw = v.product_id
+                pid = safe_str(pid_raw)
                 
                 if not pid or pid.lower() in ['nan', 'none']:
                     pid = "未分类"
@@ -176,15 +177,16 @@ def get_product_stats():
                 if safe_str(v.status) == "待发布":
                     stats[pid]["pending"] += 1
             except Exception as e:
-                # 即使单条出错，也不要崩整个页面
-                print(f"Skipping error row: {e}")
+                # 遇到坏数据跳过，不崩整个接口
+                print(f"Skipping bad row: {e}")
                 continue
         
         res = list(stats.values())
+        # 排序：积压多的在前，其次是总数多的
         res.sort(key=lambda x: (x["pending"], x["total"]), reverse=True)
         return res
 
-# === 接口 3: 列表查询 (保持) ===
+# === 接口 3: 列表查询 ===
 @main_app.get("/api/videos")
 def list_videos(page: int=1, size: int=100, sort_by: str="id", order: str="desc", keyword: Optional[str]=None, host: Optional[str]=None, status: Optional[str]=None, category: Optional[str]=None, platform: Optional[str]=None, video_type: Optional[str]=None, product_id: Optional[str]=None, title: Optional[str]=None, remark: Optional[str]=None, finish_start: Optional[str]=None, finish_end: Optional[str]=None, publish_start: Optional[str]=None, publish_end: Optional[str]=None):
     with Session(engine) as session:
