@@ -17,17 +17,16 @@ from sqlalchemy import func
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("VideoHub")
 
-main_app = FastAPI(title="VideoHub V42.0 Final Fix")
+main_app = FastAPI(title="VideoHub V46.0 Excel Mode")
 engine = create_engine("sqlite:///data/inventory.db")
 
 from .models import Video, AppSettings
 
-# === 核心工具：安全转字符串 ===
+# === 核心工具 ===
 def safe_str(val):
     if val is None: return ""
     return str(val).strip()
 
-# === 核心工具：日期解析 ===
 def parse_safe_date(date_str):
     s = safe_str(date_str).lower()
     if not s or s in ['nan', 'none', '', 'nat', 'null']: return None
