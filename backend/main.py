@@ -9,18 +9,25 @@ from typing import Optional
 from fastapi import FastAPI, UploadFile, BackgroundTasks, Form, HTTPException
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
-from sqlmodel import Session, create_engine, SQLModel, select, col, or_, desc, asc, text
+from sqlmodel import Session, create_engine, SQLModel, select, col, or_, desc, asc, text, Field
 from sqlalchemy import func
-
-from .processor import process_excel_background
-from .models import Video, AppSettings
 
 # 日志配置
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("VideoHub")
 
-main_app = FastAPI(title="VideoHub V26.0 Stable")
+main_app = FastAPI(title="VideoHub V26.2 Product Image & Search")
 engine = create_engine("sqlite:///data/inventory.db")
+
+# === 模型定义 (新增 Product) ===
+# 原有的 Video 和 AppSettings 保持不变，这里省略定义，假设它们在 .models 中
+# 如果你没有单独的 .models 文件，请确保之前的 Video 和 AppSettings 类定义在这里
+from .models import Video, AppSettings 
+
+class Product(SQLModel, table=True):
+    name: str = Field(primary_key=True) # 产品编号/名称作为主键
+    image_url: Optional[str] = None
+    updated_at: datetime.datetime = Field(default_factory=datetime.datetime.now)
 
 # === 工具函数 ===
 def parse_safe_date(date_str):
@@ -39,9 +46,10 @@ def on_startup():
     os.makedirs("data", exist_ok=True)
     os.makedirs("assets/previews", exist_ok=True)
     os.makedirs("temp_uploads", exist_ok=True)
-    SQLModel.metadata.create_all(engine)
+    SQLModel.metadata.create_all(engine) # 自动创建新的 Product 表
     
     with Session(engine) as session:
+        # (旧的迁移逻辑保持不变...)
         try: session.exec(text("SELECT created_at FROM video LIMIT 1"))
         except: 
             try: session.exec(text("ALTER TABLE video ADD COLUMN created_at DATETIME"))
@@ -69,7 +77,7 @@ main_app.mount("/assets", StaticFiles(directory="assets"), name="assets")
 async def read_index():
     return FileResponse(os.path.join("frontend", "index.html"))
 
-# === 核心接口 1: 仪表盘 ===
+# === 接口: 仪表盘 (保持不变) ===
 @main_app.get("/api/dashboard")
 def get_dashboard_data(dim: str = "day"):
     with Session(engine) as session:
@@ -152,23 +160,49 @@ def get_dashboard_data(dim: str = "day"):
             "matrix": mat_list, "hosts": host_list, "types": type_list, "plats": plat_list
         }
 
-# === 接口 2: 产品统计 ===
+# === 接口 2: 产品统计 (升级版：带图片) ===
 @main_app.get("/api/product_stats")
 def get_product_stats():
     with Session(engine) as session:
+        # 1. 先统计库存数据
         videos = session.exec(select(Video.product_id, Video.status)).all()
         stats = {}
         for pid, status in videos:
             if not pid: pid = "未分类"
             pid = pid.strip()
-            if pid not in stats: stats[pid] = {"name": pid, "total": 0, "pending": 0}
+            if pid not in stats: stats[pid] = {"name": pid, "total": 0, "pending": 0, "image_url": None}
             stats[pid]["total"] += 1
             if status == "待发布": stats[pid]["pending"] += 1
+        
+        # 2. 再查 Product 表获取图片
+        product_imgs = session.exec(select(Product)).all()
+        img_map = {p.name: p.image_url for p.name in product_imgs}
+        
+        # 3. 合并数据
+        for pid, data in stats.items():
+            data["image_url"] = img_map.get(pid, None) # 如果没有图，就是 None
+
         res = list(stats.values())
+        # 排序：优先显示有积压的，其次是总数多的
         res.sort(key=lambda x: (x["pending"], x["total"]), reverse=True)
         return res
 
-# === 接口 3: 列表查询 ===
+# === 新增接口: 保存产品图片 ===
+@main_app.post("/api/product/save_image")
+def save_product_image(name: str = Form(...), image_url: str = Form(...)):
+    with Session(engine) as session:
+        product = session.get(Product, name)
+        if not product:
+            product = Product(name=name, image_url=image_url)
+        else:
+            product.image_url = image_url
+            product.updated_at = datetime.datetime.now()
+        session.add(product)
+        session.commit()
+    return {"message": "Product image saved", "url": image_url}
+
+
+# === 接口 3: 列表查询 (保持不变) ===
 @main_app.get("/api/videos")
 def list_videos(
     page: int=1, size: int=100, sort_by: str="id", order: str="desc",
@@ -267,5 +301,7 @@ async def import_local(bg_tasks: BackgroundTasks):
     if not os.path.exists("temp_uploads"): raise HTTPException(404)
     files = [f for f in os.listdir("temp_uploads") if f.endswith(".xlsx")]
     if not files: raise HTTPException(404)
+    # 注意：确保 processor.py 也存在并能正确导入
+    from .processor import process_excel_background 
     bg_tasks.add_task(process_excel_background, os.path.join("temp_uploads", files[0]), engine)
     return {"message": "started"}

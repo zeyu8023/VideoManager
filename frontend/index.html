@@ -3,99 +3,28 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>VideoHub V26.1 Stable</title>
+    <title>VideoHub V26.2 Product Image & Search</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/echarts/5.4.3/echarts.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
     <style>
-        /* =========================================
-           1. 核心布局修复 (Fix Scrolling)
-           ========================================= */
-        body { 
-            font-family: 'Inter', 'Noto Sans SC', sans-serif; 
-            background: #f8fafc; 
-            color: #1e293b; 
-            margin: 0; 
-            height: 100vh; /* 强制全屏 */
-            overflow: hidden; /* 禁止 Body 滚动，交给内部容器 */
-        }
-        
-        .app-container { 
-            display: flex; 
-            height: 100%; /* 继承 Body 高度 */
-            width: 100%; 
-            overflow: hidden;
-        }
-        
-        /* 侧边栏 */
-        .sidebar { 
-            width: 240px; 
-            background: #0f172a; 
-            color: #94a3b8; 
-            display: flex; 
-            flex-direction: column; 
-            flex-shrink: 0; 
-            z-index: 50; 
-            box-shadow: 4px 0 24px rgba(0,0,0,0.1);
-            overflow-y: auto; /* 侧边栏内容过多时内部滚动 */
-        }
-
-        .main-content { 
-            flex: 1; 
-            display: flex; 
-            flex-direction: column; 
-            height: 100%; /* 关键：占满高度 */
-            min-height: 0; /* 关键：防止 Flex 子元素溢出 */
-            overflow: hidden; /* 内部滚动 */
-            background: #f1f5f9; 
-            position: relative; 
-        }
-
-        /* 仪表盘容器 */
-        .dash-container { 
-            padding: 24px; 
-            overflow-y: auto; /* 允许垂直滚动 */
-            height: 100%; 
-            min-height: 0;
-            scrollbar-width: thin;
-        }
-
-        /* 库存视图容器 (Flex 布局) */
-        .inventory-view { 
-            display: flex; 
-            flex-direction: column; 
-            height: 100%; 
-            min-height: 0; /* 关键修复 */
-        }
-
-        /* 表格包裹层 (核心滚动区) */
-        .table-wrap { 
-            flex: 1; /* 自动占据剩余空间 */
-            overflow: auto; /* 出现滚动条 */
-            background: white; 
-            margin: 16px 24px; 
-            border-radius: 8px; 
-            border: 1px solid #e2e8f0; 
-            box-shadow: 0 1px 2px rgba(0,0,0,0.05); 
-            min-height: 0; /* 关键修复：确保滚动条在视口内 */
-        }
-
-        /* =========================================
-           2. 其他样式保持不变
-           ========================================= */
+        /* Base & Layout (保持不变) */
+        body { font-family: 'Inter', 'Noto Sans SC', sans-serif; background: #f8fafc; color: #1e293b; margin: 0; height: 100vh; overflow: hidden; }
+        .app-container { display: flex; height: 100%; width: 100%; overflow: hidden; }
+        .sidebar { width: 240px; background: #0f172a; color: #94a3b8; display: flex; flex-direction: column; flex-shrink: 0; z-index: 50; box-shadow: 4px 0 24px rgba(0,0,0,0.1); overflow-y: auto; }
+        .main-content { flex: 1; display: flex; flex-direction: column; height: 100%; min-height: 0; overflow: hidden; background: #f1f5f9; position: relative; }
         .sidebar-header { height: 64px; display: flex; align-items: center; padding: 0 24px; color: white; font-weight: 700; border-bottom: 1px solid rgba(255,255,255,0.1); flex-shrink: 0; }
         .nav-item { padding: 14px 24px; cursor: pointer; display: flex; align-items: center; gap: 12px; font-size: 14px; font-weight: 500; transition: all 0.2s; border-left: 3px solid transparent; flex-shrink: 0; }
         .nav-item:hover { background: rgba(255,255,255,0.05); color: white; }
         .nav-item.active { background: rgba(255,255,255,0.1); color: white; border-left-color: #3b82f6; }
-        
-        @media (max-width: 768px) { 
-            .sidebar { width: 60px; } 
-            .sidebar-header { padding: 0; justify-content: center; } .sidebar-header h1 { display: none; }
-            .nav-item { justify-content: center; padding: 16px 0; } .nav-text { display: none; }
-            .kpi-grid, .chart-grid, .card-grid { grid-template-columns: 1fr !important; }
-        }
+        @media (max-width: 768px) { .sidebar { width: 60px; } .sidebar-header { padding: 0; justify-content: center; } .sidebar-header h1 { display: none; } .nav-item { justify-content: center; padding: 16px 0; } .nav-text { display: none; } .kpi-grid, .chart-grid, .card-grid { grid-template-columns: 1fr !important; } }
 
-        /* Dashboard Elements */
+        /* Containers */
+        .dash-container { padding: 24px; overflow-y: auto; height: 100%; min-height: 0; scrollbar-width: thin; }
+        .inventory-view { display: flex; flex-direction: column; height: 100%; min-height: 0; }
+        .table-wrap { flex: 1; overflow: auto; background: white; margin: 16px 24px; border-radius: 8px; border: 1px solid #e2e8f0; box-shadow: 0 1px 2px rgba(0,0,0,0.05); min-height: 0; }
+
+        /* Dashboard Elements (保持不变) */
         .kpi-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 16px; margin-bottom: 24px; flex-shrink: 0; }
         .stat-card { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); border: 1px solid #e2e8f0; display:flex; flex-direction:column; justify-content:space-between; }
         .stat-label { font-size: 12px; font-weight: 700; color: #64748b; text-transform: uppercase; margin-bottom: 8px; }
@@ -110,31 +39,38 @@
         .matrix-table td { padding: 12px 20px; font-size: 13px; border-bottom: 1px solid #f1f5f9; }
         .val-today { color: #ef4444; font-weight: 700; }
 
-        /* Inventory Elements */
+        /* Inventory Elements (保持不变) */
         .toolbar { padding: 16px 24px; background: white; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; shrink-0; }
         .filter-panel { background: white; border-bottom: 1px solid #e2e8f0; overflow: hidden; transition: max-height 0.3s; max-height: 0; padding: 0 24px; shrink-0; }
         .filter-panel.open { max-height: 600px; padding-top: 20px; padding-bottom: 20px; }
         .filter-label { font-size: 12px; font-weight: 700; color: #64748b; margin-bottom: 4px; display: block; }
-        
         .main-table { width: 100%; border-collapse: collapse; min-width: 1800px; }
         .main-table th { position: sticky; top: 0; background: #f8fafc; color: #475569; font-weight: 700; font-size: 13px; padding: 12px; border-bottom: 2px solid #e2e8f0; z-index: 10; text-align: left; }
         .main-table td { padding: 10px 12px; border-bottom: 1px solid #f1f5f9; font-size: 14px; vertical-align: middle; color: #334155; }
 
-        /* Product Cards */
-        .card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; padding-bottom: 40px; }
-        .prod-card { background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; transition: all 0.2s; cursor: pointer; position: relative; overflow: hidden; display: flex; flex-direction: column; }
+        /* Product Cards (核心更新：改为左右布局) */
+        .card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 20px; padding-bottom: 40px; }
+        .prod-card { background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px; transition: all 0.2s; position: relative; overflow: hidden; display: flex; gap: 16px; /* Flex Row */ }
         .prod-card:hover { transform: translateY(-4px); box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); border-color: #3b82f6; }
-        .prod-card::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 6px; }
-        .prod-card.safe::before { background: #10b981; } .prod-card.danger::before { background: #ef4444; } .prod-card.warn::before { background: #f59e0b; } .prod-card.normal::before { background: #3b82f6; }
-        .pc-header { display: flex; justify-content: space-between; margin-bottom: 12px; }
-        .pc-title { font-weight: 700; font-size: 16px; color: #1e293b; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 80%; }
-        .pc-body { flex: 1; display: flex; align-items: flex-end; justify-content: space-between; margin-bottom: 16px; }
-        .pc-num { font-size: 32px; font-weight: 800; line-height: 1; }
-        .pc-footer { border-top: 1px solid #f1f5f9; pt-3; display: flex; align-items: center; }
+        /* 左侧图片容器 */
+        .pc-img-box { width: 80px; height: 80px; flex-shrink: 0; border-radius: 8px; background: #f1f5f9; border: 1px solid #e2e8f0; overflow: hidden; display: flex; align-items: center; justify-content: center; cursor: pointer; position: relative; }
+        .pc-img-box:hover { border-color: #3b82f6; }
+        .pc-img-box img { width: 100%; height: 100%; object-fit: cover; }
+        .pc-img-upload-hint { position: absolute; inset: 0; background: rgba(0,0,0,0.4); color: white; display: flex; flex-direction: column; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.2s; font-size: 12px; font-weight: bold; }
+        .pc-img-box:hover .pc-img-upload-hint { opacity: 1; }
+
+        /* 右侧内容容器 */
+        .pc-content { flex: 1; display: flex; flex-direction: column; justify-content: space-between; }
+        .pc-header { display: flex; justify-content: space-between; margin-bottom: 8px; }
+        .pc-title { font-weight: 700; font-size: 16px; color: #1e293b; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 160px; cursor: pointer; }
+        .pc-title:hover { color: #3b82f6; text-decoration: underline; }
+        .pc-body { flex: 1; display: flex; align-items: flex-end; justify-content: space-between; margin-bottom: 12px; }
+        .pc-num { font-size: 28px; font-weight: 800; line-height: 1; }
+        .pc-footer { border-top: 1px solid #f1f5f9; pt-3; display: flex; align-items: center; font-size: 12px; color: #64748b; }
         .pc-progress { flex: 1; height: 6px; background: #f1f5f9; border-radius: 3px; overflow: hidden; margin-right: 10px; }
         .pc-bar { height: 100%; background: #3b82f6; }
 
-        /* UI Components */
+        /* UI Components (保持不变) */
         .t-input { width: 100%; padding: 6px 8px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 13px; outline: none; background: white; height: 34px; }
         .t-input:focus { border-color: #3b82f6; box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1); }
         .editing { background: #eff6ff !important; }
@@ -142,7 +78,6 @@
         .img-cell { width: 44px; height: 44px; border-radius: 6px; border: 1px solid #e2e8f0; background: white; overflow: hidden; cursor: pointer; display: flex; align-items: center; justify-content: center; position: relative; }
         .img-cell:hover { border-color: #3b82f6; }
         .img-cell:hover::after { content:'+'; position:absolute; inset:0; background:rgba(0,0,0,0.4); color:white; display:flex; align-items:center; justify-content:center; font-weight:bold; }
-        
         .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 50; display: none; align-items: center; justify-content: center; }
         .modal.active { display: flex; }
         .multi-pop { position: absolute; background: white; border: 1px solid #cbd5e1; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); border-radius: 6px; width: 220px; max-height: 260px; overflow-y: auto; z-index: 40; display: none; }
@@ -224,7 +159,13 @@
         </div>
 
         <div id="view-product" class="dash-container hidden">
-            <h2 class="text-xl font-bold text-slate-800 mb-6 flex items-center gap-2"><span>🏷️</span> 产品库存监控 (SPU)</h2>
+            <div class="flex justify-between items-center mb-6 sticky top-0 bg-[#f8fafc] pt-2 pb-4 z-10">
+                <h2 class="text-xl font-bold text-slate-800 flex items-center gap-2"><span>🏷️</span> 产品库存监控 (SPU)</h2>
+                <div class="relative">
+                    <input id="prod-search" class="t-input w-64 pl-8 rounded-full border-slate-300 focus:border-blue-500" placeholder="搜索产品型号...">
+                    <svg class="w-4 h-4 absolute left-2.5 top-2.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                </div>
+            </div>
             <div id="product-grid" class="card-grid"></div>
         </div>
     </main>
@@ -236,12 +177,15 @@
 <div id="import-modal" class="modal"><div class="bg-white rounded-xl w-[400px] p-8 text-center"><h3 class="font-bold text-xl mb-4">导入</h3><p class="text-sm text-slate-500 mb-6">文件存入 temp_uploads 目录</p><button onclick="startImport()" class="w-full bg-slate-800 text-white py-2 rounded font-bold">扫描</button><button onclick="document.getElementById('import-modal').classList.remove('active')" class="mt-4 text-slate-400 text-xs">关闭</button></div></div>
 <div id="settings-modal" class="modal"><div class="bg-white rounded-xl w-[400px] p-6"><h3 class="font-bold mb-4">配置</h3><textarea id="set-hosts" class="t-input h-20 mb-2"></textarea><input id="set-cats" class="t-input mb-2"><input id="set-types" class="t-input mb-2"><input id="set-plats" class="t-input mb-2"><button onclick="saveSettings()" class="w-full bg-blue-600 text-white py-2 rounded font-bold">保存</button><button onclick="document.getElementById('settings-modal').classList.remove('active')" class="w-full mt-2 text-slate-400 text-xs">关闭</button></div></div>
 
+
 <script>
     let currPage=1, totalPages=1, globalOptions={}, editingId=null, globalData=[], chartTrend=null;
 
     (function init() {
         loadDashboard('day'); loadOptions(); loadData(1); loadProductStats();
         document.addEventListener('click', e => { if(!e.target.closest('.multi-pop') && !e.target.closest('.multi-trig')) document.getElementById('multi-pop').classList.remove('show'); });
+        // 新增：产品搜索监听
+        document.getElementById('prod-search').addEventListener('input', (e) => Product.search(e.target.value));
     })();
 
     function switchView(view, btn) {
@@ -254,6 +198,7 @@
         if(view === 'product') loadProductStats();
     }
 
+    // Dashboard Logic (保持不变)
     async function loadDashboard(dim) {
         const res = await fetch(`/api/dashboard?dim=${dim}`); const data = await res.json();
         document.getElementById('d-total').innerText = data.kpi.total;
@@ -263,9 +208,7 @@
         document.getElementById('d-today-out').innerText = data.kpi.today_out;
         document.getElementById('d-month-in').innerText = data.kpi.month_in;
         document.getElementById('d-month-out').innerText = data.kpi.month_out;
-        
         document.getElementById('matrix-body').innerHTML = data.matrix.map((r, i) => `<tr><td class="font-bold flex items-center gap-2"><span class="w-5 h-5 rounded bg-slate-100 text-slate-500 text-xs flex items-center justify-center">${i+1}</span>${r.name}</td><td class="${r.day>0?'val-today':''}">${r.day}</td><td>${r.week}</td><td>${r.month}</td><td class="font-mono font-bold">${r.year}</td></tr>`).join('');
-
         if(!chartTrend) chartTrend = echarts.init(document.getElementById('chart-trend'));
         chartTrend.setOption({tooltip:{trigger:'axis'}, legend:{data:['入库','发布'],bottom:0}, grid:{top:20,left:40,right:20,bottom:30}, xAxis:{type:'category',data:data.trend.dates}, yAxis:{type:'value'}, series:[{name:'入库',type:'line',data:data.trend.in,smooth:true,itemStyle:{color:'#3b82f6'},areaStyle:{opacity:0.1}}, {name:'发布',type:'bar',data:data.trend.out,itemStyle:{color:'#10b981'}}]});
         echarts.init(document.getElementById('chart-host')).setOption({tooltip:{trigger:'axis'}, grid:{top:10,left:60,right:20,bottom:20}, xAxis:{type:'value'}, yAxis:{type:'category',data:data.hosts.map(i=>i.name).reverse()}, series:[{type:'bar',data:data.hosts.map(i=>i.value).reverse(),itemStyle:{color:'#f59e0b',borderRadius:[0,4,4,0]}}]});
@@ -273,89 +216,89 @@
         echarts.init(document.getElementById('chart-plat')).setOption({tooltip:{}, radar:{indicator:data.plats.map(p=>({name:p.name, max:Math.max(...data.plats.map(v=>v.value),10)}))}, series:[{type:'radar',data:[{value:data.plats.map(p=>p.value),name:'分发量'}]}]});
     }
 
-    async function loadProductStats() {
-        const res = await fetch('/api/product_stats'); const data = await res.json();
-        document.getElementById('product-grid').innerHTML = data.map(item => {
-            const pct = Math.round(((item.total - item.pending)/item.total)*100)||0;
-            let status = 'normal', color = '#3b82f6';
-            if(item.pending > 5) { status='danger'; color='#ef4444'; }
-            else if(item.pending === 0) { status='safe'; color='#10b981'; }
-            else if(item.total < 3) { status='warn'; }
-            return `<div class="prod-card ${status}" onclick="jumpTo('${item.name}')"><div class="pc-header"><div class="pc-title">${item.name}</div><div class="pc-badge">SPU</div></div><div class="pc-body"><div class="pc-stat"><div class="pc-num" style="color:${color}">${item.pending}</div><div class="pc-label">待发布</div></div><div class="text-right"><div class="text-2xl font-bold text-slate-300">${pct}%</div><div class="text-xs text-slate-400">完成</div></div></div><div class="pc-footer"><div class="pc-progress"><div class="pc-bar" style="width:${pct}%; background:${color}"></div></div><div class="pc-total">总库 ${item.total}</div></div></div>`;
-        }).join('');
+    // Product Logic (核心更新)
+    const Product = {
+        allData: [], // 存储所有产品数据用于前端搜索
+        init: async function() {
+            const res = await fetch('/api/product_stats');
+            this.allData = await res.json();
+            this.render(this.allData);
+        },
+        search: function(keyword) {
+            const filtered = this.allData.filter(item => item.name.toLowerCase().includes(keyword.toLowerCase()));
+            this.render(filtered);
+        },
+        render: function(data) {
+            document.getElementById('product-grid').innerHTML = data.map(item => {
+                const pct = Math.round(((item.total - item.pending)/item.total)*100)||0;
+                let color = '#3b82f6';
+                if(item.pending > 5) color='#ef4444'; else if(item.pending === 0) color='#10b981';
+                
+                // 图片逻辑
+                const hasImg = item.image_url && !item.image_url.includes('default');
+                const imgSrc = hasImg ? item.image_url : '';
+                const imgContent = hasImg 
+                    ? `<img src="${imgSrc}" onclick="event.stopPropagation();showBig('${imgSrc}')">`
+                    : `<span class="text-slate-300 text-2xl">+</span>`;
+
+                return `
+                <div class="prod-card" style="border-left: 4px solid ${color}">
+                    <div class="pc-img-box" onclick="event.stopPropagation();this.nextElementSibling.click()">
+                        ${imgContent}
+                        <div class="pc-img-upload-hint"><span>点击</span><span>上传</span></div>
+                    </div>
+                    <input type="file" class="hidden" accept="image/*" onchange="uploadProdImg(this, '${item.name}')">
+                    
+                    <div class="pc-content ml-4">
+                        <div class="pc-header"><div class="pc-title" title="${item.name}" onclick="jumpTo('${item.name}')">${item.name}</div></div>
+                        <div class="pc-body">
+                            <div class="text-left"><div class="pc-num" style="color:${color}">${item.pending}</div><div class="text-xs text-slate-500 font-bold">待发布</div></div>
+                            <div class="text-right"><div class="text-2xl font-bold text-slate-400">${pct}%</div><div class="text-xs text-slate-400">完成率</div></div>
+                        </div>
+                        <div class="pc-footer">
+                            <div class="pc-progress"><div class="pc-bar" style="width:${pct}%; background:${color}"></div></div>
+                            <div class="ml-2 font-bold">总库存 ${item.total}</div>
+                        </div>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+    };
+    // 暴露给全局调用
+    window.loadProductStats = () => Product.init();
+
+    // 新增：产品图片上传逻辑
+    async function uploadProdImg(input, name) {
+        if (!input.files[0]) return;
+        const fd = new FormData(); fd.append('file', input.files[0]);
+        try {
+            // 1. 上传文件
+            const resUp = await fetch('/api/upload', {method:'POST', body:fd});
+            const dataUp = await resUp.json();
+            // 2. 保存产品图片关联
+            const fdSave = new FormData();
+            fdSave.append('name', name);
+            fdSave.append('image_url', dataUp.url);
+            await fetch('/api/product/save_image', {method:'POST', body:fdSave});
+            // 3. 刷新视图
+            loadProductStats();
+        } catch(e) { alert('上传失败'); }
     }
 
-    function jumpTo(pid) {
-        document.querySelectorAll('.nav-item')[1].click();
-        document.getElementById('s-pid').value = pid;
-        if(!document.getElementById('filter-panel').classList.contains('open')) toggleFilter();
-        loadData(1);
-    }
-
-    async function loadOptions() {
-        const res=await fetch('/api/options'); globalOptions=await res.json();
-        const fill=(id,l)=>document.getElementById(id).innerHTML=`<option value="">全部</option>`+l.map(i=>`<option>${i}</option>`).join('');
-        fill('s-cat',globalOptions.categories); fill('s-type',globalOptions.video_types); fill('s-host',globalOptions.hosts); fill('s-status',globalOptions.statuses); fill('s-plat',globalOptions.platforms);
-        document.getElementById('dl-pids').innerHTML=globalOptions.product_ids.map(i=>`<option>${i}</option>`).join('');
-    }
-
-    async function loadData(p) {
-        currPage=p||currPage;
-        const params=new URLSearchParams({page:currPage, size:100, keyword:document.getElementById('g-search').value, product_id:document.getElementById('s-pid').value, title:document.getElementById('s-title').value, remark:document.getElementById('s-remark').value, host:document.getElementById('s-host').value, status:document.getElementById('s-status').value, category:document.getElementById('s-cat').value, video_type:document.getElementById('s-type').value, platform:document.getElementById('s-plat').value, finish_start:document.getElementById('s-fin-start').value, finish_end:document.getElementById('s-fin-end').value, publish_start:document.getElementById('s-pub-start').value, publish_end:document.getElementById('s-pub-end').value});
-        const res=await fetch(`/api/videos?${params}`); const data=await res.json();
-        globalData=data.items; totalPages=data.total_pages;
-        document.getElementById('page-info').innerText = `共 ${data.total} 条 · ${data.page}/${data.total_pages} 页`;
-        renderTable(data.items);
-    }
-
+    // Inventory Logic (保持不变)
+    function jumpTo(pid) { document.querySelectorAll('.nav-item')[1].click(); document.getElementById('s-pid').value = pid; if(!document.getElementById('filter-panel').classList.contains('open')) toggleFilter(); loadData(1); }
+    async function loadOptions() { const res=await fetch('/api/options'); globalOptions=await res.json(); const fill=(id,l)=>document.getElementById(id).innerHTML=`<option value="">全部</option>`+l.map(i=>`<option>${i}</option>`).join(''); fill('s-cat',globalOptions.categories); fill('s-type',globalOptions.video_types); fill('s-host',globalOptions.hosts); fill('s-status',globalOptions.statuses); fill('s-plat',globalOptions.platforms); document.getElementById('dl-pids').innerHTML=globalOptions.product_ids.map(i=>`<option>${i}</option>`).join(''); }
+    async function loadData(p) { currPage=p||currPage; const params=new URLSearchParams({page:currPage, size:100, keyword:document.getElementById('g-search').value, product_id:document.getElementById('s-pid').value, title:document.getElementById('s-title').value, remark:document.getElementById('s-remark').value, host:document.getElementById('s-host').value, status:document.getElementById('s-status').value, category:document.getElementById('s-cat').value, video_type:document.getElementById('s-type').value, platform:document.getElementById('s-plat').value, finish_start:document.getElementById('s-fin-start').value, finish_end:document.getElementById('s-fin-end').value, publish_start:document.getElementById('s-pub-start').value, publish_end:document.getElementById('s-pub-end').value}); const res=await fetch(`/api/videos?${params}`); const data=await res.json(); globalData=data.items; totalPages=data.total_pages; document.getElementById('page-info').innerText = `共 ${data.total} 条 · ${data.page}/${data.total_pages} 页`; renderTable(data.items); }
     function addNewRow() { globalData.unshift({id:'new', product_id:'', title:'', isNew:true}); editingId='new'; renderTable(globalData); document.querySelector('.table-wrap').scrollTop = 0; }
-
-    function renderTable(items) {
-        document.getElementById('table-body').innerHTML = items.map(v => {
-            const isEdit = (v.id === editingId); const cln = s => (s && s!=='nan' && s!=='None') ? s : ''; const img = (v.image_url && !v.image_url.includes('default')) ? v.image_url : '/assets/default.png';
-            if (isEdit) {
-                const sel=(k,l)=>`<select id="ed-${k}" class="t-input">${l.map(o=>`<option ${o===v[k]?'selected':''}>${o}</option>`).join('')}</select>`;
-                const mul=(k,t)=>`<input id="ed-${k}" class="t-input multi-trig cursor-pointer" value="${cln(v[k])}" readonly onclick="openMulti(this,'${t}')" placeholder="点击选择">`;
-                return `<tr class="editing ${v.isNew?'new-row':''}">
-                    <td class="p-2"><div class="img-cell mx-auto" onclick="document.getElementById('up-${v.id}').click()" ondrop="handleDrop(event,'${v.id}')" ondragover="event.preventDefault()" onpaste="handlePaste(event,'${v.id}')"><img src="${img}" class="w-full h-full object-cover"></div><input type="file" id="up-${v.id}" class="hidden" onchange="upImg(this,'${v.id}')"><input type="hidden" id="ed-img" value="${cln(v.image_url)}"></td>
-                    <td><input id="ed-pid" class="t-input" value="${cln(v.product_id)}" placeholder="编号"></td><td><input id="ed-title" class="t-input font-bold" value="${cln(v.title)}" placeholder="标题"></td><td>${sel('cat',globalOptions.categories)}</td><td><input id="ed-fin" type="date" class="t-input" value="${cln(v.finish_time)}"></td><td>${sel('type',globalOptions.video_types)}</td><td>${mul('host','hosts')}</td><td>${sel('status',globalOptions.statuses)}</td><td>${mul('plat','platforms')}</td><td><input id="ed-pub" type="datetime-local" class="t-input" value="${cln(v.publish_time).replace(' ','T')}"></td><td><input id="ed-rem" class="t-input" value="${cln(v.remark)}"></td>
-                    <td class="text-center sticky right-0 bg-blue-50 border-l"><button onclick="saveRow('${v.id}')" class="text-blue-600 font-bold text-xs">保存</button> <button onclick="cancelEdit()" class="text-slate-400 text-xs ml-1">取消</button></td></tr>`;
-            }
-            const pill = (s,t) => s.split(/[,，]/).map(x=>`<span class="pill" style="background:${t==='st'?(x.includes('已')?'#dcfce7':'#fff7ed'):'#f1f5f9'};color:${t==='st'?(x.includes('已')?'#166534':'#c2410c'):'#475569'}">${x}</span>`).join('');
-            return `<tr class="hover:bg-slate-50 border-b border-slate-100 last:border-0"><td class="p-2 text-center"><div class="img-cell mx-auto bg-slate-100" onclick="showBig('${img}')" ondrop="handleDrop(event,'${v.id}')" ondragover="event.preventDefault()" onpaste="handlePaste(event,'${v.id}')"><img src="${img}" class="w-full h-full object-cover"></div></td><td class="font-mono text-slate-500">${cln(v.product_id)}</td><td class="font-bold text-slate-700 truncate" style="max-width:260px" title="${cln(v.title)}">${cln(v.title)}</td><td><span class="pill bg-slate-100">${cln(v.category)}</span></td><td class="text-slate-400 text-xs font-mono">${cln(v.finish_time)}</td><td><span class="pill bg-slate-100">${cln(v.video_type)}</span></td><td>${pill(cln(v.host),'')}</td><td class="text-center">${pill(cln(v.status),'st')}</td><td>${pill(cln(v.platform),'')}</td><td class="text-slate-400 text-xs font-mono">${cln(v.publish_time).replace('T',' ')}</td><td class="text-slate-400 truncate max-w-[120px] text-xs" title="${cln(v.remark)}">${cln(v.remark)}</td><td class="text-center sticky right-0 bg-white group-hover:bg-slate-50 border-l"><button onclick="startEdit(${v.id})" class="text-blue-600 font-bold text-xs hover:underline mr-2">编辑</button><button onclick="delVideo(${v.id})" class="text-red-400 text-xs hover:text-red-600">删</button></td></tr>`;
-        }).join('');
-    }
-
+    function renderTable(items) { document.getElementById('table-body').innerHTML = items.map(v => { const isEdit = (v.id === editingId); const cln = s => (s && s!=='nan' && s!=='None') ? s : ''; const img = (v.image_url && !v.image_url.includes('default')) ? v.image_url : '/assets/default.png'; if (isEdit) { const sel=(k,l)=>`<select id="ed-${k}" class="t-input">${l.map(o=>`<option ${o===v[k]?'selected':''}>${o}</option>`).join('')}</select>`; const mul=(k,t)=>`<input id="ed-${k}" class="t-input multi-trig cursor-pointer" value="${cln(v[k])}" readonly onclick="openMulti(this,'${t}')" placeholder="点击选择">`; return `<tr class="editing ${v.isNew?'new-row':''}"> <td class="p-2"><div class="img-cell mx-auto" onclick="document.getElementById('up-${v.id}').click()" ondrop="handleDrop(event,'${v.id}')" ondragover="event.preventDefault()" onpaste="handlePaste(event,'${v.id}')"><img src="${img}" class="w-full h-full object-cover"></div><input type="file" id="up-${v.id}" class="hidden" onchange="upImg(this,'${v.id}')"><input type="hidden" id="ed-img" value="${cln(v.image_url)}"></td> <td><input id="ed-pid" class="t-input" value="${cln(v.product_id)}" placeholder="编号"></td><td><input id="ed-title" class="t-input font-bold" value="${cln(v.title)}" placeholder="标题"></td><td>${sel('cat',globalOptions.categories)}</td><td><input id="ed-fin" type="date" class="t-input" value="${cln(v.finish_time)}"></td><td>${sel('type',globalOptions.video_types)}</td><td>${mul('host','hosts')}</td><td>${sel('status',globalOptions.statuses)}</td><td>${mul('plat','platforms')}</td><td><input id="ed-pub" type="datetime-local" class="t-input" value="${cln(v.publish_time).replace(' ','T')}"></td><td><input id="ed-rem" class="t-input" value="${cln(v.remark)}"></td> <td class="text-center sticky right-0 bg-blue-50 border-l"><button onclick="saveRow('${v.id}')" class="text-blue-600 font-bold text-xs">保存</button> <button onclick="cancelEdit()" class="text-slate-400 text-xs ml-1">取消</button></td></tr>`; } const pill = (s,t) => s.split(/[,，]/).map(x=>`<span class="pill" style="background:${t==='st'?(x.includes('已')?'#dcfce7':'#fff7ed'):'#f1f5f9'};color:${t==='st'?(x.includes('已')?'#166534':'#c2410c'):'#475569'}">${x}</span>`).join(''); return `<tr class="hover:bg-slate-50 border-b border-slate-100 last:border-0"><td class="p-2 text-center"><div class="img-cell mx-auto bg-slate-100" onclick="showBig('${img}')" ondrop="handleDrop(event,'${v.id}')" ondragover="event.preventDefault()" onpaste="handlePaste(event,'${v.id}')"><img src="${img}" class="w-full h-full object-cover"></div></td><td class="font-mono text-slate-500">${cln(v.product_id)}</td><td class="font-bold text-slate-700 truncate" style="max-width:260px" title="${cln(v.title)}">${cln(v.title)}</td><td><span class="pill bg-slate-100">${cln(v.category)}</span></td><td class="text-slate-400 text-xs font-mono">${cln(v.finish_time)}</td><td><span class="pill bg-slate-100">${cln(v.video_type)}</span></td><td>${pill(cln(v.host),'')}</td><td class="text-center">${pill(cln(v.status),'st')}</td><td>${pill(cln(v.platform),'')}</td><td class="text-slate-400 text-xs font-mono">${cln(v.publish_time).replace('T',' ')}</td><td class="text-slate-400 truncate max-w-[120px] text-xs" title="${cln(v.remark)}">${cln(v.remark)}</td><td class="text-center sticky right-0 bg-white group-hover:bg-slate-50 border-l"><button onclick="startEdit(${v.id})" class="text-blue-600 font-bold text-xs hover:underline mr-2">编辑</button><button onclick="delVideo(${v.id})" class="text-red-400 text-xs hover:text-red-600">删</button></td></tr>`; }).join(''); }
     function startEdit(id){ editingId=id; renderTable(globalData); }
     function cancelEdit(){ editingId=null; loadData(); }
-    async function saveRow(id){
-        const fd=new FormData(); if(id!=='new') fd.append('id',id);
-        const map={'pid':'product_id','title':'title','cat':'category','fin':'finish_time','type':'video_type','host':'host','status':'status','plat':'platform','pub':'publish_time','rem':'remark'};
-        for(let [eid,k] of Object.entries(map)) fd.append(k, document.getElementById('ed-'+eid).value.replace('T',' '));
-        fd.append('image_url',document.getElementById('ed-img').value);
-        await fetch('/api/video/save',{method:'POST',body:fd});
-        editingId=null; loadData();
-    }
-
-    // 拖拽逻辑 (Drag & Drop)
+    async function saveRow(id){ const fd=new FormData(); if(id!=='new') fd.append('id',id); const map={'pid':'product_id','title':'title','cat':'category','fin':'finish_time','type':'video_type','host':'host','status':'status','plat':'platform','pub':'publish_time','rem':'remark'}; for(let [eid,k] of Object.entries(map)) fd.append(k, document.getElementById('ed-'+eid).value.replace('T',' ')); fd.append('image_url',document.getElementById('ed-img').value); await fetch('/api/video/save',{method:'POST',body:fd}); editingId=null; loadData(); }
     async function handleDrop(e,id){ e.preventDefault(); if(e.dataTransfer.files[0]) uploadFile(e.dataTransfer.files[0], id); }
     async function handlePaste(e,id){ if(e.clipboardData.files[0]) uploadFile(e.clipboardData.files[0], id); }
     async function upImg(input,id){ if(input.files[0]) uploadFile(input.files[0], id); }
-    async function uploadFile(file, id){
-        const fd = new FormData(); fd.append('file', file);
-        const res = await fetch('/api/upload', {method:'POST', body:fd}); const d = await res.json();
-        if(editingId == id) { document.getElementById('ed-img').value = d.url; }
-        else { const fd2=new FormData(); fd2.append('id',id); fd2.append('image_url',d.url); await fetch('/api/video/save',{method:'POST',body:fd2}); }
-        const row = globalData.find(v => v.id == id || (id==='new' && v.id==='new'));
-        if(row) row.image_url = d.url;
-        renderTable(globalData);
-    }
-
-    function openMulti(input,type){
-        const pop=document.getElementById('multi-pop'); const r=input.getBoundingClientRect(); const curr=input.value.split(/[,，]/).map(s=>s.trim());
-        pop.innerHTML=globalOptions[type].map(o=>`<div class="multi-opt" onclick="togOpt('${input.id}','${o}','${type}')"><span class="${curr.includes(o)?'text-blue-600 font-bold w-4':'w-4'}">${curr.includes(o)?'✓':''}</span> ${o}</div>`).join('');
-        pop.style.top=(r.bottom+window.scrollY)+'px'; pop.style.left=(r.left+window.scrollX)+'px'; pop.classList.add('show');
-    }
+    async function uploadFile(file, id){ const fd = new FormData(); fd.append('file', file); const res = await fetch('/api/upload', {method:'POST', body:fd}); const d = await res.json(); if(editingId == id) { document.getElementById('ed-img').value = d.url; } else { const fd2=new FormData(); fd2.append('id',id); fd2.append('image_url',d.url); await fetch('/api/video/save',{method:'POST',body:fd2}); } const row = globalData.find(v => v.id == id || (id==='new' && v.id==='new')); if(row) row.image_url = d.url; renderTable(globalData); }
+    function openMulti(input,type){ const pop=document.getElementById('multi-pop'); const r=input.getBoundingClientRect(); const curr=input.value.split(/[,，]/).map(s=>s.trim()); pop.innerHTML=globalOptions[type].map(o=>`<div class="multi-opt" onclick="togOpt('${input.id}','${o}','${type}')"><span class="${curr.includes(o)?'text-blue-600 font-bold w-4':'w-4'}">${curr.includes(o)?'✓':''}</span> ${o}</div>`).join(''); pop.style.top=(r.bottom+window.scrollY)+'px'; pop.style.left=(r.left+window.scrollX)+'px'; pop.classList.add('show'); }
     function togOpt(eid,v,type){ const inp=document.getElementById(eid); let vals=inp.value.split(/[,，]/).map(s=>s.trim()).filter(s=>s); if(vals.includes(v)) vals=vals.filter(i=>i!==v); else vals.push(v); inp.value=vals.join(','); openMulti(inp,type); }
     function toggleFilter(){ document.getElementById('filter-panel').classList.toggle('open'); }
     function showBig(s){ document.getElementById('big-img').src=s; document.getElementById('preview-modal').classList.add('active'); }
