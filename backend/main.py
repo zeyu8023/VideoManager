@@ -13,16 +13,14 @@ from typing import Optional
 from .processor import process_excel_background
 from .models import Video, AppSettings
 
-main_app = FastAPI(title="VideoHub V17.0 Enterprise")
+main_app = FastAPI(title="VideoHub V18.0 Matrix")
 engine = create_engine("sqlite:///data/inventory.db")
 
 # === 强力日期解析工具 ===
 def parse_safe_date(date_str):
-    """尝试将各种奇形怪状的字符串解析为 datetime 对象"""
     if not date_str or str(date_str).lower() in ['nan', 'none', '', 'nat']:
         return None
     try:
-        # 截取前10位处理 YYYY-MM-DD
         date_str = str(date_str).strip()[:10]
         for fmt in ("%Y-%m-%d", "%Y/%m/%d", "%Y%m%d"):
             try:
@@ -48,16 +46,14 @@ def on_startup():
             except: pass
             session.commit()
         
-        # 给旧数据补默认时间，防止报表挂零
         session.exec(text(f"UPDATE video SET created_at = '{datetime.datetime.now()}' WHERE created_at IS NULL"))
         session.commit()
 
-        # 默认配置
         defaults = {
             "hosts": "小梨,VIVI,七七,杨总,其他",
             "statuses": "待发布,已发布,剪辑中,拍摄中,脚本中",
             "categories": "球服,球鞋,球拍,周边,配件",
-            "platforms": "抖音,小红书,视频号,B站,快手",
+            "platforms": "抖音-炬鑫,小红书-有家,视频号-羽球,B站-官方",
             "video_types": "产品展示,剧情,口播,Vlog,花絮"
         }
         for k, v in defaults.items():
@@ -71,46 +67,53 @@ main_app.mount("/assets", StaticFiles(directory="assets"), name="assets")
 async def read_index():
     return FileResponse(os.path.join("frontend", "index.html"))
 
-# === 核心：全能仪表盘数据接口 ===
+# === 核心：矩阵仪表盘接口 ===
 @main_app.get("/api/dashboard")
 def get_dashboard_data(dim: str = "day"):
     with Session(engine) as session:
         videos = session.exec(select(Video)).all()
         
-        # --- 1. 基础 KPI ---
-        total = len(videos)
+        # 1. 基础库存指标
+        total_assets = len(videos)
         pending = sum(1 for v in videos if v.status == "待发布")
         
-        # 时间相关初始化
+        # 2. 时间窗口定义
         now = datetime.datetime.now()
-        today_str = now.strftime("%Y-%m-%d")
-        month_str = now.strftime("%Y-%m")
+        today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        # 本周一
+        week_start = today_start - datetime.timedelta(days=now.weekday())
+        # 本月1号
+        month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        # 今年1月1号
+        year_start = now.replace(month=1, day=1, hour=0, minute=0, second=0, microsecond=0)
         
-        today_in = 0
-        today_out = 0
-        month_in = 0
-        month_out = 0
+        # 3. 统计容器
+        # 库存流转统计
+        flow_stats = {"today_in": 0, "today_out": 0, "month_in": 0, "month_out": 0}
+        trend_map = {} # 日期: {in, out}
         
-        # 统计容器
-        trend_map = {} # {date: {in:0, out:0}}
-        host_map = {}  # {name: count}
-        type_map = {}  # {type: count}
-        plat_map = {}  # {plat: count}
-        turnover_days = [] # [days, ...]
+        # 结构统计
+        host_map = {}
+        type_map = {}
+        plat_dist_map = {} # 平台分发统计
+        
+        # 矩阵统计 {account_name: {day, week, month, year}}
+        matrix_map = {}
+        total_distribution_count = 0 # 总分发量
 
         for v in videos:
             dt_finish = parse_safe_date(v.finish_time)
             dt_publish = parse_safe_date(v.publish_time)
             
-            # --- 统计入库 (Finish Time) ---
+            # --- A. 库存入库统计 ---
             if dt_finish:
                 d_str = dt_finish.strftime("%Y-%m-%d")
                 m_str = dt_finish.strftime("%Y-%m")
                 
-                if d_str == today_str: today_in += 1
-                if m_str == month_str: month_in += 1
+                if dt_finish >= today_start: flow_stats["today_in"] += 1
+                if dt_finish >= month_start: flow_stats["month_in"] += 1
                 
-                # 趋势图 Key
+                # 趋势图 key
                 k_trend = d_str
                 if dim == 'month': k_trend = m_str
                 elif dim == 'week': k_trend = dt_finish.strftime("%Y-W%W")
@@ -118,13 +121,13 @@ def get_dashboard_data(dim: str = "day"):
                 if k_trend not in trend_map: trend_map[k_trend] = {"in": 0, "out": 0}
                 trend_map[k_trend]["in"] += 1
 
-            # --- 统计发布 (Publish Time) ---
+            # --- B. 发布与分发统计 (核心升级) ---
             if dt_publish:
                 d_str = dt_publish.strftime("%Y-%m-%d")
                 m_str = dt_publish.strftime("%Y-%m")
                 
-                if d_str == today_str: today_out += 1
-                if m_str == month_str: month_out += 1
+                if dt_publish >= today_start: flow_stats["today_out"] += 1
+                if dt_publish >= month_start: flow_stats["month_out"] += 1
                 
                 k_trend = d_str
                 if dim == 'month': k_trend = m_str
@@ -133,54 +136,65 @@ def get_dashboard_data(dim: str = "day"):
                 if k_trend not in trend_map: trend_map[k_trend] = {"in": 0, "out": 0}
                 trend_map[k_trend]["out"] += 1
                 
-                # 统计平台分布 (仅已发布)
-                if v.platform:
-                    for p in v.platform.replace('，', ',').split(','):
-                        p = p.strip()
-                        if p: plat_map[p] = plat_map.get(p, 0) + 1
+                # === C. 矩阵账号统计 ===
+                # 只有“已发布”且有时间的才算有效分发
+                if v.status == "已发布" and v.platform:
+                    # 拆分多选平台 (例如 "抖音-A, 小红书-B")
+                    accounts = [p.strip() for p in v.platform.replace('，', ',').split(',') if p.strip()]
+                    
+                    for acc in accounts:
+                        total_distribution_count += 1
+                        
+                        # 初始化账号数据
+                        if acc not in matrix_map: 
+                            matrix_map[acc] = {"day": 0, "week": 0, "month": 0, "year": 0}
+                        
+                        # 累加各时间维度
+                        if dt_publish >= today_start: matrix_map[acc]["day"] += 1
+                        if dt_publish >= week_start: matrix_map[acc]["week"] += 1
+                        if dt_publish >= month_start: matrix_map[acc]["month"] += 1
+                        if dt_publish >= year_start: matrix_map[acc]["year"] += 1
+                        
+                        # 同时也统计雷达图数据
+                        plat_dist_map[acc] = plat_dist_map.get(acc, 0) + 1
 
-            # --- 统计主播产出 (基于完成时间) ---
-            # 只要完成了就算产出
-            if v.host and dt_finish:
+            # --- D. 其他结构统计 ---
+            if v.host and dt_finish: # 主播按产出算
                 for h in v.host.replace('，', ',').split(','):
                     h = h.strip()
                     if h: host_map[h] = host_map.get(h, 0) + 1
             
-            # --- 统计内容结构 ---
             if v.video_type:
                 type_map[v.video_type] = type_map.get(v.video_type, 0) + 1
 
-            # --- 统计周转效率 ---
-            # 如果既有完成时间，又有发布时间，计算差值
-            if dt_finish and dt_publish:
-                delta = (dt_publish - dt_finish).days
-                if delta >= 0: turnover_days.append(delta)
-
-        # 整理数据 - 趋势图
-        sorted_keys = sorted(trend_map.keys())[-30:] # 最近30周期
+        # 4. 数据格式化
+        # 趋势图
+        sorted_keys = sorted(trend_map.keys())[-30:]
         
-        # 整理数据 - 主播排行 (Top 5)
-        sorted_hosts = sorted(host_map.items(), key=lambda x: x[1], reverse=True)[:5]
-        
-        # 整理数据 - 平均周转
-        avg_turnover = round(sum(turnover_days) / len(turnover_days), 1) if turnover_days else 0
+        # 矩阵列表 (按年发布量倒序)
+        matrix_list = [{"name": k, **v} for k, v in matrix_map.items()]
+        matrix_list.sort(key=lambda x: x["year"], reverse=True)
 
         return {
-            "total": total, "pending": pending,
-            "today_in": today_in, "today_out": today_out,
-            "month_in": month_in, "month_out": month_out,
-            "avg_turnover": avg_turnover,
+            "kpi": {
+                "total": total_assets, 
+                "pending": pending,
+                "dist_total": total_distribution_count, # 新增：累计分发
+                "today_in": flow_stats["today_in"], "today_out": flow_stats["today_out"],
+                "month_in": flow_stats["month_in"], "month_out": flow_stats["month_out"]
+            },
             "trend": {
                 "dates": sorted_keys,
                 "in": [trend_map[k]["in"] for k in sorted_keys],
                 "out": [trend_map[k]["out"] for k in sorted_keys]
             },
-            "hosts": [{"name": k, "value": v} for k, v in sorted_hosts],
+            "matrix": matrix_list, # 新增：矩阵表数据
+            "hosts": sorted([{"name": k, "value": v} for k, v in host_map.items()], key=lambda x:x['value'], reverse=True)[:5],
             "types": [{"name": k, "value": v} for k, v in type_map.items()],
-            "plats": [{"name": k, "value": v} for k, v in plat_map.items()]
+            "plats": [{"name": k, "value": v} for k, v in plat_dist_map.items()]
         }
 
-# === 列表接口 (保持不变) ===
+# === 列表接口 (保持 V16 全功能) ===
 @main_app.get("/api/videos")
 def list_videos(
     page: int = 1, size: int = 100, sort_by: str = "id", order: str = "desc",
@@ -211,10 +225,9 @@ def list_videos(
         sort_col = getattr(Video, sort_by, Video.id)
         stmt = stmt.order_by(asc(sort_col) if order == "asc" else desc(sort_col))
         stmt = stmt.offset((page - 1) * size).limit(size)
-        
         return {"items": session.exec(stmt).all(), "total": total, "page": page, "size": size, "total_pages": math.ceil(total / size)}
 
-# === 选项接口 ===
+# === 通用接口 (保持不变) ===
 @main_app.get("/api/options")
 def get_options():
     with Session(engine) as session:
@@ -236,7 +249,6 @@ def get_options():
             "product_ids": merge(Video.product_id, "ignore")
         }
 
-# === 增删改查 (通用) ===
 @main_app.post("/api/video/save")
 async def save_video(
     id: Optional[str] = Form(None),

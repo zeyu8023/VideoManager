@@ -3,51 +3,54 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VideoHub V17.0</title>
+    <title>VideoHub V18.0 Matrix</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/echarts/5.4.3/echarts.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Inter', 'Noto Sans SC', sans-serif; background: #f8fafc; color: #1e293b; overflow: hidden; }
         
-        /* 布局框架 */
         .app-container { display: flex; height: 100vh; width: 100vw; }
         .sidebar { width: 240px; background: #0f172a; color: #94a3b8; display: flex; flex-direction: column; flex-shrink: 0; }
-        .nav-item { padding: 16px 24px; cursor: pointer; display: flex; align-items: center; gap: 12px; font-size: 14px; font-weight: 500; transition: all 0.2s; border-left: 3px solid transparent; }
+        .sidebar-header { height: 64px; display: flex; align-items: center; padding: 0 24px; color: white; font-weight: 700; font-size: 18px; gap: 10px; border-bottom: 1px solid #1e293b; }
+        .nav-item { padding: 14px 24px; cursor: pointer; display: flex; align-items: center; gap: 12px; font-size: 14px; font-weight: 500; transition: all 0.2s; border-left: 3px solid transparent; }
         .nav-item:hover { background: #1e293b; color: white; }
         .nav-item.active { background: #1e293b; color: white; border-left-color: #3b82f6; }
-        
         .main-content { flex: 1; display: flex; flex-direction: column; overflow: hidden; background: #f1f5f9; position: relative; }
 
-        /* === 仪表盘专属样式 === */
+        /* 仪表盘 */
         .dash-container { padding: 24px; overflow-y: auto; height: 100%; }
-        
-        /* 1. 顶栏 KPI */
         .kpi-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 16px; margin-bottom: 24px; }
         .stat-card { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); border: 1px solid #e2e8f0; }
         .stat-label { font-size: 12px; font-weight: 700; color: #64748b; text-transform: uppercase; margin-bottom: 8px; }
         .stat-num { font-size: 28px; font-weight: 800; color: #0f172a; }
         .stat-sub { font-size: 12px; color: #94a3b8; margin-top: 4px; }
 
-        /* 2. 中段图表 */
         .chart-grid { display: grid; grid-template-columns: 2fr 1.5fr 1.5fr; gap: 16px; margin-bottom: 24px; }
-        .chart-box { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); border: 1px solid #e2e8f0; height: 320px; position: relative; }
-        .chart-title { font-size: 14px; font-weight: 700; color: #334155; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; }
+        .chart-box { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); border: 1px solid #e2e8f0; height: 340px; }
+        .chart-title { font-size: 14px; font-weight: 700; color: #334155; margin-bottom: 12px; }
 
-        /* 3. 底部趋势 */
-        .trend-box { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); border: 1px solid #e2e8f0; height: 380px; }
+        .trend-box { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); border: 1px solid #e2e8f0; height: 400px; margin-bottom: 24px; }
 
-        /* === 库存表样式 === */
+        /* 新增：矩阵表格样式 */
+        .matrix-box { background: white; border-radius: 12px; padding: 0; box-shadow: 0 1px 2px rgba(0,0,0,0.05); border: 1px solid #e2e8f0; overflow: hidden; margin-bottom: 40px; }
+        .matrix-header { padding: 16px 20px; border-bottom: 1px solid #e2e8f0; font-weight: 700; color: #334155; background: #f8fafc; }
+        .matrix-table { width: 100%; text-align: left; border-collapse: collapse; }
+        .matrix-table th { padding: 12px 20px; font-size: 12px; color: #64748b; font-weight: 700; background: #f8fafc; border-bottom: 1px solid #e2e8f0; }
+        .matrix-table td { padding: 12px 20px; font-size: 13px; border-bottom: 1px solid #f1f5f9; color: #334155; }
+        .matrix-table tr:last-child td { border-bottom: none; }
+        .matrix-table tr:hover { background: #f8fafc; }
+        .val-today { color: #ef4444; font-weight: 700; } /* 今日数据高亮 */
+
+        /* 库存表 */
         .toolbar { padding: 16px 24px; background: white; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; shrink-0; }
         .filter-panel { background: white; border-bottom: 1px solid #e2e8f0; overflow: hidden; transition: max-height 0.3s; max-height: 0; padding: 0 24px; }
         .filter-panel.open { max-height: 600px; padding-top: 20px; padding-bottom: 20px; }
         .filter-label { font-size: 12px; font-weight: 700; color: #64748b; margin-bottom: 4px; display: block; }
-        
         .table-wrap { flex: 1; overflow: auto; background: white; margin: 16px 24px; border-radius: 8px; border: 1px solid #e2e8f0; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
-        table { width: 100%; border-collapse: collapse; min-width: 1800px; }
-        th { position: sticky; top: 0; background: #f8fafc; color: #475569; font-weight: 700; font-size: 13px; padding: 12px; border-bottom: 2px solid #e2e8f0; text-align: left; z-index: 10; }
-        td { padding: 10px 12px; border-bottom: 1px solid #f1f5f9; font-size: 14px; vertical-align: middle; color: #334155; }
-        tr:hover td { background: #f8fafc; }
+        .main-table { width: 100%; border-collapse: collapse; min-width: 1800px; }
+        .main-table th { position: sticky; top: 0; background: #f8fafc; color: #475569; font-weight: 700; font-size: 13px; padding: 12px; border-bottom: 2px solid #e2e8f0; z-index: 10; text-align: left; }
+        .main-table td { padding: 10px 12px; border-bottom: 1px solid #f1f5f9; font-size: 14px; vertical-align: middle; color: #334155; }
 
         /* 组件 */
         .t-input { width: 100%; padding: 6px 8px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 13px; outline: none; background: white; height: 34px; }
@@ -57,7 +60,6 @@
         .img-cell { width: 44px; height: 44px; border-radius: 6px; border: 1px solid #e2e8f0; background: white; overflow: hidden; cursor: pointer; display: flex; align-items: center; justify-content: center; position: relative; }
         .img-cell:hover::after { content:'+'; position:absolute; inset:0; background:rgba(0,0,0,0.4); color:white; display:flex; align-items:center; justify-content:center; font-weight:bold; }
 
-        /* 弹窗 & 多选 */
         .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 50; display: none; align-items: center; justify-content: center; }
         .modal.active { display: flex; }
         .multi-pop { position: absolute; background: white; border: 1px solid #cbd5e1; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); border-radius: 6px; width: 220px; max-height: 260px; overflow-y: auto; z-index: 40; display: none; }
@@ -70,12 +72,12 @@
 
 <div class="app-container">
     <aside class="sidebar">
-        <div class="h-16 flex items-center px-6 gap-3 mb-6">
-            <div class="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white font-bold text-xl">V</div>
+        <div class="sidebar-header">
+            <div class="w-8 h-8 bg-blue-600 rounded flex items-center justify-center text-white font-bold text-xl">V</div>
             <h1 class="text-xl font-bold text-white tracking-tight">VideoHub</h1>
         </div>
-        <div class="nav-item active" onclick="switchView('dashboard', this)"><span>📊</span> 仪表盘</div>
-        <div class="nav-item" onclick="switchView('inventory', this)"><span>📦</span> 视频库存</div>
+        <div class="nav-item active" onclick="switchView('dashboard', this)"><span>📊</span> 数据驾驶舱</div>
+        <div class="nav-item" onclick="switchView('inventory', this)"><span>📦</span> 视频库存表</div>
     </aside>
 
     <main class="main-content">
@@ -84,39 +86,43 @@
             
             <div class="kpi-grid">
                 <div class="stat-card border-l-4 border-blue-500">
-                    <div class="stat-label">总库存</div>
+                    <div class="stat-label">总库存 (视频数)</div>
                     <div class="stat-num" id="d-total">-</div>
-                    <div class="stat-sub text-blue-500">Total Assets</div>
+                </div>
+                <div class="stat-card border-l-4 border-purple-500">
+                    <div class="stat-label text-purple-600">累计分发 (人次)</div>
+                    <div class="stat-num text-purple-700" id="d-dist">-</div>
+                    <div class="stat-sub">全平台总发布量</div>
                 </div>
                 <div class="stat-card border-l-4 border-orange-500">
-                    <div class="stat-label">待发布</div>
-                    <div class="stat-num text-orange-600" id="d-pending">-</div>
-                    <div class="stat-sub">Backlog</div>
+                    <div class="stat-label text-orange-600">待发布库存</div>
+                    <div class="stat-num text-orange-700" id="d-pending">-</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-label">本月入库</div>
-                    <div class="stat-num text-slate-700" id="d-m-in">-</div>
-                    <div class="stat-sub">Monthly In</div>
+                    <div class="stat-label">今日 入库 / 发布</div>
+                    <div class="flex items-baseline gap-2 mt-auto">
+                        <span class="text-3xl font-black text-slate-800" id="d-today-in">0</span>
+                        <span class="text-slate-400">/</span>
+                        <span class="text-3xl font-black text-green-600" id="d-today-out">0</span>
+                    </div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-label">本月发布</div>
-                    <div class="stat-num text-emerald-600" id="d-m-out">-</div>
-                    <div class="stat-sub">Monthly Out</div>
-                </div>
-                <div class="stat-card bg-slate-50 border border-slate-200">
-                    <div class="stat-label">平均周转</div>
-                    <div class="stat-num" id="d-turnover">-</div>
-                    <div class="stat-sub">Days / Video</div>
+                    <div class="stat-label">本月 入库 / 发布</div>
+                    <div class="flex items-baseline gap-2 mt-auto">
+                        <span class="text-3xl font-black text-slate-800" id="d-month-in">0</span>
+                        <span class="text-slate-400">/</span>
+                        <span class="text-3xl font-black text-green-600" id="d-month-out">0</span>
+                    </div>
                 </div>
             </div>
 
             <div class="chart-grid">
                 <div class="chart-box">
-                    <div class="chart-title">🏆 主播产出 Top 5</div>
+                    <div class="chart-title">🏆 主播产出排行 (Top 5)</div>
                     <div id="chart-host" class="w-full h-full pb-6"></div>
                 </div>
                 <div class="chart-box">
-                    <div class="chart-title">📊 视频类型占比</div>
+                    <div class="chart-title">📊 内容类型占比</div>
                     <div id="chart-type" class="w-full h-full pb-6"></div>
                 </div>
                 <div class="chart-box">
@@ -126,7 +132,7 @@
             </div>
 
             <div class="trend-box">
-                <div class="chart-title">
+                <div class="chart-title flex justify-between">
                     <span>📈 业务趋势 (入库 vs 发布)</span>
                     <div class="flex gap-2">
                         <button onclick="loadDashboard('day')" class="text-xs px-2 py-1 rounded bg-slate-100 hover:bg-blue-100">日</button>
@@ -135,6 +141,23 @@
                     </div>
                 </div>
                 <div id="chart-trend" class="w-full h-[320px]"></div>
+            </div>
+
+            <div class="matrix-box">
+                <div class="matrix-header">📱 各账号分发矩阵 (Account Distribution Matrix)</div>
+                <table class="matrix-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 30%">平台账号名称</th>
+                            <th style="width: 15%">今日发布 🔥</th>
+                            <th style="width: 15%">本周发布</th>
+                            <th style="width: 15%">本月发布</th>
+                            <th style="width: 25%">年度总计 (Rank)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="matrix-body">
+                        </tbody>
+                </table>
             </div>
         </div>
 
@@ -158,12 +181,10 @@
                     <div><label class="filter-label">视频类型</label><select id="s-type" class="t-input"></select></div>
                     <div><label class="filter-label">主播</label><select id="s-host" class="t-input"></select></div>
                     <div><label class="filter-label">状态</label><select id="s-status" class="t-input"></select></div>
-                    
                     <div><label class="filter-label">发布平台</label><select id="s-plat" class="t-input"></select></div>
                     <div class="col-span-2"><label class="filter-label">完成时间范围</label><div class="flex gap-2"><input type="date" id="s-fin-start" class="t-input"><input type="date" id="s-fin-end" class="t-input"></div></div>
                     <div class="col-span-2"><label class="filter-label">发布时间范围</label><div class="flex gap-2"><input type="date" id="s-pub-start" class="t-input"><input type="date" id="s-pub-end" class="t-input"></div></div>
                     <div><label class="filter-label">备注</label><input id="s-remark" class="t-input" placeholder="包含备注..."></div>
-
                     <div class="col-span-6 flex justify-end gap-2 border-t pt-3 mt-2">
                         <button onclick="loadData(1)" class="px-5 py-1.5 bg-slate-800 text-white rounded text-sm font-bold">执行查询</button>
                         <button onclick="resetFilters()" class="px-5 py-1.5 bg-white border rounded text-sm font-bold">重置条件</button>
@@ -172,7 +193,7 @@
             </div>
 
             <div class="table-wrap">
-                <table>
+                <table class="main-table">
                     <thead>
                         <tr>
                             <th class="w-16 text-center">图</th>
@@ -224,7 +245,7 @@
         <textarea id="set-hosts" class="t-input h-20 mb-2" placeholder="主播..."></textarea>
         <input id="set-cats" class="t-input mb-2" placeholder="类型...">
         <input id="set-types" class="t-input mb-2" placeholder="视类...">
-        <input id="set-plats" class="t-input mb-2" placeholder="平台...">
+        <input id="set-plats" class="t-input mb-2" placeholder="平台..."></textarea>
         <button onclick="saveSettings()" class="w-full bg-blue-600 text-white py-2 rounded font-bold">保存</button>
         <button onclick="document.getElementById('settings-modal').classList.remove('active')" class="w-full mt-2 text-slate-400 text-xs">关闭</button>
     </div>
@@ -233,15 +254,13 @@
 <script>
     let currPage=1, totalPages=1;
     let globalOptions={}, editingId=null, globalData=[];
-    let charts={};
+    let chartTrend=null;
 
     // --- 初始化 ---
     (function init() {
-        // 并行加载
         loadDashboard('day'); 
         loadOptions(); 
         loadData(1);
-        
         document.addEventListener('click', e => {
             if(!e.target.closest('.multi-pop') && !e.target.closest('.multi-trig')) 
                 document.getElementById('multi-pop').classList.remove('show');
@@ -257,22 +276,39 @@
         if(view === 'dashboard') loadDashboard('day');
     }
 
-    // --- 仪表盘核心逻辑 (ECharts) ---
+    // --- 仪表盘逻辑 (增强版) ---
     async function loadDashboard(dim) {
         try {
             const res = await fetch(`/api/dashboard?dim=${dim}`);
             const data = await res.json();
             
             // 填充 KPI
-            document.getElementById('d-total').innerText = data.total;
-            document.getElementById('d-pending').innerText = data.pending;
-            document.getElementById('d-m-in').innerText = data.month_in;
-            document.getElementById('d-m-out').innerText = data.month_out;
-            document.getElementById('d-turnover').innerText = data.avg_turnover;
+            document.getElementById('d-total').innerText = data.kpi.total;
+            document.getElementById('d-dist').innerText = data.kpi.dist_total; // 新增累计分发
+            document.getElementById('d-pending').innerText = data.kpi.pending;
+            document.getElementById('d-today-in').innerText = data.kpi.today_in;
+            document.getElementById('d-today-out').innerText = data.kpi.today_out;
+            document.getElementById('d-month-in').innerText = data.kpi.month_in;
+            document.getElementById('d-month-out').innerText = data.kpi.month_out;
             
-            // 1. 趋势图 (Line)
-            if(!charts.t) charts.t = echarts.init(document.getElementById('chart-trend'));
-            charts.t.setOption({
+            // 渲染矩阵表 (新增)
+            const tbody = document.getElementById('matrix-body');
+            tbody.innerHTML = data.matrix.map((row, idx) => `
+                <tr>
+                    <td class="font-bold flex items-center gap-2">
+                        <span class="w-5 h-5 rounded bg-slate-100 text-slate-500 text-xs flex items-center justify-center">${idx+1}</span>
+                        ${row.name}
+                    </td>
+                    <td class="${row.day>0?'val-today':''}">${row.day}</td>
+                    <td>${row.week}</td>
+                    <td>${row.month}</td>
+                    <td class="font-mono text-slate-700 font-bold">${row.year}</td>
+                </tr>
+            `).join('');
+
+            // ECharts 1: Trend
+            if(!chartTrend) chartTrend = echarts.init(document.getElementById('chart-trend'));
+            chartTrend.setOption({
                 tooltip: {trigger:'axis'},
                 legend: {data:['入库','发布'], bottom:0},
                 grid: {top:20, left:40, right:20, bottom:30},
@@ -284,47 +320,32 @@
                 ]
             });
 
-            // 2. 主播排行 (Bar)
-            if(!charts.h) charts.h = echarts.init(document.getElementById('chart-host'));
-            charts.h.setOption({
-                tooltip: {trigger:'axis'},
-                grid: {top:10, left:50, right:30, bottom:20},
-                xAxis: {type:'value'},
-                yAxis: {type:'category', data:data.hosts.map(i=>i.name).reverse()},
+            // ECharts 2: Host
+            const ch = echarts.init(document.getElementById('chart-host'));
+            ch.setOption({
+                tooltip: {trigger:'axis'}, grid: {top:10, left:60, right:20, bottom:20},
+                xAxis: {type:'value'}, yAxis: {type:'category', data:data.hosts.map(i=>i.name).reverse()},
                 series: [{type:'bar', data:data.hosts.map(i=>i.value).reverse(), itemStyle:{color:'#f59e0b', borderRadius:[0,4,4,0]}}]
             });
 
-            // 3. 视频类型 (Pie)
-            if(!charts.typ) charts.typ = echarts.init(document.getElementById('chart-type'));
-            charts.typ.setOption({
-                tooltip: {trigger:'item'},
-                series: [{
-                    type:'pie', radius:['40%','70%'], 
-                    data:data.types,
-                    itemStyle: {borderRadius: 5}
-                }]
+            // ECharts 3: Type
+            const ct = echarts.init(document.getElementById('chart-type'));
+            ct.setOption({ tooltip: {trigger:'item'}, series: [{type:'pie', radius:['40%','70%'], data:data.types}] });
+
+            // ECharts 4: Radar
+            const cp = echarts.init(document.getElementById('chart-plat'));
+            const maxV = Math.max(...data.plats.map(p=>p.value), 10);
+            cp.setOption({
+                tooltip: {}, radar: {indicator: data.plats.map(p=>({name:p.name, max:maxV}))},
+                series: [{type:'radar', data:[{value:data.plats.map(p=>p.value), name:'分发量'}]}]
             });
 
-            // 4. 平台雷达 (Radar)
-            if(!charts.p) charts.p = echarts.init(document.getElementById('chart-plat'));
-            // 处理雷达数据
-            const maxVal = Math.max(...data.plats.map(p=>p.value), 10);
-            charts.p.setOption({
-                tooltip: {},
-                radar: { indicator: data.plats.map(p=>({name:p.name, max:maxVal})) },
-                series: [{
-                    type: 'radar',
-                    data: [{value: data.plats.map(p=>p.value), name: '发布量', areaStyle: {color:'rgba(16, 185, 129, 0.2)'}}]
-                }]
-            });
-
-            // 响应式重绘
-            window.onresize = () => Object.values(charts).forEach(c=>c.resize());
+            window.onresize = () => { chartTrend.resize(); ch.resize(); ct.resize(); cp.resize(); };
 
         } catch(e) { console.error(e); }
     }
 
-    // --- 选项逻辑 ---
+    // --- 选项 & 列表 (保持不变) ---
     async function loadOptions() {
         const res=await fetch('/api/options'); globalOptions=await res.json();
         const fill=(id,l,label)=>document.getElementById(id).innerHTML=`<option value="">全部${label}</option>`+l.map(i=>`<option>${i}</option>`).join('');
@@ -334,7 +355,6 @@
         document.getElementById('dl-pids').innerHTML=globalOptions.product_ids.map(i=>`<option>${i}</option>`).join('');
     }
 
-    // --- 列表逻辑 ---
     async function loadData(p) {
         currPage=p||currPage;
         const params=new URLSearchParams({page:currPage, size:100, 
@@ -349,11 +369,11 @@
         });
         const res=await fetch(`/api/videos?${params}`); const data=await res.json();
         globalData=data.items; totalPages=data.total_pages;
-        document.getElementById('page-info').innerText = `第 ${data.page}/${data.total_pages} 页`;
+        document.getElementById('page-info').innerText = `共 ${data.total} 条 · ${data.page}/${data.total_pages} 页`;
         renderTable(data.items);
     }
 
-    // --- 表格渲染 ---
+    // --- 渲染 ---
     function addNewRow() {
         globalData.unshift({id:'new', product_id:'', title:'', isNew:true});
         editingId='new';
@@ -413,7 +433,7 @@
         }).join('');
     }
 
-    // --- 交互逻辑 ---
+    // --- 交互 ---
     function startEdit(id){ editingId=id; renderTable(globalData); }
     function cancelEdit(){ editingId=null; loadData(); }
     
@@ -424,7 +444,6 @@
         fd.append('image_url',document.getElementById('ed-img').value);
         await fetch('/api/video/save',{method:'POST',body:fd});
         editingId=null; loadData(); 
-        // 这里可以加一个 loadDashboard() 实时更新图表
     }
 
     async function upImg(input, id) {
