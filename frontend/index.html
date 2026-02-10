@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>VideoHub V31.0 Stable</title>
+    <title>VideoHub V32.0 Final</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/echarts/5.4.3/echarts.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
     <style>
-        /* === 布局核心修复 === */
+        /* === 布局核心 === */
         body { font-family: 'Inter', 'Noto Sans SC', sans-serif; background: #f8fafc; color: #1e293b; margin: 0; height: 100vh; overflow: hidden; }
         .app-container { display: flex; height: 100%; width: 100%; overflow: hidden; }
         
@@ -17,13 +17,13 @@
         
         .main-content { 
             flex: 1; 
-            position: relative; /* 关键：作为绝对定位的父容器 */
+            position: relative; 
             height: 100%; 
             background: #f1f5f9; 
             overflow: hidden; 
         }
 
-        /* 视图容器：绝对定位占满父容器，确保内部滚动 */
+        /* 视图容器：绝对定位占满，确保滚动正常 */
         .view-container {
             position: absolute;
             top: 0; left: 0; right: 0; bottom: 0;
@@ -32,7 +32,7 @@
             overflow: hidden;
         }
         
-        /* 仪表盘和产品库的滚动区域 */
+        /* 通用滚动区域 */
         .scroll-content {
             flex: 1;
             overflow-y: auto;
@@ -40,7 +40,7 @@
             min-height: 0;
         }
 
-        /* 库存表特殊布局：头部固定，表格区域滚动 */
+        /* 库存表特殊布局 */
         .inventory-layout { display: flex; flex-direction: column; height: 100%; }
         .inv-header { flex-shrink: 0; z-index: 20; background: #f1f5f9; }
         .inv-body { 
@@ -54,7 +54,7 @@
             box-shadow: 0 1px 2px rgba(0,0,0,0.05);
         }
         
-        /* === 其他样式 === */
+        /* === 组件样式 === */
         .sidebar-header { height: 64px; display: flex; align-items: center; padding: 0 24px; color: white; font-weight: 700; border-bottom: 1px solid rgba(255,255,255,0.1); flex-shrink: 0; }
         .nav-item { padding: 14px 24px; cursor: pointer; display: flex; align-items: center; gap: 12px; font-size: 14px; font-weight: 500; transition: all 0.2s; border-left: 3px solid transparent; }
         .nav-item:hover { background: rgba(255,255,255,0.05); color: white; }
@@ -64,25 +64,9 @@
         .stat-card { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); border: 1px solid #e2e8f0; display:flex; flex-direction:column; justify-content:space-between; }
         .stat-label { font-size: 12px; font-weight: 700; color: #64748b; text-transform: uppercase; margin-bottom: 8px; }
         .stat-num { font-size: 28px; font-weight: 800; color: #0f172a; }
-        .chart-grid { display: grid; grid-template-columns: 2fr 1.5fr 1.5fr; gap: 16px; margin-bottom: 24px; flex-shrink: 0; }
-        .chart-box { background: white; border-radius: 12px; padding: 20px; border: 1px solid #e2e8f0; height: 340px; }
-        .trend-box { background: white; border-radius: 12px; padding: 20px; border: 1px solid #e2e8f0; height: 400px; margin-bottom: 24px; flex-shrink: 0; }
-        .matrix-box { background: white; border-radius: 12px; border: 1px solid #e2e8f0; overflow: hidden; margin-bottom: 40px; flex-shrink: 0; }
-        .matrix-header { padding: 16px 20px; border-bottom: 1px solid #e2e8f0; font-weight: 700; color: #334155; background: #f8fafc; }
-        .matrix-table { width: 100%; text-align: left; border-collapse: collapse; }
-        .matrix-table th { padding: 12px 20px; font-size: 12px; color: #64748b; font-weight: 700; background: #f8fafc; border-bottom: 1px solid #e2e8f0; }
-        .matrix-table td { padding: 12px 20px; font-size: 13px; border-bottom: 1px solid #f1f5f9; }
-        .val-today { color: #ef4444; font-weight: 700; }
-
-        .toolbar { padding: 16px 24px; background: white; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; shrink-0; }
-        .filter-panel { background: white; border-bottom: 1px solid #e2e8f0; overflow: hidden; transition: max-height 0.3s; max-height: 0; padding: 0 24px; shrink-0; }
-        .filter-panel.open { max-height: 600px; padding-top: 20px; padding-bottom: 20px; }
-        .main-table { width: 100%; border-collapse: collapse; min-width: 1800px; }
-        .main-table th { position: sticky; top: 0; background: #f8fafc; color: #475569; font-weight: 700; font-size: 13px; padding: 12px; border-bottom: 2px solid #e2e8f0; z-index: 10; text-align: left; }
-        .main-table td { padding: 10px 12px; border-bottom: 1px solid #f1f5f9; font-size: 14px; vertical-align: middle; color: #334155; }
-
+        
         /* Pure Text Card Grid */
-        .card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; padding-bottom: 40px; }
+        .card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 16px; padding-bottom: 40px; }
         .prod-card { background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; cursor: pointer; transition: all 0.2s; position: relative; overflow: hidden; }
         .prod-card:hover { transform: translateY(-2px); box-shadow: 0 8px 12px -3px rgba(0,0,0,0.1); border-color: #3b82f6; }
         .prod-card.danger { border-left: 4px solid #ef4444; } .prod-card.safe { border-left: 4px solid #10b981; } .prod-card.warn { border: 2px solid #f59e0b; }
@@ -96,7 +80,15 @@
         .pc-bar-fill { height: 100%; border-radius: 2px; }
         .pc-foot { display: flex; justify-content: space-between; margin-top: 10px; font-size: 11px; color: #94a3b8; }
 
+        .toolbar { padding: 16px 24px; background: white; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; shrink-0; }
+        .filter-panel { background: white; border-bottom: 1px solid #e2e8f0; overflow: hidden; transition: max-height 0.3s; max-height: 0; padding: 0 24px; shrink-0; }
+        .filter-panel.open { max-height: 600px; padding-top: 20px; padding-bottom: 20px; }
+        .main-table { width: 100%; border-collapse: collapse; min-width: 1800px; }
+        .main-table th { position: sticky; top: 0; background: #f8fafc; color: #475569; font-weight: 700; font-size: 13px; padding: 12px; border-bottom: 2px solid #e2e8f0; z-index: 10; text-align: left; }
+        .main-table td { padding: 10px 12px; border-bottom: 1px solid #f1f5f9; font-size: 14px; vertical-align: middle; color: #334155; }
+        
         .t-input { width: 100%; padding: 6px 8px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 13px; outline: none; background: white; height: 34px; }
+        .t-input:focus { border-color: #3b82f6; box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1); }
         .editing { background: #eff6ff !important; }
         .pill { padding: 3px 8px; border-radius: 6px; font-size: 12px; font-weight: 600; display: inline-block; margin-right: 4px; border: 1px solid transparent; }
         .img-cell { width: 44px; height: 44px; border-radius: 6px; border: 1px solid #e2e8f0; background: white; overflow: hidden; cursor: pointer; display: flex; align-items: center; justify-content: center; position: relative; }
@@ -108,8 +100,6 @@
         .multi-pop.show { display: block; }
         .multi-opt { padding: 8px 12px; cursor: pointer; display: flex; align-items: center; gap: 8px; font-size: 13px; }
         .multi-opt:hover { background: #f1f5f9; color: #2563eb; }
-        
-        @media (max-width: 768px) { .sidebar { width: 60px; } .sidebar-header h1, .nav-text { display: none; } .sidebar-header { padding: 0; justify-content: center; } .nav-item { justify-content: center; padding: 16px 0; } .kpi-grid, .chart-grid, .card-grid { grid-template-columns: 1fr !important; } }
     </style>
 </head>
 <body>
@@ -150,45 +140,47 @@
             </div>
         </div>
 
-        <div id="view-inventory" class="inventory-layout hidden">
-            <div class="inv-header">
-                <div class="toolbar flex justify-between items-center p-4 bg-white border-b border-slate-200">
-                    <h2 class="text-lg font-bold text-slate-800 hidden md:block">库存明细</h2>
-                    <div class="flex gap-2 items-center flex-1 justify-end">
-                        <input id="g-search" onkeydown="if(event.key==='Enter') loadData(1)" placeholder="全局搜索..." class="t-input w-48 md:w-64 bg-slate-50 border-transparent focus:bg-white">
-                        <button onclick="toggleFilter()" class="px-3 py-1.5 text-sm font-bold text-slate-600 bg-slate-100 rounded hover:bg-slate-200">筛选</button>
-                        <button onclick="openSettings()" class="px-3 py-1.5 text-sm font-bold text-slate-600 bg-slate-100 rounded hover:bg-slate-200">配置</button>
-                        <button onclick="openImport()" class="px-3 py-1.5 text-sm font-bold text-blue-600 bg-blue-50 rounded hover:bg-blue-100">导入</button>
-                        <button onclick="addNewRow()" class="px-4 py-1.5 text-sm font-bold text-white bg-blue-600 rounded hover:bg-blue-700 shadow flex items-center gap-1"><span>+</span> 新增</button>
+        <div id="view-inventory" class="view-container hidden">
+            <div class="inventory-layout">
+                <div class="inv-header">
+                    <div class="toolbar flex justify-between items-center p-4 bg-white border-b border-slate-200">
+                        <h2 class="text-lg font-bold text-slate-800 hidden md:block">库存明细</h2>
+                        <div class="flex gap-2 items-center flex-1 justify-end">
+                            <input id="g-search" onkeydown="if(event.key==='Enter') loadData(1)" placeholder="全局搜索..." class="t-input w-48 md:w-64 bg-slate-50 border-transparent focus:bg-white">
+                            <button onclick="toggleFilter()" class="px-3 py-1.5 text-sm font-bold text-slate-600 bg-slate-100 rounded hover:bg-slate-200">筛选</button>
+                            <button onclick="openSettings()" class="px-3 py-1.5 text-sm font-bold text-slate-600 bg-slate-100 rounded hover:bg-slate-200">配置</button>
+                            <button onclick="openImport()" class="px-3 py-1.5 text-sm font-bold text-blue-600 bg-blue-50 rounded hover:bg-blue-100">导入</button>
+                            <button onclick="addNewRow()" class="px-4 py-1.5 text-sm font-bold text-white bg-blue-600 rounded hover:bg-blue-700 shadow flex items-center gap-1"><span>+</span> 新增</button>
+                        </div>
                     </div>
-                </div>
-                <div id="filter-panel" class="filter-panel">
-                    <div class="grid grid-cols-2 md:grid-cols-6 gap-x-4 gap-y-4 py-4 px-6">
-                        <div><label class="filter-label">产品</label><input id="s-pid" list="dl-pids" class="t-input" placeholder="输入编号..."></div>
-                        <div><label class="filter-label">标题</label><input id="s-title" class="t-input" placeholder="包含标题..."></div>
-                        <div><label class="filter-label">类型</label><select id="s-cat" class="t-input"></select></div>
-                        <div><label class="filter-label">视类</label><select id="s-type" class="t-input"></select></div>
-                        <div><label class="filter-label">主播</label><select id="s-host" class="t-input"></select></div>
-                        <div><label class="filter-label">状态</label><select id="s-status" class="t-input"></select></div>
-                        <div><label class="filter-label">平台</label><select id="s-plat" class="t-input"></select></div>
-                        <div class="col-span-2"><label class="filter-label">完成时间</label><div class="flex gap-2"><input type="date" id="s-fin-start" class="t-input"><input type="date" id="s-fin-end" class="t-input"></div></div>
-                        <div class="col-span-2"><label class="filter-label">发布时间</label><div class="flex gap-2"><input type="date" id="s-pub-start" class="t-input"><input type="date" id="s-pub-end" class="t-input"></div></div>
-                        <div><label class="filter-label">备注</label><input id="s-remark" class="t-input" placeholder="包含备注..."></div>
-                        <div class="col-span-2 md:col-span-6 flex justify-end gap-2 border-t pt-3 mt-2">
-                            <button onclick="loadData(1)" class="px-5 py-1.5 bg-slate-800 text-white rounded text-sm font-bold">查询</button>
-                            <button onclick="resetFilters()" class="px-5 py-1.5 bg-white border rounded text-sm font-bold">重置</button>
+                    <div id="filter-panel" class="filter-panel">
+                        <div class="grid grid-cols-2 md:grid-cols-6 gap-x-4 gap-y-4 py-4 px-6">
+                            <div><label class="filter-label">产品</label><input id="s-pid" list="dl-pids" class="t-input" placeholder="输入编号..."></div>
+                            <div><label class="filter-label">标题</label><input id="s-title" class="t-input" placeholder="包含标题..."></div>
+                            <div><label class="filter-label">类型</label><select id="s-cat" class="t-input"></select></div>
+                            <div><label class="filter-label">视类</label><select id="s-type" class="t-input"></select></div>
+                            <div><label class="filter-label">主播</label><select id="s-host" class="t-input"></select></div>
+                            <div><label class="filter-label">状态</label><select id="s-status" class="t-input"></select></div>
+                            <div><label class="filter-label">平台</label><select id="s-plat" class="t-input"></select></div>
+                            <div class="col-span-2"><label class="filter-label">完成时间</label><div class="flex gap-2"><input type="date" id="s-fin-start" class="t-input"><input type="date" id="s-fin-end" class="t-input"></div></div>
+                            <div class="col-span-2"><label class="filter-label">发布时间</label><div class="flex gap-2"><input type="date" id="s-pub-start" class="t-input"><input type="date" id="s-pub-end" class="t-input"></div></div>
+                            <div><label class="filter-label">备注</label><input id="s-remark" class="t-input" placeholder="包含备注..."></div>
+                            <div class="col-span-2 md:col-span-6 flex justify-end gap-2 border-t pt-3 mt-2">
+                                <button onclick="loadData(1)" class="px-5 py-1.5 bg-slate-800 text-white rounded text-sm font-bold">查询</button>
+                                <button onclick="resetFilters()" class="px-5 py-1.5 bg-white border rounded text-sm font-bold">重置</button>
+                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
-            
-            <div class="inv-body">
-                <table class="main-table"><thead><tr><th class="w-16 text-center">图</th><th class="w-32">产品/编号</th><th style="min-width: 260px;">视频标题</th><th class="w-24">类型</th><th class="w-28">完成时间</th><th class="w-24">视类</th><th class="w-32">主播(多)</th><th class="w-24 text-center">状态</th><th class="w-32">平台(多)</th><th class="w-32">发布时间</th><th class="w-40">备注</th><th class="w-20 text-center sticky right-0 bg-slate-50 border-l">操作</th></tr></thead><tbody id="table-body"></tbody></table>
-            </div>
-            
-            <div class="inv-header h-12 bg-white border-t border-slate-200 px-6 flex justify-between items-center shrink-0">
-                <span class="text-xs text-slate-500 font-medium" id="page-info">0 条</span>
-                <div class="flex gap-2"><button onclick="changePage(-1)" class="px-3 py-1 bg-slate-100 rounded text-xs font-bold disabled:opacity-50">◀</button><button onclick="changePage(1)" class="px-3 py-1 bg-slate-100 rounded text-xs font-bold disabled:opacity-50">▶</button></div>
+                
+                <div class="inv-body">
+                    <table class="main-table"><thead><tr><th class="w-16 text-center">图</th><th class="w-32">产品/编号</th><th style="min-width: 260px;">视频标题</th><th class="w-24">类型</th><th class="w-28">完成时间</th><th class="w-24">视类</th><th class="w-32">主播(多)</th><th class="w-24 text-center">状态</th><th class="w-32">平台(多)</th><th class="w-32">发布时间</th><th class="w-40">备注</th><th class="w-20 text-center sticky right-0 bg-slate-50 border-l">操作</th></tr></thead><tbody id="table-body"></tbody></table>
+                </div>
+                
+                <div class="inv-header h-12 bg-white border-t border-slate-200 px-6 flex justify-between items-center shrink-0">
+                    <span class="text-xs text-slate-500 font-medium" id="page-info">0 条</span>
+                    <div class="flex gap-2"><button onclick="changePage(-1)" class="px-3 py-1 bg-slate-100 rounded text-xs font-bold disabled:opacity-50">◀</button><button onclick="changePage(1)" class="px-3 py-1 bg-slate-100 rounded text-xs font-bold disabled:opacity-50">▶</button></div>
+                </div>
             </div>
         </div>
 
@@ -227,9 +219,10 @@
         document.getElementById('view-dashboard').classList.add('hidden');
         document.getElementById('view-inventory').classList.add('hidden');
         document.getElementById('view-product').classList.add('hidden');
-        document.getElementById('view-'+view).classList.remove('hidden');
-        if(view === 'dashboard') loadDashboard('day');
-        if(view === 'product') loadProductStats();
+        
+        if(view === 'dashboard') { document.getElementById('view-dashboard').classList.remove('hidden'); loadDashboard('day'); }
+        if(view === 'inventory') { document.getElementById('view-inventory').classList.remove('hidden'); }
+        if(view === 'product') { document.getElementById('view-product').classList.remove('hidden'); loadProductStats(); }
     }
 
     // Dashboard Logic
@@ -254,9 +247,11 @@
     const Product = {
         allData: [],
         init: async function() {
-            const res = await fetch('/api/product_stats');
-            this.allData = await res.json();
-            this.render(this.allData);
+            try {
+                const res = await fetch('/api/product_stats');
+                this.allData = await res.json();
+                this.render(this.allData);
+            } catch(e) { console.error("Product fetch failed", e); }
         },
         search: function(keyword) {
             if(!keyword) { this.render(this.allData); return; }

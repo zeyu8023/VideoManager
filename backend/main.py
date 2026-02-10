@@ -17,34 +17,26 @@ from sqlalchemy import func
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("VideoHub")
 
-main_app = FastAPI(title="VideoHub V31.0 Final Fix")
+main_app = FastAPI(title="VideoHub V32.0 Pure Fix")
 engine = create_engine("sqlite:///data/inventory.db")
 
-# === 模型定义 (保留 Product 表以免报错，但核心逻辑回滚到 Video) ===
-class Product(SQLModel, table=True):
-    name: str = Field(primary_key=True)
-    image_url: Optional[str] = None
-    updated_at: datetime.datetime = Field(default_factory=datetime.datetime.now)
-
+# 引入 Video 和 AppSettings
 from .models import Video, AppSettings
 
-# === 核心工具：安全转字符串 (这就是修复空白的关键！) ===
+# === 核心工具：安全转字符串 (防止报错的关键) ===
 def safe_str(val):
-    """不管传入什么（None, int, float），都转为干净的字符串"""
     if val is None: return ""
     return str(val).strip()
 
+# === 核心工具：日期解析 ===
 def parse_safe_date(date_str):
-    """解析各种日期的强力函数，修复入库数据为0的问题"""
     s = safe_str(date_str).lower()
     if not s or s in ['nan', 'none', '', 'nat', 'null']: return None
     try:
-        # 1. 尝试标准 YYYY-MM-DD
         clean_s = s[:10]
         for fmt in ("%Y-%m-%d", "%Y/%m/%d", "%Y%m%d", "%Y.%m.%d"):
             try: return datetime.datetime.strptime(clean_s, fmt)
             except: continue
-        # 2. 尝试正则提取 (针对 "2024-01-01 12:00:00" 这种)
         match = re.search(r'(\d{4})[-/年.](\d{1,2})[-/月.](\d{1,2})', s)
         if match:
             return datetime.datetime(int(match.group(1)), int(match.group(2)), int(match.group(3)))
@@ -60,7 +52,6 @@ def on_startup():
     SQLModel.metadata.create_all(engine)
     
     with Session(engine) as session:
-        # 自动修复表结构
         try: session.exec(text("SELECT created_at FROM video LIMIT 1"))
         except: 
             try: session.exec(text("ALTER TABLE video ADD COLUMN created_at DATETIME"))
@@ -70,7 +61,6 @@ def on_startup():
         session.exec(text("UPDATE video SET created_at = finish_time WHERE created_at IS NULL AND finish_time IS NOT NULL"))
         session.exec(text(f"UPDATE video SET created_at = '{datetime.datetime.now()}' WHERE created_at IS NULL"))
         
-        # 默认配置
         defaults = {
             "hosts": "小梨,VIVI,七七,杨总,其他",
             "statuses": "待发布,已发布,剪辑中,拍摄中,脚本中",
@@ -109,40 +99,33 @@ def get_dashboard_data(dim: str = "day"):
         dist = 0
 
         for v in videos:
-            # 这里的 safe_str 防止非字符串报错
             if safe_str(v.status) == "待发布":
                 pending += 1
 
             fin = parse_safe_date(v.finish_time)
             pub = parse_safe_date(v.publish_time)
             
-            # 入库统计
             if fin:
                 if fin >= today: flow["t_in"] += 1
                 if fin >= month: flow["m_in"] += 1
                 k = fin.strftime("%Y-%m-%d")
                 if dim == 'month': k = fin.strftime("%Y-%m")
                 elif dim == 'week': k = fin.strftime("%Y-W%W")
-                
                 if k not in trend: trend[k] = {"in":0, "out":0}
                 trend[k]["in"] += 1
-                
                 if v.host:
                     for h in safe_str(v.host).replace('，', ',').split(','):
                         h = h.strip()
                         if h: hosts[h] = hosts.get(h, 0) + 1
 
-            # 发布统计
             if pub:
                 if pub >= today: flow["t_out"] += 1
                 if pub >= month: flow["m_out"] += 1
                 k = pub.strftime("%Y-%m-%d")
                 if dim == 'month': k = pub.strftime("%Y-%m")
                 elif dim == 'week': k = pub.strftime("%Y-W%W")
-                
                 if k not in trend: trend[k] = {"in":0, "out":0}
                 trend[k]["out"] += 1
-                
                 if safe_str(v.status) == "已发布" and v.platform:
                     accs = [p.strip() for p in safe_str(v.platform).replace('，', ',').split(',') if p.strip()]
                     for acc in accs:
@@ -160,7 +143,6 @@ def get_dashboard_data(dim: str = "day"):
         dates = sorted(trend.keys())[-30:]
         mat_list = [{"name":k, **v} for k,v in matrix.items()]
         mat_list.sort(key=lambda x:x["year"], reverse=True)
-        
         return {
             "kpi": {"total":total, "pending":pending, "dist":dist, "t_in":flow["t_in"], "t_out":flow["t_out"], "m_in":flow["m_in"], "m_out":flow["m_out"]},
             "trend": {"dates":dates, "in":[trend[k]["in"] for k in dates], "out":[trend[k]["out"] for k in dates]},
@@ -170,7 +152,7 @@ def get_dashboard_data(dim: str = "day"):
             "plats": [{"name":k, "value":v} for k,v in plats.items()]
         }
 
-# === 接口 2: 产品统计 (绝对防崩版) ===
+# === 接口 2: 产品统计 (核心修复：移除图片关联，强制类型转换) ===
 @main_app.get("/api/product_stats")
 def get_product_stats():
     with Session(engine) as session:
@@ -180,8 +162,7 @@ def get_product_stats():
         stats = {}
         for v in videos:
             try:
-                # [关键修复] 强制转字符串，防止 int.strip() 报错
-                # 无论 product_id 是 "3043"(int) 还是 "小梨"(str)，这里都转成 "3043"(str)
+                # [关键修复点] 强制转字符串，防止 int.strip() 报错导致 500 错误
                 pid = safe_str(v.product_id)
                 
                 if not pid or pid.lower() in ['nan', 'none']:
@@ -195,17 +176,15 @@ def get_product_stats():
                 if safe_str(v.status) == "待发布":
                     stats[pid]["pending"] += 1
             except Exception as e:
-                # 万一还有错，跳过这条，别崩整个页面
-                logger.error(f"Skipping error row: {e}")
+                # 即使单条出错，也不要崩整个页面
+                print(f"Skipping error row: {e}")
                 continue
         
         res = list(stats.values())
-        # 排序：积压多的在前，其次是总数多的
         res.sort(key=lambda x: (x["pending"], x["total"]), reverse=True)
-        
         return res
 
-# === 接口 3: 列表查询 (List) ===
+# === 接口 3: 列表查询 (保持) ===
 @main_app.get("/api/videos")
 def list_videos(page: int=1, size: int=100, sort_by: str="id", order: str="desc", keyword: Optional[str]=None, host: Optional[str]=None, status: Optional[str]=None, category: Optional[str]=None, platform: Optional[str]=None, video_type: Optional[str]=None, product_id: Optional[str]=None, title: Optional[str]=None, remark: Optional[str]=None, finish_start: Optional[str]=None, finish_end: Optional[str]=None, publish_start: Optional[str]=None, publish_end: Optional[str]=None):
     with Session(engine) as session:
@@ -226,9 +205,8 @@ def list_videos(page: int=1, size: int=100, sort_by: str="id", order: str="desc"
 
         total = session.exec(select(func.count()).select_from(stmt.subquery())).one()
         stmt = stmt.order_by(asc(getattr(Video, sort_by)) if order=="asc" else desc(getattr(Video, sort_by))).offset((page-1)*size).limit(size)
-        return {"items": session.exec(stmt).all(), "total": total, "page": page, "size": size, "total_pages": math.ceil(total / size)}
+        return {"items": session.exec(stmt).all(), "total": total, "page": page, "size": size, "total_pages": math.ceil(total/size)}
 
-# === 增删改查操作 ===
 @main_app.post("/api/video/save")
 async def save_video(id: Optional[str]=Form(None), product_id: Optional[str]=Form(None), title: Optional[str]=Form(None), host: Optional[str]=Form(None), status: Optional[str]=Form(None), category: Optional[str]=Form(None), video_type: Optional[str]=Form(None), platform: Optional[str]=Form(None), finish_time: Optional[str]=Form(None), publish_time: Optional[str]=Form(None), remark: Optional[str]=Form(None), image_url: Optional[str]=Form(None)):
     with Session(engine) as session:
