@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>VideoHub V47.0 Final Fixed</title>
+    <title>VideoHub V48.0 Stable</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/echarts/5.4.3/echarts.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        /* === 全局样式 === */
+        /* === 核心布局 === */
         body { font-family: 'Inter', sans-serif; background: #f1f5f9; color: #334155; margin: 0; height: 100vh; overflow: hidden; }
         .app-container { display: flex; height: 100%; width: 100%; overflow: hidden; }
         .hidden { display: none !important; }
@@ -23,16 +23,15 @@
         /* 主内容区 */
         .main-content { flex: 1; position: relative; height: 100%; background: #f1f5f9; overflow: hidden; }
         .view-container { position: absolute; top: 0; left: 0; right: 0; bottom: 0; display: flex; flex-direction: column; overflow: hidden; }
-        .scroll-content { flex: 1; overflow-y: auto; padding: 24px; min-height: 0; }
+        .scroll-content { flex: 1; overflow-y: auto; padding: 24px; min-height: 0; scrollbar-width: thin; }
 
-        /* === 仪表盘 === */
+        /* 仪表盘组件 */
         .kpi-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 16px; margin-bottom: 24px; }
         .stat-card { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); border: 1px solid #e2e8f0; display:flex; flex-direction:column; justify-content:space-between; }
         .stat-num { font-size: 28px; font-weight: 800; color: #0f172a; }
         .chart-grid { display: grid; grid-template-columns: 2fr 1.5fr 1.5fr; gap: 16px; margin-bottom: 24px; }
         .chart-box { background: white; border-radius: 12px; padding: 20px; border: 1px solid #e2e8f0; height: 380px; display: flex; flex-direction: column; }
         .trend-box { background: white; border-radius: 12px; padding: 20px; border: 1px solid #e2e8f0; height: 380px; margin-bottom: 24px; }
-        
         .matrix-box { background: white; border-radius: 12px; border: 1px solid #e2e8f0; overflow: hidden; height: 380px; display: flex; flex-direction: column; }
         .matrix-header { padding: 16px 20px; border-bottom: 1px solid #f1f5f9; font-weight: 700; color: #334155; display: flex; justify-content: space-between; align-items: center; background: #fff; }
         .matrix-content { flex: 1; overflow-y: auto; }
@@ -50,10 +49,10 @@
         .toolbar { padding: 12px 24px; background: white; display: flex; justify-content: space-between; align-items: center; }
         .inv-body { flex: 1; overflow: auto; position: relative; margin: 0; background: white; border-top: 1px solid #e2e8f0; }
         
-        .main-table { width: 100%; table-layout: fixed; border-collapse: collapse; min-width: 1600px; }
+        .main-table { width: 100%; table-layout: fixed; border-collapse: collapse; min-width: 1500px; }
         .main-table th { 
             position: sticky; top: 0; background: #f1f5f9; color: #475569; font-weight: 600; font-size: 12px; 
-            padding: 8px 12px; border-bottom: 1px solid #cbd5e1; border-right: 1px solid #e2e8f0; 
+            padding: 10px 12px; border-bottom: 1px solid #cbd5e1; border-right: 1px solid #e2e8f0; 
             text-align: left; z-index: 10; white-space: nowrap; user-select: none;
         }
         .resizer { position: absolute; top: 0; right: 0; width: 5px; cursor: col-resize; height: 100%; z-index: 20; }
@@ -61,36 +60,26 @@
 
         .main-table td { 
             padding: 0; border-bottom: 1px solid #e2e8f0; border-right: 1px solid #f1f5f9; 
-            font-size: 13px; vertical-align: middle; color: #334155; 
-            height: 44px; /* 稍微增加行高 */
+            font-size: 13px; vertical-align: top; color: #334155; 
+            /* 关键：允许换行 */
+            white-space: normal; word-wrap: break-word; overflow-wrap: break-word;
         }
         .main-table tr:hover td { background: #f8fafc; }
 
-        /* 输入框样式 */
+        /* 单元格内输入框 - 适配多行 */
         .cell-input { 
-            width: 100%; height: 100%; border: none; outline: none; background: transparent; 
-            padding: 0 12px; font-family: inherit; font-size: inherit; color: inherit;
+            width: 100%; min-height: 44px; height: 100%; border: none; outline: none; background: transparent; 
+            padding: 12px; font-family: inherit; font-size: inherit; color: inherit;
+            resize: none; display: block; overflow: hidden; /* 自动撑开 */
         }
         .cell-input:focus { background: #fff; box-shadow: inset 0 0 0 2px #3b82f6; z-index: 2; position: relative; }
-        .cell-select { width: 100%; height: 100%; border: none; outline: none; background: transparent; padding: 0 8px; cursor: pointer; }
-        .cell-trigger { 
-            width: 100%; height: 100%; padding: 0 12px; cursor: pointer; display: flex; align-items: center; overflow: hidden; 
-        }
+        
+        .cell-select { width: 100%; height: 100%; min-height: 44px; border: none; outline: none; background: transparent; padding: 0 8px; cursor: pointer; -webkit-appearance: none; }
+        .cell-trigger { width: 100%; min-height: 44px; padding: 8px 12px; cursor: pointer; display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
         .cell-trigger:hover { background: #f8fafc; }
 
-        /* 图片单元格优化 */
-        .img-wrapper { position: relative; width: 36px; height: 36px; margin: 0 auto; }
-        .img-thumb { width: 100%; height: 100%; object-fit: cover; border-radius: 4px; cursor: zoom-in; border: 1px solid #e2e8f0; }
-        .img-upload-btn { 
-            position: absolute; bottom: -4px; right: -4px; 
-            width: 16px; height: 16px; background: #3b82f6; color: white; 
-            border-radius: 50%; font-size: 10px; display: flex; align-items: center; justify-content: center; 
-            cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.2); z-index: 5;
-        }
-        .img-upload-btn:hover { transform: scale(1.1); }
-
         /* 胶囊标签 */
-        .pill { display: inline-flex; align-items: center; padding: 1px 6px; border-radius: 4px; font-size: 11px; margin-right: 3px; border: 1px solid transparent; white-space: nowrap; }
+        .pill { display: inline-flex; align-items: center; padding: 2px 6px; border-radius: 4px; font-size: 12px; margin-right: 3px; border: 1px solid transparent; white-space: nowrap; line-height: 1.2; }
         
         /* 提示 */
         #save-toast { position: fixed; top: 20px; right: 20px; background: #10b981; color: white; padding: 8px 16px; border-radius: 4px; font-size: 13px; font-weight: 600; opacity: 0; transition: opacity 0.3s; z-index: 100; pointer-events: none; }
@@ -101,7 +90,8 @@
         .btn { padding: 6px 16px; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; gap: 4px; border: 1px solid transparent; }
         .btn-primary { background: #0f172a; color: white; }
         .btn-secondary { background: white; border-color: #cbd5e1; color: #475569; }
-        
+        .img-cell { width: 44px; height: 44px; border-radius: 4px; border: 1px solid #e2e8f0; background: #f8fafc; overflow: hidden; cursor: pointer; margin: 4px auto; display: flex; align-items: center; justify-content: center; }
+
         /* 多选弹窗 */
         .multi-pop { position: absolute; background: white; border: 1px solid #cbd5e1; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); border-radius: 6px; width: 220px; max-height: 260px; overflow-y: auto; z-index: 60; display: none; }
         .multi-pop.show { display: block; }
@@ -140,7 +130,7 @@
                 <div class="kpi-grid">
                     <div class="stat-card border-l-4 border-blue-500"><div class="text-xs font-bold text-slate-500 uppercase mb-2">总库存</div><div class="stat-num" id="d-total">-</div></div>
                     <div class="stat-card border-l-4 border-purple-500"><div class="text-xs font-bold text-slate-500 uppercase mb-2">累计分发</div><div class="stat-num" id="d-dist">-</div></div>
-                    <div class="stat-card border-l-4 border-orange-500"><div class="text-xs font-bold text-slate-500 uppercase mb-2">待发布</div><div class="stat-num text-orange-700" id="d-pending">-</div></div>
+                    <div class="stat-card border-l-4 border-orange-500"><div class="text-xs font-bold text-slate-500 uppercase mb-2">待发布</div><div class="stat-num" id="d-pending">-</div></div>
                     <div class="stat-card"><div class="text-xs font-bold text-slate-500 uppercase mb-2">今日 入库 / 发布</div><div class="flex items-baseline gap-2 mt-auto"><span class="text-3xl font-black text-slate-800" id="d-today-in">-</span><span class="text-slate-400">/</span><span class="text-3xl font-black text-green-600" id="d-today-out">-</span></div></div>
                     <div class="stat-card"><div class="text-xs font-bold text-slate-500 uppercase mb-2">本月 入库 / 发布</div><div class="flex items-baseline gap-2 mt-auto"><span class="text-3xl font-black text-slate-800" id="d-month-in">-</span><span class="text-slate-400">/</span><span class="text-3xl font-black text-green-600" id="d-month-out">-</span></div></div>
                 </div>
@@ -197,8 +187,8 @@
                         <select id="s-host" class="t-input"></select>
                         <select id="s-status" class="t-input"></select>
                         <select id="s-plat" class="t-input"></select>
-                        <input type="date" id="s-fin-start" class="t-input" placeholder="完成开始">
-                        <input type="date" id="s-fin-end" class="t-input" placeholder="完成结束">
+                        <input type="date" id="s-fin-start" class="t-input">
+                        <input type="date" id="s-fin-end" class="t-input">
                         <div class="flex justify-end gap-2 col-span-full md:col-span-1"><button onclick="loadData(1)" class="btn btn-primary w-full">查询</button></div>
                     </div>
                 </div>
@@ -207,7 +197,7 @@
             <div class="inv-body">
                 <table class="main-table" id="inv-table">
                     <colgroup>
-                        <col style="width: 60px;">  <col style="width: 120px;"> <col style="width: 260px;"> <col style="width: 100px;"> <col style="width: 120px;"> <col style="width: 90px;">  <col style="width: 140px;"> <col style="width: 100px;"> <col style="width: 160px;"> <col style="width: 140px;"> <col style="width: 140px;"> <col style="width: 50px;">  </colgroup>
+                        <col style="width: 60px;">  <col style="width: 120px;"> <col style="width: 280px;"> <col style="width: 100px;"> <col style="width: 120px;"> <col style="width: 100px;"> <col style="width: 140px;"> <col style="width: 100px;"> <col style="width: 160px;"> <col style="width: 140px;"> <col style="width: 160px;"> <col style="width: 50px;">  </colgroup>
                     <thead>
                         <tr>
                             <th class="text-center">图<div class="resizer"></div></th>
@@ -255,18 +245,15 @@
     let currPage=1, totalPages=1, globalOptions={}, currentEditId=null;
 
     window.addEventListener('load', async () => {
-        // 解耦启动顺序
-        loadOptions();
-        loadDashboard('day');
-        loadData(1);
+        // === 独立启动逻辑 (防止一个挂了全挂) ===
+        loadOptions().catch(e => console.error("Opts Error", e));
+        loadDashboard('day').catch(e => console.error("Dash Error", e));
+        loadData(1).catch(e => console.error("Data Error", e));
         Product.init();
         
         document.getElementById('prod-search').addEventListener('input', (e) => Product.search(e.target.value));
-        // 修复：多选框关闭逻辑
         document.addEventListener('click', e => { 
-            if(!e.target.closest('.multi-pop') && !e.target.closest('.cell-trigger')) {
-                document.getElementById('multi-pop').classList.remove('show');
-            }
+            if(!e.target.closest('.multi-pop') && !e.target.closest('.cell-trigger')) document.getElementById('multi-pop').classList.remove('show'); 
         });
         initResizers();
     });
@@ -293,9 +280,10 @@
         if(!str) return '-';
         return str.split(/[,，]/).filter(s=>s.trim()).map(s => `<span class="pill" style="${getPillStyle(s.trim())}">${s.trim()}</span>`).join('');
     }
-    // 修复日期显示
-    const formatDate = (s) => s ? s.split(' ')[0].replace(/\//g, '-') : '';
-    const formatDateTime = (s) => s ? s.replace(' ', 'T').slice(0, 16) : '';
+    
+    // === 修复日期显示 (兼容 ISO 格式 T) ===
+    const formatDate = (s) => s ? s.split(/[ T]/)[0] : ''; // 只要前面的日期部分
+    const formatDateTime = (s) => s ? s.replace(' ', 'T').slice(0, 16) : ''; // 适配 datetime-local
 
     // === Excel Logic (Auto Save) ===
     function showToast() { const t = document.getElementById('save-toast'); t.classList.add('show'); setTimeout(() => t.classList.remove('show'), 2000); }
@@ -311,35 +299,32 @@
     function renderRow(v) {
         const cln = s => (s && s!=='nan' && s!=='None') ? s : '';
         const img = (v.image_url && !v.image_url.includes('default')) ? v.image_url : '/assets/default.png';
+        const opts = globalOptions || {}; // 防崩兜底
         
         return `
         <tr>
             <td class="text-center">
-                <div class="img-wrapper">
-                    <img src="${img}" class="img-thumb" onclick="showBig('${img}')">
-                    <div class="img-upload-btn" onclick="document.getElementById('up-${v.id}').click()">☁️</div>
-                </div>
-                <input type="file" id="up-${v.id}" class="hidden" onchange="uploadFile(this.files[0], '${v.id}')">
+                <div class="img-cell" onclick="showBig('${img}')"><img src="${img}" class="w-full h-full object-cover"></div>
             </td>
-            <td><input class="cell-input font-mono" value="${cln(v.product_id)}" onchange="saveCell('${v.id}','product_id',this.value)"></td>
-            <td><input class="cell-input font-bold text-slate-700" value="${cln(v.title)}" onchange="saveCell('${v.id}','title',this.value)"></td>
+            <td><textarea class="cell-input font-mono" onchange="saveCell('${v.id}','product_id',this.value)">${cln(v.product_id)}</textarea></td>
+            <td><textarea class="cell-input font-bold text-slate-700" onchange="saveCell('${v.id}','title',this.value)">${cln(v.title)}</textarea></td>
             <td><select class="cell-select text-xs" onchange="saveCell('${v.id}','video_type',this.value)">
                 <option value="${cln(v.video_type)}">${cln(v.video_type)||'-'}</option>
-                ${globalOptions.video_types.map(o=>`<option>${o}</option>`).join('')}
+                ${(opts.video_types||[]).map(o=>`<option>${o}</option>`).join('')}
             </select></td>
             <td><input type="date" class="cell-input text-xs" value="${formatDate(cln(v.finish_time))}" onchange="saveCell('${v.id}','finish_time',this.value)"></td>
             <td><select class="cell-select text-xs" onchange="saveCell('${v.id}','category',this.value)">
                 <option value="${cln(v.category)}">${cln(v.category)||'-'}</option>
-                ${globalOptions.categories.map(o=>`<option>${o}</option>`).join('')}
+                ${(opts.categories||[]).map(o=>`<option>${o}</option>`).join('')}
             </select></td>
             <td><div class="cell-trigger" onclick="openMulti('${v.id}','host',this, event)">${renderPills(cln(v.host))}</div></td>
             <td><select class="cell-select text-xs text-center" onchange="saveCell('${v.id}','status',this.value)">
                 <option value="${cln(v.status)}">${cln(v.status)||'-'}</option>
-                ${globalOptions.statuses.map(o=>`<option>${o}</option>`).join('')}
+                ${(opts.statuses||[]).map(o=>`<option>${o}</option>`).join('')}
             </select></td>
             <td><div class="cell-trigger" onclick="openMulti('${v.id}','platform',this, event)">${renderPills(cln(v.platform))}</div></td>
             <td><input type="datetime-local" class="cell-input text-xs" value="${formatDateTime(cln(v.publish_time))}" onchange="saveCell('${v.id}','publish_time',this.value)"></td>
-            <td><input class="cell-input text-xs text-slate-400" value="${cln(v.remark)}" onchange="saveCell('${v.id}','remark',this.value)"></td>
+            <td><textarea class="cell-input text-xs text-slate-400" onchange="saveCell('${v.id}','remark',this.value)">${cln(v.remark)}</textarea></td>
             <td class="text-center"><button onclick="delVideo('${v.id}')" class="text-slate-300 hover:text-red-500 font-bold">×</button></td>
         </tr>`;
     }
@@ -347,12 +332,12 @@
     // === Multi Select ===
     let multiTargetId=null, multiTargetField=null, multiTargetEl=null;
     function openMulti(id, field, el, event) {
-        event.stopPropagation(); // 关键：阻止冒泡，防止立即关闭
+        event.stopPropagation();
         multiTargetId = id; multiTargetField = field; multiTargetEl = el;
         const pop = document.getElementById('multi-pop');
         const rect = el.getBoundingClientRect();
         const currentVals = Array.from(el.querySelectorAll('.pill')).map(p => p.innerText);
-        const options = field === 'host' ? globalOptions.hosts : globalOptions.platforms;
+        const options = field === 'host' ? (globalOptions.hosts||[]) : (globalOptions.platforms||[]);
         
         pop.innerHTML = options.map(o => {
             const active = currentVals.includes(o) ? 'text-blue-600 font-bold bg-blue-50' : '';
@@ -375,12 +360,25 @@
         openMulti(multiTargetId, multiTargetField, multiTargetEl, event); // Refresh
     }
 
-    // === Dashboard (修复版) ===
+    function initResizers() {
+        const table = document.getElementById('inv-table');
+        table.querySelectorAll('th').forEach(col => {
+            const resizer = col.querySelector('.resizer');
+            if(!resizer) return;
+            let x=0, w=0;
+            const md = (e) => { x=e.clientX; w=parseInt(window.getComputedStyle(col).width); document.addEventListener('mousemove', mm); document.addEventListener('mouseup', mu); };
+            const mm = (e) => { col.style.width = `${w + e.clientX - x}px`; };
+            const mu = () => { document.removeEventListener('mousemove', mm); document.removeEventListener('mouseup', mu); };
+            resizer.addEventListener('mousedown', md);
+        });
+    }
+
+    // === Dashboard (手动 ID 映射修复) ===
     async function loadDashboard(dim) {
         try {
             const res = await fetch(`/api/dashboard?dim=${dim}`);
             const data = await res.json();
-            // 修复：手动映射
+            
             document.getElementById('d-total').innerText = data.kpi.total;
             document.getElementById('d-dist').innerText = data.kpi.dist;
             document.getElementById('d-pending').innerText = data.kpi.pending;
@@ -389,7 +387,6 @@
             document.getElementById('d-month-in').innerText = data.kpi.m_in;   
             document.getElementById('d-month-out').innerText = data.kpi.m_out; 
             
-            // 修复：表格矩阵
             document.getElementById('matrix-body').innerHTML = data.matrix.map((r, i) => {
                 let rankClass = i===0 ? 'rank-1' : (i===1 ? 'rank-2' : (i===2 ? 'rank-3' : ''));
                 return `<tr>
@@ -401,7 +398,6 @@
                 </tr>`;
             }).join('');
             
-            // Charts... (Standard Echarts Code)
             if(typeof echarts !== 'undefined') {
                 echarts.init(document.getElementById('chart-trend')).setOption({tooltip:{trigger:'axis'}, xAxis:{type:'category',data:data.trend.dates}, yAxis:{type:'value'}, series:[{name:'入库',type:'line',smooth:true,itemStyle:{color:'#3b82f6'},areaStyle:{opacity:0.1},data:data.trend.in},{name:'发布',type:'bar',itemStyle:{color:'#10b981'},data:data.trend.out}]});
                 echarts.init(document.getElementById('chart-host')).setOption({tooltip:{trigger:'axis'}, xAxis:{type:'value'}, yAxis:{type:'category',data:data.hosts.map(i=>i.name).reverse()}, series:[{type:'bar',data:data.hosts.map(i=>i.value).reverse(), itemStyle:{color:'#f59e0b', borderRadius:[0,4,4,0]}}]});
@@ -411,58 +407,46 @@
         } catch(e) { console.error(e); }
     }
 
-    // === Main Data Loader (全字段筛选回归) ===
-    async function loadData(page) {
-        currPage = page || currPage;
-        // 修复：补全所有筛选参数
+    async function loadData(page) { 
+        currPage = page || currPage; 
         const params = new URLSearchParams({
-            page: currPage, size: 50,
-            keyword: document.getElementById('g-search').value,
-            product_id: document.getElementById('s-pid').value,
-            title: document.getElementById('s-title').value,
-            category: document.getElementById('s-cat').value,
-            host: document.getElementById('s-host').value,
-            status: document.getElementById('s-status').value,
-            platform: document.getElementById('s-plat').value,
-            finish_start: document.getElementById('s-fin-start').value,
-            finish_end: document.getElementById('s-fin-end').value,
-            publish_start: document.getElementById('s-pub-start').value,
-            publish_end: document.getElementById('s-pub-end').value
+            page:currPage, size:50, 
+            keyword:document.getElementById('g-search').value, 
+            product_id:document.getElementById('s-pid').value, 
+            title:document.getElementById('s-title').value, 
+            remark:document.getElementById('s-remark').value, 
+            host:document.getElementById('s-host').value, 
+            status:document.getElementById('s-status').value, 
+            category:document.getElementById('s-cat').value, 
+            video_type:document.getElementById('s-type').value, 
+            platform:document.getElementById('s-plat').value, 
+            finish_start:document.getElementById('s-fin-start').value, 
+            finish_end:document.getElementById('s-fin-end').value, 
+            publish_start:document.getElementById('s-pub-start').value, 
+            publish_end:document.getElementById('s-pub-end').value
         });
-        const res = await fetch(`/api/videos?${params}`);
-        const data = await res.json();
-        document.getElementById('table-body').innerHTML = data.items.map(v => renderRow(v)).join('');
-        document.getElementById('page-info').innerText = `共 ${data.total} 条`;
+        try {
+            const res = await fetch(`/api/videos?${params}`); 
+            const data = await res.json(); 
+            totalPages = data.total_pages;
+            document.getElementById('page-info').innerText = `共 ${data.total} 条 · ${data.page}/${data.total_pages} 页`; 
+            document.getElementById('table-body').innerHTML = data.items.map(v => renderRow(v)).join(''); 
+        } catch(e) { console.error("Data Error", e); }
     }
 
-    // === Standard Functions ===
-    function initResizers() {
-        const table = document.getElementById('inv-table');
-        table.querySelectorAll('th').forEach(col => {
-            const resizer = col.querySelector('.resizer');
-            if(!resizer) return;
-            let x=0, w=0;
-            const md = (e) => { x=e.clientX; w=parseInt(window.getComputedStyle(col).width); document.addEventListener('mousemove', mm); document.addEventListener('mouseup', mu); resizer.style.height=table.offsetHeight+'px'; };
-            const mm = (e) => { col.style.width = `${w + e.clientX - x}px`; };
-            const mu = () => { document.removeEventListener('mousemove', mm); document.removeEventListener('mouseup', mu); resizer.style.height='100%'; };
-            resizer.addEventListener('mousedown', md);
-        });
-    }
-    
     async function loadOptions() { 
-        const res=await fetch('/api/options'); 
-        globalOptions=await res.json(); 
-        const fill=(id,l)=>document.getElementById(id).innerHTML=`<option value="">全部</option>`+l.map(i=>`<option>${i}</option>`).join(''); 
-        fill('s-cat',globalOptions.categories); fill('s-host',globalOptions.hosts); fill('s-status',globalOptions.statuses); fill('s-plat',globalOptions.platforms);
+        try {
+            const res=await fetch('/api/options'); 
+            globalOptions=await res.json(); 
+            const fill=(id,l)=>document.getElementById(id).innerHTML=`<option value="">全部</option>`+l.map(i=>`<option>${i}</option>`).join(''); 
+            fill('s-cat',globalOptions.categories); fill('s-type',globalOptions.video_types); 
+            fill('s-host',globalOptions.hosts); fill('s-status',globalOptions.statuses); fill('s-plat',globalOptions.platforms);
+        } catch(e) { console.error("Opts Error", e); globalOptions={}; }
     }
-    async function uploadFile(file, id){ const fd = new FormData(); fd.append('file', file); const res = await fetch('/api/upload', {method:'POST', body:fd}); const d = await res.json(); saveCell(id, 'image_url', d.url); document.querySelector(`#up-${id}`).previousElementSibling.querySelector('img').src = d.url; }
-    function addNewRow() { const tr = document.createElement('tbody'); tr.innerHTML = renderRow({id:'new', product_id:'', title:''}); document.getElementById('table-body').prepend(tr.firstElementChild); }
-    async function delVideo(id){ if(confirm('删?')){ await fetch(`/api/video/${id}`,{method:'DELETE'}); loadData(currPage); } }
-    
-    // Product & Utils
+
     const Product = {
         allData: [],
-        init: async function() { const res = await fetch('/api/product_stats'); this.allData = await res.json(); this.render(this.allData); },
+        init: async function() { try { const res = await fetch('/api/product_stats'); this.allData = await res.json(); this.render(this.allData); } catch(e){} },
         search: function(kw) { this.render(kw ? this.allData.filter(i=>String(i.name).toLowerCase().includes(kw.toLowerCase())) : this.allData); },
         render: function(data) {
             const grid = document.getElementById('product-grid');
@@ -474,16 +458,19 @@
             }).join('');
         }
     };
-    function jumpTo(pid) { window.switchView('inventory'); document.getElementById('s-pid').value = pid; document.getElementById('filter-panel').classList.add('open'); loadData(1); }
+
+    function addNewRow() { const tr = document.createElement('tbody'); tr.innerHTML = renderRow({id:'new', product_id:'', title:''}); document.getElementById('table-body').prepend(tr.firstElementChild); }
+    async function delVideo(id){ if(confirm('删?')){ await fetch(`/api/video/${id}`,{method:'DELETE'}); loadData(currPage); } }
     
-    // Stubs
+    // Utils
     function toggleFilter(){ document.getElementById('filter-panel').classList.toggle('open'); }
     function resetFilters(){ document.querySelectorAll('#filter-panel input,select').forEach(e=>e.value=''); loadData(1); }
     function openImport(){ document.getElementById('import-modal').classList.add('active'); }
     async function startImport(){ await fetch('/api/import/local',{method:'POST'}); alert('后台任务已启动'); location.reload(); }
-    function openSettings(){ document.getElementById('settings-modal').classList.add('active'); }
-    async function saveSettings(){ /* Same as before */ document.getElementById('settings-modal').classList.remove('active'); }
+    function openSettings(){ document.getElementById('settings-modal').classList.add('active'); document.getElementById('set-hosts').value=globalOptions.hosts.join(','); document.getElementById('set-cats').value=globalOptions.categories.join(','); document.getElementById('set-types').value=globalOptions.video_types.join(','); document.getElementById('set-plats').value=globalOptions.platforms.join(','); }
+    async function saveSettings(){ const s=(k,v)=>fetch('/api/settings',{method:'POST',body:new URLSearchParams({key:k,value:v})}); await s('hosts',document.getElementById('set-hosts').value); await s('categories',document.getElementById('set-cats').value); await s('video_types',document.getElementById('set-types').value); await s('platforms',document.getElementById('set-plats').value); document.getElementById('settings-modal').classList.remove('active'); loadOptions(); }
     function showBig(s){ document.getElementById('big-img').src=s; document.getElementById('preview-modal').classList.add('active'); }
+    function jumpTo(pid) { window.switchView('inventory'); document.getElementById('s-pid').value = pid; document.getElementById('filter-panel').classList.add('open'); loadData(1); }
     window.changePage = (d) => { if(currPage+d > 0) loadData(currPage+d); };
 </script>
 </body>
